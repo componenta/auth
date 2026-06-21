@@ -23,7 +23,7 @@ final readonly class DatabaseRememberMeTokenManagerFactory implements LazyServic
         );
     }
 
-    public function lazy(ContainerInterface $container, ProxyFactoryInterface $proxyFactory): object
+    public function lazy(ContainerInterface $container, ProxyFactoryInterface $proxyFactory, array $context = []): object
     {
         return $proxyFactory->makeLazy(
             DatabaseRememberMeTokenManager::class,

@@ -14,7 +14,7 @@ use Psr\Container\ContainerInterface;
 
 final readonly class DatabaseRememberMeTokenManagerConfigFactory implements LazyServiceFactoryInterface
 {
-    public function lazy(ContainerInterface $container, ProxyFactoryInterface $proxyFactory): object
+    public function lazy(ContainerInterface $container, ProxyFactoryInterface $proxyFactory, array $context = []): object
     {
         return $proxyFactory->makeProxy(
             DatabaseRememberMeTokenManagerConfig::class,
