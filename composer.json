@@ -8,7 +8,7 @@
         "componenta/arrayable": "^1.0",
         "componenta/clock": "^1.0",
         "componenta/config": "^1.0",
-        "componenta/cqrs": "^2.0",
+        "componenta/cqrs": "^1.0",
         "componenta/di": "^2.0",
         "componenta/identity": "^1.0",
         "componenta/password": "^1.0",
