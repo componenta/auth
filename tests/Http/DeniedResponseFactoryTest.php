@@ -6,6 +6,7 @@ namespace Componenta\Auth\Tests\Http;
 
 use Componenta\Auth\Denied\UserDisabled;
 use Componenta\Auth\Http\DeniedResponseFactory;
+use Componenta\Auth\PublicDeniedReasonInterface;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -26,9 +27,12 @@ final class DeniedResponseFactoryTest extends TestCase
         $response->method('withHeader')->willReturnSelf();
         $factory = $this->createMock(ResponseFactoryInterface::class);
         $factory->method('createResponse')->with(403)->willReturn($response);
+        $reason = new UserDisabled('internal-user-42', 'moderation note');
+
+        self::assertNotInstanceOf(PublicDeniedReasonInterface::class, $reason);
 
         (new DeniedResponseFactory($factory, ['user_disabled' => 403]))
-            ->create(new UserDisabled('internal-user-42', 'moderation note'));
+            ->create($reason);
 
         self::assertSame('{"error":"user_disabled"}', $written);
     }
