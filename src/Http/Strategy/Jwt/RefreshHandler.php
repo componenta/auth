@@ -48,6 +48,10 @@ final readonly class RefreshHandler implements RequestHandlerInterface
 
         $user = $this->provider->findById($result->userId);
         if ($user === null) {
+            // The atomic rotation already created a successor. Do not leave an
+            // undiscoverable active grant when its subject no longer exists.
+            $this->refreshManager->revoke($result->id);
+
             return TokenResponseHeaders::apply(
                 $this->deniedResponseFactory->create(new InvalidRefreshToken()),
             );
