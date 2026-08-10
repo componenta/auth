@@ -68,6 +68,7 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
         $this->revokeForSessions([$sessionId]);
     }
 
+    /** @param iterable<string> $sessionIds */
     public function revokeForSessions(iterable $sessionIds): void
     {
         $ids = [];
@@ -91,7 +92,7 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
         if ($exceptSessionId !== null) {
             $delete->where(function ($query) use ($exceptSessionId): void {
                 $query
-                    ->orWhere($this->config->sessionIdColumn, '!=', $exceptSessionId)
+                    ->where($this->config->sessionIdColumn, '!=', $exceptSessionId)
                     ->orWhere($this->config->sessionIdColumn, null);
             });
         }
