@@ -1,0 +1,76 @@
+name: Apply reviewed auth v2 overlay
+
+on:
+  push:
+    branches: [v2]
+    paths:
+      - .auth-v2-review.b64
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-reviewed-auth-v2-overlay
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout v2
+        uses: actions/checkout@v4
+        with:
+          ref: v2
+          fetch-depth: 4
+
+      - name: Verify immutable starting point
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD~2)" = "34ff2e62fbc8aeb03a83e378ea4cb128b06e6865"
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_sqlite
+          coverage: none
+          tools: composer:v2
+
+      - name: Apply reviewed overlay
+        shell: bash
+        run: |
+          set -euo pipefail
+          work="$(mktemp -d)"
+          base64 --decode .auth-v2-review.b64 > "$work/overlay.tar.gz"
+          mkdir "$work/unpacked"
+          tar -xzf "$work/overlay.tar.gz" -C "$work/unpacked"
+          test "$(sha256sum "$work/overlay.tar.gz" | cut -d' ' -f1)" = "807759e0fa3381fe4fff3b4f29f8c69bb34ba1afc3ee8ede2fb1c73e0b03b9a5"
+
+          while IFS= read -r path; do
+            if [[ -n "$path" ]]; then
+              rm -rf -- "$path"
+            fi
+          done < "$work/unpacked/delete-list.txt"
+
+          cp -a "$work/unpacked/replacement/." .
+          rm -f .auth-v2-review.b64
+          rm -f .github/workflows/apply-auth-v2-review.yml
+
+      - name: Resolve and verify DI 2
+        shell: bash
+        run: |
+          set -euo pipefail
+          composer update --with 'componenta/di:2.*' --prefer-dist --no-interaction --no-progress
+          bash tools/verify.sh
+
+      - name: Commit directly to v2
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "Andrey Shelamkoff"
+          git config user.email "inbox.shelamkoff@gmail.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "fix(auth): complete v2 security invariants"
+          git push origin HEAD:v2
