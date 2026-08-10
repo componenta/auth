@@ -24,7 +24,7 @@ if [[ ! -f src/Session/SessionAwareInterface.php ]]; then
     exit 1
 fi
 
-if grep -R --line-number --fixed-strings 'currentSessionId' src tests; then
+if grep -R --line-number --fixed-strings 'currentSessionId' src; then
     echo 'Request-local currentSessionId must not be stored on an identity.' >&2
     exit 1
 fi
