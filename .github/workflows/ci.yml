@@ -31,6 +31,18 @@ jobs:
         id: verify
         continue-on-error: true
         run: bash tools/verify.sh
+      - name: Export exact source checkout for remediation
+        if: always() && matrix.php == '8.4' && matrix.di == '2.*'
+        uses: actions/upload-artifact@v4
+        with:
+          name: auth-v2-source-${{ github.sha }}
+          path: |
+            .
+            !.git/**
+            !vendor/**
+            !composer.lock
+          include-hidden-files: true
+          retention-days: 1
       - name: Publish explicit commit status
         if: always() && github.event_name == 'push'
         env:
