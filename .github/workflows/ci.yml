@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  statuses: write
 
 jobs:
   quality:
@@ -21,13 +22,44 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: mbstring
+          extensions: mbstring, pdo_sqlite
           coverage: none
           tools: composer:v2
-      - run: composer validate --strict
-      - run: composer update --with "componenta/di:${{ matrix.di }}" --prefer-dist --no-interaction --no-progress
-      - run: composer check-platform-reqs
-      - run: composer test
-      - run: composer phpstan
-      - run: composer audit --no-interaction
-      - run: composer lint
+      - name: Resolve DI matrix dependencies
+        run: composer update --with "componenta/di:${{ matrix.di }}" --prefer-dist --no-interaction --no-progress
+      - name: Verify package
+        id: verify
+        continue-on-error: true
+        run: bash tools/verify.sh
+      - name: Publish explicit commit status
+        if: always() && github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+          CONTEXT: auth-ci/php-${{ matrix.php }}-di-${{ matrix.di }}
+          STATE: ${{ steps.verify.outcome == 'success' && 'success' || 'failure' }}
+        run: |
+          set -euo pipefail
+          payload="$(php -r 'echo json_encode([
+              "state" => getenv("STATE"),
+              "context" => getenv("CONTEXT"),
+              "description" => getenv("STATE") === "success"
+                  ? "Auth v2 verification passed"
+                  : "Auth v2 verification failed",
+              "target_url" => sprintf(
+                  "https://github.com/%s/actions/runs/%s",
+                  getenv("GITHUB_REPOSITORY"),
+                  getenv("GITHUB_RUN_ID"),
+              ),
+          ], JSON_THROW_ON_ERROR);')"
+          curl --fail --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header 'Accept: application/vnd.github+json' \
+            --header 'X-GitHub-Api-Version: 2022-11-28' \
+            --data "${payload}" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${SHA}" \
+            >/dev/null
+      - name: Preserve verification failure
+        if: steps.verify.outcome != 'success'
+        run: exit 1
