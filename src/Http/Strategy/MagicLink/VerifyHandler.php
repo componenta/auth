@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Http\Strategy\MagicLink;
 
-use Componenta\Auth\AuthSubject;
+use Componenta\Auth\AuthenticatorInterface;
 use Componenta\Auth\Context;
 use Componenta\Auth\ContextInterface;
 use Componenta\Auth\DeniedReasonInterface;
@@ -19,17 +19,11 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 
-/**
- * Handles magic link verification requests.
- *
- * Extracts the token from the request, verifies it via
- * MagicLinkStrategy, creates a session, and sets the session cookie.
- */
 final readonly class VerifyHandler implements RequestHandlerInterface
 {
     public function __construct(
         private VerifyExtractor $extractor,
-        private MagicLinkStrategy $strategy,
+        private AuthenticatorInterface $authenticator,
         private SessionManagerInterface $sessionManager,
         private PayloadStorageInterface $storage,
         private DeniedResponseFactoryInterface $deniedResponseFactory,
@@ -37,18 +31,16 @@ final readonly class VerifyHandler implements RequestHandlerInterface
         private SessionAttributeExtractorInterface $attributeExtractor = new SessionAttributeExtractor(),
     ) {}
 
+    #[\Override]
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         $payload = $this->extractor->extract($request);
 
         if ($payload === null) {
-            $response = $this->responseFactory->createResponse(400);
-            $response->getBody()->write(json_encode(['error' => 'missing_token'], JSON_THROW_ON_ERROR));
-
-            return $response->withHeader('Content-Type', 'application/json');
+            return $this->json(400, ['error' => 'missing_token']);
         }
 
-        $result = $this->strategy->attempt($payload, new Context([
+        $result = $this->authenticator->attempt($payload, new Context([
             ServerRequestInterface::class => $request,
             ContextInterface::EXTRACTOR => $this->extractor,
         ]));
@@ -58,12 +50,23 @@ final readonly class VerifyHandler implements RequestHandlerInterface
         }
 
         $session = $this->sessionManager->create(
-            AuthSubject::id($result->subject),
+            $result->subject->uuid->toString(),
             $this->attributeExtractor->extract($request),
         );
+        $response = $this->storage->store(
+            $request,
+            $this->responseFactory->createResponse(200),
+            new SessionPayload($session->id),
+        );
 
-        $response = $this->responseFactory->createResponse(200);
-        $response = $this->storage->store($request, $response, new SessionPayload($session->id));
+        return $response->withHeader('Content-Type', 'application/json');
+    }
+
+    /** @param array<string, mixed> $payload */
+    private function json(int $status, array $payload): ResponseInterface
+    {
+        $response = $this->responseFactory->createResponse($status);
+        $response->getBody()->write(json_encode($payload, JSON_THROW_ON_ERROR));
 
         return $response->withHeader('Content-Type', 'application/json');
     }

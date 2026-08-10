@@ -7,6 +7,7 @@ namespace Componenta\Auth\Http\Strategy\Otp;
 use Componenta\Auth\AuthenticationResult;
 use Componenta\Auth\AuthenticationStrategyInterface;
 use Componenta\Auth\ContextInterface;
+use Componenta\Auth\Http\Strategy\Otp\Denied\CodeExpired;
 use Componenta\Auth\Http\Strategy\Otp\Denied\InvalidCode;
 use Componenta\Auth\Http\Strategy\Otp\Denied\TooManyAttempts;
 use Componenta\Auth\Token\UserProviderInterface;
@@ -22,11 +23,13 @@ final readonly class OtpStrategy implements AuthenticationStrategyInterface
         private ClockInterface $clock = new Clock(),
     ) {}
 
+    #[\Override]
     public function supports(object $payload, ContextInterface $context): bool
     {
         return $payload instanceof OtpPayload;
     }
 
+    #[\Override]
     public function attempt(object $payload, ContextInterface $context): AuthenticationResult
     {
         /** @var OtpPayload $payload */
@@ -41,14 +44,18 @@ final readonly class OtpStrategy implements AuthenticationStrategyInterface
             return new AuthenticationResult(new TooManyAttempts());
         }
 
+        if ($result->status === CodeVerificationStatus::Expired) {
+            return new AuthenticationResult(new CodeExpired());
+        }
+
         if ($result->status !== CodeVerificationStatus::Verified || $result->userId === null) {
             return new AuthenticationResult(new InvalidCode());
         }
 
-        $user = $this->provider->findById($result->userId);
+        $identity = $this->provider->findById($result->userId);
 
-        return $user === null
+        return $identity === null
             ? new AuthenticationResult(new InvalidCode())
-            : new AuthenticationResult($user);
+            : new AuthenticationResult($identity);
     }
 }

@@ -1,64 +1,212 @@
 # Migrating to componenta/auth v2
 
-Version 2 intentionally changes several storage and composition contracts. The old APIs could not enforce the credential-lifecycle invariants required for concurrent and partially failing authentication flows.
+Version 2 intentionally changes storage, identity, composition and property contracts. The former APIs could not enforce credential-lifecycle invariants under concurrency, partial failure and long-running workers.
 
-## Required application changes
+## Canonical identity UUID
 
-### Ordered authenticator composition
+Removed:
 
-Define every active strategy explicitly and in security-sensitive order:
+```text
+Componenta\Auth\AuthSubjectInterface
+Componenta\Auth\AuthSubject
+```
+
+Use the UUID already provided by `IdentityInterface`:
+
+```php
+$subjectId = $identity->uuid->toString();
+```
+
+Update application stores so sessions, remember-me tokens, one-time tokens, refresh grants and JWT `sub` use that same value. Internal database IDs belong inside persistence adapters.
+
+## Request-local session state
+
+Removed:
+
+```text
+Componenta\Auth\Session\SessionAwareInterface
+```
+
+Do not add a mutable current-session property to the identity entity. `AuthenticationResult` now has:
+
+```php
+public ?SessionInterface $session;
+```
+
+`AuthenticationMiddleware` attaches it to the PSR-7 request under `SessionInterface::class`.
+
+The generic `AuthenticationResult::$attributes` bag has been removed.
+
+## Property API
+
+Replace these calls:
+
+```text
+ContextInterface::getAttributes()       -> $context->attributes
+SessionInterface::getAttributes()       -> $session->attributes
+SessionCollectionInterface::isEmpty()   -> $sessions->empty
+CredentialTransportState::isEmpty()     -> $state->empty
+CredentialTransportState::shouldClear() -> $state->cleared
+CredentialTransportState::payloads()    -> $state->payloads
+RefreshToken::isRevoked()               -> $token->revoked
+PublicDeniedReasonInterface::publicDetails() -> $reason->publicDetails
+```
+
+Methods that accept input or perform actions are unchanged in style.
+
+## Password providers
+
+The password provider no longer receives a credential-bearing payload:
+
+```php
+interface UserProviderInterface
+{
+    public function findByIdentity(
+        string $identity,
+    ): null|(IdentityInterface&PasswordAwareInterface);
+}
+```
+
+Update providers that previously implemented `provide(Payload $payload)`.
+
+## Shared authenticator for verification handlers
+
+`LoginHandler`, OTP `VerifyHandler` and magic-link `VerifyHandler` now depend on `AuthenticatorInterface`, not an individual strategy. Ensure every strategy used by those handlers appears in ordered `auth.strategies`.
+
+## Delivery queues
+
+Removed zero-logic wrappers:
+
+```text
+Componenta\Auth\Token\TokenRequester
+Componenta\Auth\Http\Strategy\Otp\OtpRequester
+```
+
+Inject `TokenRequestQueueInterface` or `OtpRequestQueueInterface` directly and enqueue `TokenRequest`/`OtpRequest`.
+
+Default factory service IDs for application queues:
+
+```text
+auth.magicLink.queue
+auth.passwordReset.queue
+```
+
+OTP request handling resolves `OtpRequestQueueInterface::class`.
+
+## Ordered authenticator composition
+
+Define every active strategy explicitly:
 
 ```php
 'auth' => [
     'strategies' => [
         SessionStrategy::class,
         RememberMeStrategy::class,
+        PasswordStrategy::class,
+        OtpStrategy::class,
+        MagicLinkStrategy::class,
         JwtStrategy::class,
     ],
     'events' => true,
 ],
 ```
 
-`AuthenticatorInterface` is now built by `AuthenticatorFactory`. Empty, duplicate, missing and non-strategy services fail fast.
+Empty, duplicate, missing and non-strategy services fail fast.
 
-### Refresh token store
+## JWT profile
 
-Implement the new `RefreshTokenStoreInterface`:
+`JwtConfig` now requires explicit issuer and audience:
 
-- `storeInitial()` persists the first member of a family;
-- `rotateAtomically()` serializes lookup, expiry validation, revocation, successor creation and replay compromise;
-- `revokeAllForUser()` is required for account recovery.
+```php
+new JwtConfig(
+    issuer: 'https://issuer.example',
+    audience: 'componenta-api',
+    type: 'at+jwt',
+    accessTtl: 900,
+    refreshTtl: 604800,
+    clockSkew: 30,
+);
+```
 
-A compliant store needs durable family/grant state. After `Reused`, no active token may remain in that family and no concurrent transaction may insert a new active descendant.
+The DI config must define non-empty `auth.jwt.issuer` and `auth.jwt.audience` before resolving JWT services. Tokens without the exact issuer, audience and type are rejected.
 
-### OTP store
+HMAC secrets must meet the digest-size minimum for the selected algorithm.
 
-Replace `find()/incrementAttempts()/consume()` with `verifyAndConsume()`. Attempt accounting, expiry, constant-time comparison and consume must operate on the same locked or versioned challenge record.
+`RefreshTokenGenerator` accepts 32–64 bytes only. Test fixtures that used short generators must be updated.
 
-### Password reset
+## Refresh store
 
-Register an application implementation of `PasswordResetServiceInterface`. `Success` means one completed security transition: reset token consumed, password changed, and all old session, remember-me and refresh credentials durably or logically invalidated. For multiple stores, use a credential version plus transactional outbox/idempotent retry.
+Implement the atomic store contract:
 
-### Uniform delivery queues
+- `storeInitial()` persists the first family member;
+- `rotateAtomically()` serializes validation, revocation, replay compromise and successor creation;
+- `revokeAllForUser()` supports account recovery.
 
-`TokenRequester` and `OtpRequester` enqueue opaque requests only. Register queue adapters and run `TokenRequestProcessor` / `OtpRequestProcessor` in a worker. Provider lookup and sender I/O no longer occur on the HTTP request path, preventing account-enumeration timing differences.
+A `Rotated` result must return the exact successor ID and expiry supplied to `rotateAtomically()`, an active token, a valid family ID and a non-empty subject ID.
 
-### Session lifecycle
+## OTP store
 
-- `TouchSessionMiddleware` now requires a `PayloadStorageInterface`.
-- `AuthenticationResult::$attributes` carries the already verified `SessionInterface`.
-- `SessionManagerInterface::touch()` accepts the resolved last-active timestamp and throttles writes via `auth.session.touchInterval` (60 seconds by default).
-- `cleanup(int $limit)` is bounded and must be invoked by a scheduler/worker. HTTP middleware only schedules work through `SessionCleanupSchedulerInterface`.
-- `RememberMeTokenManagerInterface::revokeForSessions()` replaces per-session deletion loops.
+Replace separate lookup/attempt/consume operations with `verifyAndConsume()`. The operation must use one locked or versioned challenge record. Return `Expired` when expiry is known; it is no longer collapsed into `Invalid` inside the strategy.
 
-### Events and denial responses
+## Password reset
 
-Generic authentication events contain `payloadType`, never the raw password, OTP or bearer payload. `DeniedReasonInterface::$attributes` is audit context and is not public. Implement `PublicDeniedReasonInterface` only for explicitly allowlisted public fields.
+Register `PasswordResetServiceInterface`. `PasswordResetResult::Success` means one completed security transition: reset token consumed, password changed, and old session, remember-me and refresh credentials invalidated.
 
-### Input and platform requirements
+`PasswordUpdaterInterface` has been removed because the HTTP handler no longer orchestrates the security transition itself.
 
-`ext-mbstring` is required. Password and OTP extractors reject arrays, objects, oversized values and unknown boolean representations. Map `InvalidPayloadException` to HTTP 400 with `InvalidPayloadMiddleware` or equivalent application middleware.
+## Session and transport lifecycle
+
+- `LogoutHandler` no longer performs a duplicate cookie removal when `AuthenticationMiddleware` owns terminal transport commit.
+- Custom authentication middleware must attach the verified `SessionInterface` if logout should terminate that server-side session.
+- Session touch rechecks idle/absolute expiry.
+- Session cleanup is bounded and rechecks expiry before delete.
+- `SessionCollection::pluck()` rejects unknown keys.
+
+## Housekeeping signatures
+
+The following methods are now bounded and return affected rows:
+
+```php
+SessionManagerInterface::cleanup(int $limit = 1000): int;
+RememberMeTokenManagerInterface::cleanup(int $limit = 1000): int;
+TokenManagerInterface::cleanup(int $limit = 1000): int;
+```
+
+Invoke them from a worker, cron task or scheduler.
+
+## Composer requirements
+
+The package now declares its direct PSR-17 and PSR-15 handler dependencies:
+
+```text
+psr/http-factory
+psr/http-server-handler
+```
+
+`ext-mbstring` remains required.
+
+## Removed dead API
+
+The following unused/redundant symbols are removed in v2:
+
+```text
+AuthSubjectInterface
+AuthSubject
+SessionAwareInterface
+RememberMeAwareInterface
+PasswordUpdaterInterface
+TokenRequester
+OtpRequester
+ConfigKey::COOKIE
+ConfigKey::MAGIC_LINK
+ConfigKey::PASSWORD_RESET
+```
 
 ## Secure rollout order
 
-Update storage adapters before deploying handlers that call the new contracts. Refresh-store schema and code must ship atomically. Do not emulate `rotateAtomically()` by calling the former methods in sequence; that preserves the replay race this release removes.
+1. Update identity/provider and storage adapters.
+2. Deploy atomic refresh and OTP store implementations.
+3. Register delivery queues and processors.
+4. Configure ordered strategies and explicit JWT profile.
+5. Deploy handlers and property-API consumers.
+6. Run concurrency, DB integration, PHPUnit and PHPStan gates before production rollout.

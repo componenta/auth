@@ -14,22 +14,23 @@ final readonly class RequestHandler implements RequestHandlerInterface
     private const int MAX_IDENTITY_LENGTH = 320;
 
     public function __construct(
-        private OtpRequester $requester,
+        private OtpRequestQueueInterface $queue,
         private ResponseFactoryInterface $responseFactory,
         private string $identityField = 'destination',
     ) {}
 
+    #[\Override]
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
-        $parsed = $request->getParsedBody();
-        $body = is_array($parsed) ? $parsed : [];
-        $identity = $body[$this->identityField] ?? null;
+        $body = $request->getParsedBody();
+        $identity = is_array($body) ? ($body[$this->identityField] ?? null) : null;
 
         if (!is_string($identity) || $identity === '' || strlen($identity) > self::MAX_IDENTITY_LENGTH) {
             return $this->json(400, ['error' => 'invalid_identity']);
         }
 
-        $this->requester->request($identity);
+        $this->queue->enqueue(new OtpRequest($identity));
+
         return $this->json(200, ['message' => 'If the account exists, a code has been sent.']);
     }
 
@@ -38,6 +39,7 @@ final readonly class RequestHandler implements RequestHandlerInterface
     {
         $response = $this->responseFactory->createResponse($status);
         $response->getBody()->write(json_encode($data, JSON_THROW_ON_ERROR));
+
         return $response->withHeader('Content-Type', 'application/json');
     }
 }

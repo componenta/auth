@@ -14,15 +14,57 @@ final readonly class JwtConfigFactory
 {
     public function __invoke(ContainerInterface $container): JwtConfig
     {
-        /** @var Config $config */
-        $config = $container->get('config');
+        $config = $container->get(ConfigKey::CONFIG);
+
+        if (!$config instanceof Config) {
+            throw new \LogicException('The config service must be Componenta\\Config\\Config.');
+        }
+
         $jwt = $config->array(new ConfigPath(ConfigKey::AUTH . '.' . ConfigKey::JWT), []);
 
         return new JwtConfig(
-            accessTtl: $jwt['accessTtl'] ?? 900,
-            refreshTtl: $jwt['refreshTtl'] ?? 604800,
-            issuer: $jwt['issuer'] ?? '',
-            audience: $jwt['audience'] ?? '',
+            issuer: self::requiredString($jwt, 'issuer'),
+            audience: self::requiredString($jwt, 'audience'),
+            type: self::string($jwt, 'type', 'at+jwt'),
+            accessTtl: self::integer($jwt, 'accessTtl', 900),
+            refreshTtl: self::integer($jwt, 'refreshTtl', 604800),
+            clockSkew: self::integer($jwt, 'clockSkew', 30),
         );
+    }
+
+    /** @param array<string, mixed> $config */
+    private static function requiredString(array $config, string $key): string
+    {
+        $value = $config[$key] ?? null;
+
+        if (!is_string($value) || $value === '') {
+            throw new \LogicException(sprintf('auth.jwt.%s must be a non-empty string.', $key));
+        }
+
+        return $value;
+    }
+
+    /** @param array<string, mixed> $config */
+    private static function string(array $config, string $key, string $default): string
+    {
+        $value = $config[$key] ?? $default;
+
+        if (!is_string($value) || $value === '') {
+            throw new \LogicException(sprintf('auth.jwt.%s must be a non-empty string.', $key));
+        }
+
+        return $value;
+    }
+
+    /** @param array<string, mixed> $config */
+    private static function integer(array $config, string $key, int $default): int
+    {
+        $value = $config[$key] ?? $default;
+
+        if (!is_int($value)) {
+            throw new \LogicException(sprintf('auth.jwt.%s must be an integer.', $key));
+        }
+
+        return $value;
     }
 }

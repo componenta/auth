@@ -4,7 +4,8 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Http\Strategy\MagicLink;
 
-use Componenta\Auth\Token\TokenRequester;
+use Componenta\Auth\Token\TokenRequest;
+use Componenta\Auth\Token\TokenRequestQueueInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -16,16 +17,16 @@ final readonly class RequestHandler implements RequestHandlerInterface
     private const int MAX_REDIRECT_LENGTH = 2048;
 
     public function __construct(
-        private TokenRequester $requester,
+        private TokenRequestQueueInterface $queue,
         private ResponseFactoryInterface $responseFactory,
         private string $identityField = 'identity',
     ) {}
 
+    #[\Override]
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
-        $parsed = $request->getParsedBody();
-        $body = is_array($parsed) ? $parsed : [];
-        $identity = $body[$this->identityField] ?? null;
+        $body = $request->getParsedBody();
+        $identity = is_array($body) ? ($body[$this->identityField] ?? null) : null;
 
         if (!is_string($identity) || $identity === '' || strlen($identity) > self::MAX_IDENTITY_LENGTH) {
             return $this->json(400, ['error' => 'invalid_identity']);
@@ -33,10 +34,16 @@ final readonly class RequestHandler implements RequestHandlerInterface
 
         $context = [];
         $redirect = $body['redirect'] ?? null;
-        if (is_string($redirect) && $redirect !== '' && strlen($redirect) <= self::MAX_REDIRECT_LENGTH) {
+
+        if ($redirect !== null) {
+            if (!is_string($redirect) || $redirect === '' || strlen($redirect) > self::MAX_REDIRECT_LENGTH) {
+                return $this->json(400, ['error' => 'invalid_redirect']);
+            }
+
             $context['redirect'] = $redirect;
         }
-        $this->requester->request($identity, context: $context);
+
+        $this->queue->enqueue(new TokenRequest($identity, context: $context));
 
         return $this->json(200, ['message' => 'If the account exists, a link has been sent.']);
     }
@@ -46,6 +53,7 @@ final readonly class RequestHandler implements RequestHandlerInterface
     {
         $response = $this->responseFactory->createResponse($status);
         $response->getBody()->write(json_encode($data, JSON_THROW_ON_ERROR));
+
         return $response->withHeader('Content-Type', 'application/json');
     }
 }

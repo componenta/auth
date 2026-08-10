@@ -7,49 +7,38 @@ namespace Componenta\Auth\Http;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
-/**
- * Request-scoped accumulator for authentication transport mutations.
- *
- * Clearing credentials is terminal for the request: once clear() is called,
- * queued and future rotations are ignored. This prevents a credential created
- * during authentication from being written after a downstream logout.
- */
+/** Request-scoped accumulator with terminal clear-over-store precedence. */
 final class CredentialTransportState
 {
     /** @var list<object> */
-    private array $payloads = [];
+    private array $queuedPayloads = [];
 
     private bool $clear = false;
 
+    public bool $empty {
+        get => !$this->clear && $this->queuedPayloads === [];
+    }
+
+    public bool $cleared {
+        get => $this->clear;
+    }
+
+    /** @var list<object> */
+    public array $payloads {
+        get => $this->queuedPayloads;
+    }
+
     public function queue(object $payload): void
     {
-        if ($this->clear) {
-            return;
+        if (!$this->clear) {
+            $this->queuedPayloads[] = $payload;
         }
-
-        $this->payloads[] = $payload;
     }
 
     public function clear(): void
     {
         $this->clear = true;
-        $this->payloads = [];
-    }
-
-    public function isEmpty(): bool
-    {
-        return !$this->clear && $this->payloads === [];
-    }
-
-    public function shouldClear(): bool
-    {
-        return $this->clear;
-    }
-
-    /** @return list<object> */
-    public function payloads(): array
-    {
-        return $this->payloads;
+        $this->queuedPayloads = [];
     }
 
     public function apply(
@@ -61,7 +50,7 @@ final class CredentialTransportState
             return $storage->remove($request, $response);
         }
 
-        foreach ($this->payloads as $payload) {
+        foreach ($this->queuedPayloads as $payload) {
             $response = $storage->store($request, $response, $payload);
         }
 

@@ -14,34 +14,35 @@ use Componenta\Stdlib\PasswordVerifierInterface;
 
 final class PasswordStrategy implements AuthenticationStrategyInterface
 {
-    private readonly UserProviderInterface $provider;
-    private readonly PasswordHasherInterface&PasswordVerifierInterface $hasher;
     private readonly string $dummyHash;
 
     public function __construct(
-        UserProviderInterface $provider,
-        PasswordHasherInterface&PasswordVerifierInterface $hasher = new PasswordHasher(),
+        private readonly UserProviderInterface $provider,
+        private readonly PasswordHasherInterface&PasswordVerifierInterface $hasher = new PasswordHasher(),
         ?string $dummyHash = null,
     ) {
-        $this->provider = $provider;
-        $this->hasher = $hasher;
-        // Compute during construction/warm-up, never on the first unknown user.
-        $this->dummyHash = $dummyHash ?? $hasher->hash('componenta-auth-dummy-password');
+        $this->dummyHash = $dummyHash
+            ?? $this->hasher->hash('componenta-auth-dummy-password');
     }
 
+    #[\Override]
     public function supports(object $payload, ContextInterface $context): bool
     {
         return $payload instanceof Payload;
     }
 
+    #[\Override]
     public function attempt(object $payload, ContextInterface $context): AuthenticationResult
     {
         /** @var Payload $payload */
-        $user = $this->provider->provide($payload);
-        $valid = $this->hasher->verify($payload->password, $user?->hash ?? $this->dummyHash);
+        $identity = $this->provider->findByIdentity($payload->identity);
+        $valid = $this->hasher->verify(
+            $payload->password,
+            $identity?->hash ?? $this->dummyHash,
+        );
 
-        return $user === null || !$valid
+        return $identity === null || !$valid
             ? new AuthenticationResult(new InvalidCredentials())
-            : new AuthenticationResult($user);
+            : new AuthenticationResult($identity);
     }
 }

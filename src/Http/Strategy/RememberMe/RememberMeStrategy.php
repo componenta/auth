@@ -13,7 +13,6 @@ use Componenta\Auth\Http\Transport\SessionPayload;
 use Componenta\Auth\RememberMe\RememberMeTokenManagerInterface;
 use Componenta\Auth\Session\SessionAttributeExtractor;
 use Componenta\Auth\Session\SessionAttributeExtractorInterface;
-use Componenta\Auth\Session\SessionInterface;
 use Componenta\Auth\Session\SessionManagerInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
@@ -26,11 +25,13 @@ final readonly class RememberMeStrategy implements AuthenticationStrategyInterfa
         private SessionAttributeExtractorInterface $attributeExtractor = new SessionAttributeExtractor(),
     ) {}
 
+    #[\Override]
     public function supports(object $payload, ContextInterface $context): bool
     {
         return $payload instanceof SessionPayload && $payload->rememberMeToken !== null;
     }
 
+    #[\Override]
     public function attempt(object $payload, ContextInterface $context): AuthenticationResult
     {
         /** @var SessionPayload $payload */
@@ -40,9 +41,9 @@ final readonly class RememberMeStrategy implements AuthenticationStrategyInterfa
             return new AuthenticationResult(new InvalidCredentials());
         }
 
-        $user = $this->provider->findById($consumed->userId);
+        $identity = $this->provider->findById($consumed->userId);
 
-        if ($user === null) {
+        if ($identity === null) {
             return new AuthenticationResult(new InvalidCredentials());
         }
 
@@ -54,16 +55,13 @@ final readonly class RememberMeStrategy implements AuthenticationStrategyInterfa
         $attributes = $request instanceof ServerRequestInterface
             ? $this->attributeExtractor->extract($request)
             : [];
-
         $session = $this->sessionManager->create($consumed->userId, $attributes);
         $newToken = $this->tokenManager->create($consumed->userId, $session->id);
 
-        $user->currentSessionId = $session->id;
-
         return new AuthenticationResult(
-            subject: $user,
+            subject: $identity,
             transportPayload: new SessionPayload($session->id, $newToken),
-            attributes: [SessionInterface::class => $session],
+            session: $session,
         );
     }
 }

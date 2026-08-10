@@ -20,18 +20,18 @@ final readonly class TokenPairResponse
         private ClockInterface $clock = new Clock(),
     ) {}
 
-    public function create(IdentityInterface $user): ResponseInterface
+    public function create(IdentityInterface $identity): ResponseInterface
     {
         $now = $this->clock->now()->getTimestamp();
-        $subjectId = $user->uuid->toString();
-        $claims = new Claims(
+        $subjectId = $identity->uuid->toString();
+        $accessToken = $this->signer->sign(new Claims(
             subject: $subjectId,
             issuedAt: $now,
             expiresAt: $now + $this->config->accessTtl,
             issuer: $this->config->issuer,
             audience: $this->config->audience,
-        );
-        $accessToken = $this->signer->sign($claims);
+            type: $this->config->type,
+        ));
         $refreshToken = $this->refreshManager->issue($subjectId);
         $response = $this->responseFactory->createResponse(200);
         $response->getBody()->write(json_encode([

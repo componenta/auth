@@ -6,12 +6,10 @@ namespace Componenta\Auth\Session;
 
 use Psr\Http\Message\ServerRequestInterface;
 
-/**
- * Default implementation that extracts IP, User-Agent,
- * and device metadata (OS, browser, device type) from the request.
- */
 final readonly class SessionAttributeExtractor implements SessionAttributeExtractorInterface
 {
+    private const int MAX_USER_AGENT_LENGTH = 1024;
+
     public function __construct(
         private DeviceDetector $deviceDetector = new DeviceDetector(),
     ) {}
@@ -19,12 +17,20 @@ final readonly class SessionAttributeExtractor implements SessionAttributeExtrac
     #[\Override]
     public function extract(ServerRequestInterface $request): array
     {
-        $userAgent = $request->getHeaderLine('User-Agent');
+        $userAgent = substr(
+            $request->getHeaderLine('User-Agent'),
+            0,
+            self::MAX_USER_AGENT_LENGTH,
+        );
+        $clientIp = $request->getAttribute('client_ip')
+            ?? $request->getServerParams()['REMOTE_ADDR']
+            ?? '';
+        $ip = is_string($clientIp) && strlen($clientIp) <= 45
+            ? $clientIp
+            : '';
 
         return [
-            DatabaseSessionManager::ATTR_IP => $request->getAttribute('client_ip')
-                ?? $request->getServerParams()['REMOTE_ADDR']
-                ?? '',
+            DatabaseSessionManager::ATTR_IP => $ip,
             DatabaseSessionManager::ATTR_USER_AGENT => $userAgent,
             ...$this->deviceDetector->detect($userAgent),
         ];

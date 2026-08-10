@@ -7,6 +7,7 @@ namespace Componenta\Auth\Tests\Http\Strategy\Otp;
 use Componenta\Auth\Context;
 use Componenta\Auth\Http\Strategy\Otp\CodeStoreInterface;
 use Componenta\Auth\Http\Strategy\Otp\CodeVerificationResult;
+use Componenta\Auth\Http\Strategy\Otp\Denied\CodeExpired;
 use Componenta\Auth\Http\Strategy\Otp\Denied\InvalidCode;
 use Componenta\Auth\Http\Strategy\Otp\OtpConfig;
 use Componenta\Auth\Http\Strategy\Otp\OtpPayload;
@@ -22,13 +23,12 @@ use Psr\Clock\ClockInterface;
 
 final class OtpStrategyTest extends TestCase
 {
-    public function testDelegatesComparisonAttemptAndConsumeToOneAtomicStoreCall(): void
+    public function testDelegatesVerificationToOneAtomicStoreCall(): void
     {
         $identity = new OtpIdentityFixture();
         $store = new CodeStoreFixture(CodeVerificationResult::verified('user-1'));
         $provider = new OtpUserProviderFixture($identity);
         $strategy = new OtpStrategy($provider, $store, new OtpConfig(maxAttempts: 3), new OtpClockFixture());
-
         $result = $strategy->attempt(new OtpPayload('mail@example.com', '123456'), new Context());
 
         self::assertSame($identity, $result->subject);
@@ -39,12 +39,23 @@ final class OtpStrategyTest extends TestCase
     {
         $store = new CodeStoreFixture(CodeVerificationResult::invalid());
         $provider = new OtpUserProviderFixture(null);
-        $strategy = new OtpStrategy($provider, $store, new OtpConfig(), new OtpClockFixture());
-
-        $result = $strategy->attempt(new OtpPayload('mail@example.com', 'old-code'), new Context());
+        $result = (new OtpStrategy($provider, $store, new OtpConfig(), new OtpClockFixture()))
+            ->attempt(new OtpPayload('mail@example.com', 'old-code'), new Context());
 
         self::assertInstanceOf(InvalidCode::class, $result->subject);
         self::assertSame(0, $provider->findByIdCalls);
+    }
+
+    public function testExpiredResultRemainsDistinguishable(): void
+    {
+        $result = (new OtpStrategy(
+            new OtpUserProviderFixture(null),
+            new CodeStoreFixture(CodeVerificationResult::expired()),
+            new OtpConfig(),
+            new OtpClockFixture(),
+        ))->attempt(new OtpPayload('mail@example.com', '123456'), new Context());
+
+        self::assertInstanceOf(CodeExpired::class, $result->subject);
     }
 }
 
@@ -52,11 +63,9 @@ final class CodeStoreFixture implements CodeStoreInterface
 {
     /** @var array{string,string,int,int}|null */
     public ?array $arguments = null;
-
     public function __construct(private CodeVerificationResult $result) {}
     public function store(StoredCode $code): void {}
     public function invalidate(string $destination): void {}
-
     public function verifyAndConsume(string $destination, string $presentedCode, int $now, int $maxAttempts): CodeVerificationResult
     {
         $this->arguments = [$destination, $presentedCode, $now, $maxAttempts];

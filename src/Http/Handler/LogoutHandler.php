@@ -8,7 +8,6 @@ use Componenta\Auth\Event\EventDispatcher;
 use Componenta\Auth\Event\LoggedOut;
 use Componenta\Auth\Http\CredentialTransportState;
 use Componenta\Auth\Http\PayloadStorageInterface;
-use Componenta\Auth\Session\SessionAwareInterface;
 use Componenta\Auth\Session\SessionInterface;
 use Componenta\Auth\Session\SessionManagerInterface;
 use Componenta\Clock\Clock;
@@ -29,31 +28,27 @@ readonly class LogoutHandler implements RequestHandlerInterface
         protected ClockInterface $clock = new Clock(),
     ) {}
 
+    #[\Override]
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
+        $session = $request->getAttribute(SessionInterface::class);
+        $identity = $request->getAttribute(IdentityInterface::class);
+
+        if ($session instanceof SessionInterface) {
+            $this->sessionManager->terminate($session->id);
+        }
+
+        $response = $this->responseFactory->createResponse(204);
         $transportState = $request->getAttribute(CredentialTransportState::class);
 
         if ($transportState instanceof CredentialTransportState) {
             $transportState->clear();
+        } else {
+            $response = $this->storage->remove($request, $response);
         }
 
-        $session = $request->getAttribute(SessionInterface::class);
-        $user = $request->getAttribute(IdentityInterface::class);
-
-        if ($session instanceof SessionInterface) {
-            $this->sessionManager->terminate($session->id);
-        } elseif ($user instanceof SessionAwareInterface && $user->currentSessionId !== null) {
-            // Compatibility fallback for application-provided authentication middleware.
-            $this->sessionManager->terminate($user->currentSessionId);
-        }
-
-        $response = $this->storage->remove(
-            $request,
-            $this->responseFactory->createResponse(204),
-        );
-
-        if ($user instanceof IdentityInterface) {
-            $this->dispatcher?->dispatch(new LoggedOut($user, $this->clock->now()));
+        if ($identity instanceof IdentityInterface) {
+            $this->dispatcher?->dispatch(new LoggedOut($identity, $this->clock->now()));
         }
 
         return $response;

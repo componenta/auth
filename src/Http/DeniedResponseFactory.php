@@ -12,26 +12,22 @@ use Psr\Http\Message\ResponseInterface;
 /** Default implementation mapping denial reasons to minimal JSON responses. */
 final readonly class DeniedResponseFactory implements DeniedResponseFactoryInterface
 {
-    /**
-     * @param array<string, int> $statusMap
-     */
+    /** @param array<string, int> $statusMap */
     public function __construct(
         private ResponseFactoryInterface $responseFactory,
         private array $statusMap = [],
         private int $defaultStatus = 401,
     ) {}
 
+    #[\Override]
     public function create(DeniedReasonInterface $reason): ResponseInterface
     {
         $status = $this->statusMap[$reason->code] ?? $this->defaultStatus;
         $response = $this->responseFactory->createResponse($status);
         $payload = ['error' => $reason->code];
 
-        if ($reason instanceof PublicDeniedReasonInterface) {
-            $details = $reason->publicDetails();
-            if ($details !== []) {
-                $payload['details'] = $details;
-            }
+        if ($reason instanceof PublicDeniedReasonInterface && $reason->publicDetails !== []) {
+            $payload['details'] = $reason->publicDetails;
         }
 
         $response->getBody()->write(json_encode($payload, JSON_THROW_ON_ERROR));

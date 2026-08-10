@@ -13,85 +13,58 @@ use Componenta\Auth\Http\Strategy\Jwt\Denied\InvalidAccessToken;
 use Componenta\Clock\Clock;
 use Psr\Clock\ClockInterface;
 
-/**
- * Authenticates a user via JWT access token.
- *
- * Accepts BearerPayload from BearerExtractor, parses
- * and verifies the JWT, checks expiry, and resolves the user.
- */
 final readonly class JwtStrategy implements AuthenticationStrategyInterface
 {
-    /**
-     * @param JwtConfig|null $config When provided with non-empty issuer/audience,
-     *                               tokens with mismatching iss/aud are rejected.
-     *                               nbf is always enforced when present in the token.
-     */
     public function __construct(
         private SignerInterface $signer,
         private JwtUserProviderInterface $provider,
+        private JwtConfig $config,
         private ClockInterface $clock = new Clock(),
-        private ?JwtConfig $config = null,
     ) {}
 
+    #[\Override]
     public function supports(object $payload, ContextInterface $context): bool
     {
         return $payload instanceof BearerPayload;
     }
 
-    /**
-     * Must only be called after {@see supports()} returns true.
-     */
+    #[\Override]
     public function attempt(object $payload, ContextInterface $context): AuthenticationResult
     {
         /** @var BearerPayload $payload */
         $claims = $this->signer->parse($payload->token);
 
-        if ($claims === null) {
+        if ($claims === null || !$this->matchesProfile($claims)) {
             return new AuthenticationResult(new InvalidAccessToken());
         }
 
-        $now = $this->now();
+        $now = $this->clock->now()->getTimestamp();
+        $skew = $this->config->clockSkew;
 
-        if ($claims->expiresAt <= $now) {
+        if ($claims->expiresAt <= $now - $skew) {
             return new AuthenticationResult(new AccessTokenExpired());
         }
 
-        if ($claims->notBefore !== null && $claims->notBefore > $now) {
+        if (
+            $claims->issuedAt > $now + $skew
+            || ($claims->notBefore !== null && $claims->notBefore > $now + $skew)
+            || $claims->expiresAt <= $claims->issuedAt
+            || $claims->expiresAt - $claims->issuedAt > $this->config->accessTtl
+        ) {
             return new AuthenticationResult(new InvalidAccessToken());
         }
 
-        if (!$this->claimsMatchExpectations($claims)) {
-            return new AuthenticationResult(new InvalidAccessToken());
-        }
+        $identity = $this->provider->findById($claims->subject);
 
-        $user = $this->provider->findById($claims->subject);
-
-        if ($user === null) {
-            return new AuthenticationResult(new InvalidAccessToken());
-        }
-
-        return new AuthenticationResult($user);
+        return $identity === null
+            ? new AuthenticationResult(new InvalidAccessToken())
+            : new AuthenticationResult($identity);
     }
 
-    private function claimsMatchExpectations(Claims $claims): bool
+    private function matchesProfile(Claims $claims): bool
     {
-        if ($this->config === null) {
-            return true;
-        }
-
-        if ($this->config->issuer !== '' && $claims->issuer !== $this->config->issuer) {
-            return false;
-        }
-
-        if ($this->config->audience !== '' && $claims->audience !== $this->config->audience) {
-            return false;
-        }
-
-        return true;
-    }
-
-    private function now(): int
-    {
-        return $this->clock->now()->getTimestamp();
+        return $claims->issuer === $this->config->issuer
+            && $claims->audience === $this->config->audience
+            && $claims->type === $this->config->type;
     }
 }

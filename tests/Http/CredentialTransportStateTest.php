@@ -22,15 +22,15 @@ final class CredentialTransportStateTest extends TestCase
         $storage->expects(self::once())->method('remove')
             ->with($request, $response)
             ->willReturn($cleared);
-
         $state = new CredentialTransportState();
         $state->queue(new \stdClass());
         $state->clear();
         $state->queue(new \stdClass());
 
         self::assertSame($cleared, $state->apply($storage, $request, $response));
-        self::assertTrue($state->shouldClear());
-        self::assertSame([], $state->payloads());
+        self::assertTrue($state->cleared);
+        self::assertFalse($state->empty);
+        self::assertSame([], $state->payloads);
     }
 
     public function testQueuedPayloadIsCommittedWhenCredentialsWereNotCleared(): void
@@ -44,10 +44,12 @@ final class CredentialTransportStateTest extends TestCase
             ->with($request, $response, $payload)
             ->willReturn($stored);
         $storage->expects(self::never())->method('remove');
-
         $state = new CredentialTransportState();
+        self::assertTrue($state->empty);
         $state->queue($payload);
 
+        self::assertFalse($state->empty);
+        self::assertSame([$payload], $state->payloads);
         self::assertSame($stored, $state->apply($storage, $request, $response));
     }
 }

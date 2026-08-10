@@ -4,17 +4,19 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Session;
 
-/**
- * Default implementation of SessionCollectionInterface.
- */
 final readonly class SessionCollection implements SessionCollectionInterface
 {
+    private const array PROPERTIES = [
+        'id', 'userId', 'expiresAt', 'absoluteExpiresAt', 'regenerateAt',
+        'replacedBy', 'createdAt', 'lastActiveAt', 'attributes',
+    ];
+
     /** @var array<string, SessionInterface> */
     private array $sessions;
 
-    /**
-     * @param iterable<SessionInterface> $sessions
-     */
+    public bool $empty;
+
+    /** @param iterable<SessionInterface> $sessions */
     public function __construct(iterable $sessions = [])
     {
         $indexed = [];
@@ -24,8 +26,10 @@ final readonly class SessionCollection implements SessionCollectionInterface
         }
 
         $this->sessions = $indexed;
+        $this->empty = $indexed === [];
     }
 
+    #[\Override]
     public function find(string|array $id): SessionInterface|self|null
     {
         if (is_string($id)) {
@@ -35,34 +39,47 @@ final readonly class SessionCollection implements SessionCollectionInterface
         return new self(array_intersect_key($this->sessions, array_flip($id)));
     }
 
+    #[\Override]
     public function filter(callable $callback): static
     {
         return new self(array_filter($this->sessions, $callback));
     }
 
+    #[\Override]
     public function pluck(string $key = 'id'): array
     {
         return array_map(
-            static fn(SessionInterface $session) => $session->$key,
+            static function (SessionInterface $session) use ($key): mixed {
+                if (in_array($key, self::PROPERTIES, true)) {
+                    return $session->{$key};
+                }
+
+                if ($session->hasAttribute($key)) {
+                    return $session->getAttribute($key);
+                }
+
+                throw new \OutOfBoundsException(sprintf(
+                    'Session property or attribute "%s" does not exist.',
+                    $key,
+                ));
+            },
             array_values($this->sessions),
         );
     }
 
+    #[\Override]
     public function toArray(): array
     {
         return array_values($this->sessions);
     }
 
-    public function isEmpty(): bool
-    {
-        return $this->sessions === [];
-    }
-
+    #[\Override]
     public function count(): int
     {
         return count($this->sessions);
     }
 
+    #[\Override]
     public function getIterator(): \Traversable
     {
         return new \ArrayIterator($this->toArray());

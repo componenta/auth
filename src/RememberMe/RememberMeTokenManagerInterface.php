@@ -21,5 +21,6 @@ interface RememberMeTokenManagerInterface
 
     public function updateSessionId(string $oldSessionId, string $newSessionId): void;
 
-    public function cleanup(): void;
+    /** Removes at most $limit expired tokens and returns affected rows. */
+    public function cleanup(int $limit = 1000): int;
 }

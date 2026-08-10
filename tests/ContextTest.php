@@ -11,12 +11,13 @@ final class ContextTest extends TestCase
 {
     public function testWithAttributeReturnsNewContext(): void
     {
-        $context = new Context(['ip' => '127.0.0.1']);
+        $context = new Context(['ip' => '127.0.0.1', 'nullable' => null]);
         $next = $context->withAttribute('user_agent', 'test');
 
         self::assertNotSame($context, $next);
         self::assertFalse($context->hasAttribute('user_agent'));
         self::assertSame('test', $next->getAttribute('user_agent'));
-        self::assertSame(['ip' => '127.0.0.1'], $context->getAttributes());
+        self::assertNull($context->getAttribute('nullable', 'fallback'));
+        self::assertSame(['ip' => '127.0.0.1', 'nullable' => null], $context->attributes);
     }
 }

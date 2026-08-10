@@ -4,14 +4,9 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Session;
 
-/**
- * Default implementation of SessionInterface.
- */
 final readonly class Session implements SessionInterface
 {
-    /**
-     * @param array<string, mixed> $attributes
-     */
+    /** @param array<string, mixed> $attributes */
     public function __construct(
         public string $id,
         public int|string $userId,
@@ -21,21 +16,20 @@ final readonly class Session implements SessionInterface
         public ?string $replacedBy,
         public \DateTimeImmutable $createdAt,
         public \DateTimeImmutable $lastActiveAt,
-        private(set) array $attributes = [],
+        public array $attributes = [],
     ) {}
 
+    #[\Override]
     public function hasAttribute(string $name): bool
     {
         return array_key_exists($name, $this->attributes);
     }
 
+    #[\Override]
     public function getAttribute(string $name, mixed $default = null): mixed
     {
-        return $this->attributes[$name] ?? $default;
-    }
-
-    public function getAttributes(): array
-    {
-        return $this->attributes;
+        return array_key_exists($name, $this->attributes)
+            ? $this->attributes[$name]
+            : $default;
     }
 }

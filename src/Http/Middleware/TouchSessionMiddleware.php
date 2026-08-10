@@ -7,19 +7,15 @@ namespace Componenta\Auth\Http\Middleware;
 use Componenta\Auth\Http\CredentialTransportState;
 use Componenta\Auth\Http\PayloadStorageInterface;
 use Componenta\Auth\Http\Transport\SessionPayload;
-use Componenta\Auth\Session\SessionAwareInterface;
 use Componenta\Auth\Session\SessionInterface;
 use Componenta\Auth\Session\SessionManagerInterface;
 use Componenta\Clock\DateTimeFactoryInterface;
-use Componenta\Identity\IdentityInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 
-/**
- * Uses the session already resolved by SessionStrategy/RememberMeStrategy.
- */
+/** Reuses the session verified by the authentication strategy. */
 final readonly class TouchSessionMiddleware implements MiddlewareInterface
 {
     public function __construct(
@@ -28,6 +24,7 @@ final readonly class TouchSessionMiddleware implements MiddlewareInterface
         private PayloadStorageInterface $storage,
     ) {}
 
+    #[\Override]
     public function process(
         ServerRequestInterface $request,
         RequestHandlerInterface $handler,
@@ -38,16 +35,10 @@ final readonly class TouchSessionMiddleware implements MiddlewareInterface
             return $handler->handle($request);
         }
 
-        $user = $request->getAttribute(IdentityInterface::class);
         $now = $this->dateTimeFactory->now();
 
         if ($session->regenerateAt <= $now) {
             $newSession = $this->manager->regenerate($session->id);
-
-            if ($user instanceof SessionAwareInterface) {
-                $user->currentSessionId = $newSession->id;
-            }
-
             $request = $request->withAttribute(SessionInterface::class, $newSession);
             $payload = new SessionPayload($newSession->id);
             $transportState = $request->getAttribute(CredentialTransportState::class);

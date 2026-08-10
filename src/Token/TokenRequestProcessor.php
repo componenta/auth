@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Token;
 
-use Componenta\Auth\AuthSubject;
-
-/** Worker-side processor. It must not run in the request thread. */
 final readonly class TokenRequestProcessor
 {
     public function __construct(
@@ -17,11 +14,13 @@ final readonly class TokenRequestProcessor
 
     public function process(TokenRequest $request): void
     {
-        $user = $this->provider->findByIdentity($request->identity);
-        if ($user === null) {
+        $identity = $this->provider->findByIdentity($request->identity);
+
+        if ($identity === null) {
             return;
         }
-        $subjectId = (string) AuthSubject::id($user);
+
+        $subjectId = $identity->uuid->toString();
         $this->tokenManager->revokeForUser($subjectId);
         $token = $this->tokenManager->generate($subjectId);
         $this->sender->send(

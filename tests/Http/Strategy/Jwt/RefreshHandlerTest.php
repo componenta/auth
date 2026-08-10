@@ -24,40 +24,36 @@ use Psr\Http\Message\ServerRequestInterface;
 
 final class RefreshHandlerTest extends TestCase
 {
+    private const string PRESENTED = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    private const string FAMILY = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+
     public function testRevokesRotatedSuccessorWhenSubjectNoLongerExists(): void
     {
-        $rotated = new RefreshToken('successor', 'deleted-user', 'family', 1060);
-        $store = new RefreshHandlerStoreFixture(RefreshTokenRotationResult::rotated($rotated));
+        $store = new RefreshHandlerStoreFixture();
         $clock = new RefreshHandlerClockFixture();
-        $config = new JwtConfig(refreshTtl: 60);
+        $config = new JwtConfig('https://issuer.example', 'componenta-api', refreshTtl: 60);
         $manager = new RefreshTokenManager(
             $store,
-            new RefreshTokenGenerator(8),
+            new RefreshTokenGenerator(),
             $config,
             $clock,
         );
-
         $provider = $this->createMock(JwtUserProviderInterface::class);
         $provider->expects(self::once())
             ->method('findById')
             ->with('deleted-user')
             ->willReturn(null);
-
         $signer = $this->createMock(SignerInterface::class);
         $signer->expects(self::never())->method('sign');
-
         $response = $this->createMock(ResponseInterface::class);
         $response->method('withHeader')->willReturnSelf();
-
         $deniedFactory = $this->createMock(DeniedResponseFactoryInterface::class);
         $deniedFactory->expects(self::once())
             ->method('create')
             ->with(self::isInstanceOf(InvalidRefreshToken::class))
             ->willReturn($response);
-
         $request = $this->createMock(ServerRequestInterface::class);
-        $request->method('getParsedBody')->willReturn(['refresh_token' => 'presented']);
-
+        $request->method('getParsedBody')->willReturn(['refresh_token' => self::PRESENTED]);
         $handler = new RefreshHandler(
             $manager,
             $provider,
@@ -69,16 +65,15 @@ final class RefreshHandlerTest extends TestCase
         );
 
         self::assertSame($response, $handler->handle($request));
-        self::assertSame(['successor', 1000], $store->revoked);
+        self::assertSame([$store->successor, 1000], $store->revoked);
     }
 }
 
 final class RefreshHandlerStoreFixture implements RefreshTokenStoreInterface
 {
+    public ?string $successor = null;
     /** @var array{string, int}|null */
     public ?array $revoked = null;
-
-    public function __construct(private RefreshTokenRotationResult $rotation) {}
 
     public function storeInitial(RefreshToken $token): void {}
 
@@ -88,7 +83,14 @@ final class RefreshHandlerStoreFixture implements RefreshTokenStoreInterface
         int $successorExpiresAt,
         int $now,
     ): RefreshTokenRotationResult {
-        return $this->rotation;
+        $this->successor = $successorTokenId;
+
+        return RefreshTokenRotationResult::rotated(new RefreshToken(
+            $successorTokenId,
+            'deleted-user',
+            'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+            $successorExpiresAt,
+        ));
     }
 
     public function revoke(string $tokenId, int $revokedAt): void

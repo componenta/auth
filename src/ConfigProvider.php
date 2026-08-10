@@ -13,6 +13,7 @@ use Componenta\Auth\Factory\DatabaseSessionManagerConfigFactory;
 use Componenta\Auth\Factory\DatabaseSessionManagerFactory;
 use Componenta\Auth\Factory\DeniedResponseFactoryFactory;
 use Componenta\Auth\Factory\EventDispatcherFactory;
+use Componenta\Auth\Factory\ForgotPasswordHandlerFactory;
 use Componenta\Auth\Factory\JwtConfigFactory;
 use Componenta\Auth\Factory\JwtMagicLinkTokenHandlerFactory;
 use Componenta\Auth\Factory\JwtOtpTokenHandlerFactory;
@@ -33,7 +34,6 @@ use Componenta\Auth\Factory\RevokeHandlerFactory;
 use Componenta\Auth\Factory\TokenPairResponseFactory;
 use Componenta\Auth\Http\DeniedResponseFactoryInterface;
 use Componenta\Auth\Http\Handler\LogoutHandler;
-use Componenta\Auth\PasswordReset\ResetPasswordHandler;
 use Componenta\Auth\Http\Strategy\Jwt\JwtConfig;
 use Componenta\Auth\Http\Strategy\Jwt\MagicLink\TokenHandler as JwtMagicLinkTokenHandler;
 use Componenta\Auth\Http\Strategy\Jwt\Otp\TokenHandler as JwtOtpTokenHandler;
@@ -48,6 +48,8 @@ use Componenta\Auth\Http\Strategy\MagicLink\VerifyHandler as MagicLinkVerifyHand
 use Componenta\Auth\Http\Strategy\Otp\RequestHandler as OtpRequestHandler;
 use Componenta\Auth\Http\Strategy\Otp\VerifyHandler as OtpVerifyHandler;
 use Componenta\Auth\Http\Strategy\Password\LoginHandler;
+use Componenta\Auth\PasswordReset\ForgotPasswordHandler;
+use Componenta\Auth\PasswordReset\ResetPasswordHandler;
 use Componenta\Auth\RememberMe\DatabaseRememberMeTokenManagerConfig;
 use Componenta\Auth\RememberMe\RememberMeRegenerationListener;
 use Componenta\Auth\RememberMe\RememberMeTerminationListener;
@@ -61,6 +63,7 @@ use Componenta\Auth\Session\SessionManagerInterface;
 
 class ConfigProvider extends \Componenta\Config\ConfigProvider
 {
+    #[\Override]
     protected function getFactories(): array
     {
         return [
@@ -77,6 +80,7 @@ class ConfigProvider extends \Componenta\Config\ConfigProvider
             MagicLinkRequestHandler::class => MagicLinkRequestHandlerFactory::class,
             OtpVerifyHandler::class => OtpVerifyHandlerFactory::class,
             OtpRequestHandler::class => OtpRequestHandlerFactory::class,
+            ForgotPasswordHandler::class => ForgotPasswordHandlerFactory::class,
             LogoutHandler::class => LogoutHandlerFactory::class,
             ResetPasswordHandler::class => ResetPasswordHandlerFactory::class,
             JwtConfig::class => JwtConfigFactory::class,
@@ -92,6 +96,7 @@ class ConfigProvider extends \Componenta\Config\ConfigProvider
         ];
     }
 
+    #[\Override]
     protected function getInvokables(): array
     {
         return [
@@ -101,6 +106,7 @@ class ConfigProvider extends \Componenta\Config\ConfigProvider
         ];
     }
 
+    #[\Override]
     protected function getConfig(): array
     {
         return [
@@ -130,8 +136,10 @@ class ConfigProvider extends \Componenta\Config\ConfigProvider
                     ],
                 ],
                 ConfigKey::REMEMBER_ME => [
-                    'table' => 'remember_me_tokens', 'dateFormat' => 'Y-m-d H:i:s',
-                    'ttl' => 2592000, 'cookieName' => 'rmid',
+                    'table' => 'remember_me_tokens',
+                    'dateFormat' => 'Y-m-d H:i:s',
+                    'ttl' => 2592000,
+                    'cookieName' => 'rmid',
                     'columns' => [
                         'id' => 'id', 'userId' => 'user_id', 'sessionId' => 'session_id',
                         'token' => 'token', 'expiresAt' => 'expires_at', 'createdAt' => 'created_at',
@@ -151,8 +159,12 @@ class ConfigProvider extends \Componenta\Config\ConfigProvider
                     ],
                 ],
                 ConfigKey::JWT => [
-                    'accessTtl' => 900, 'refreshTtl' => 604800,
-                    'issuer' => '', 'audience' => '',
+                    'accessTtl' => 900,
+                    'refreshTtl' => 604800,
+                    'issuer' => '',
+                    'audience' => '',
+                    'type' => 'at+jwt',
+                    'clockSkew' => 30,
                 ],
             ],
         ];

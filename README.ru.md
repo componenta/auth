@@ -1,10 +1,10 @@
 # Componenta Auth
 
-Контракты аутентификации и PSR-7/PSR-15 компоненты для Componenta-приложений на PHP 8.4+.
+Контракты аутентификации и PSR-7/PSR-15 компоненты для приложений Componenta на PHP 8.4+.
 
-Пакет поддерживает вход по паролю, stateful sessions, remember-me cookie, подписанные JWT access-токены со stateful opaque refresh grants, OTP, magic links, сброс пароля и события жизненного цикла аутентификации. Механизм проверки credentials отделён от их жизненного цикла и записи в HTTP transport.
+Пакет поддерживает password login, stateful sessions, remember-me cookie, подписанные JWT access-токены со stateful opaque refresh grants, OTP, magic links, password reset и lifecycle events.
 
-Для браузерных приложений рекомендуемый профиль — stateful `HttpOnly` session. JWT access-токены должны быть короткоживущими, а opaque refresh-токены — атомарно ротируемыми stateful grants.
+Для браузерных приложений рекомендуемый профиль — stateful `HttpOnly` session. JWT access token должен быть короткоживущим, а opaque refresh token остаётся серверным grant с атомарной ротацией и обнаружением replay.
 
 ## Установка
 
@@ -12,30 +12,37 @@
 composer require componenta/auth
 ```
 
-`Componenta\Auth\ConfigProvider` объявлен в `extra.componenta.config-providers`. При установленном `componenta/composer-plugin` провайдер может подключаться автоматически.
+`Componenta\Auth\ConfigProvider` объявлен в `extra.componenta.config-providers`.
 
 ## Требования
 
 - PHP 8.4 или новее;
 - `ext-mbstring`;
-- реализации PSR-7 / PSR-15 / PSR-17 для HTTP-слоя;
+- реализации PSR-7, PSR-15 и PSR-17;
 - Componenta DI 2 или 3;
-- application adapters для используемых хранилищ.
+- application adapters для используемых stores и delivery queues.
+
+## Единственный идентификатор identity
+
+Каждый authenticated subject является `Componenta\Identity\IdentityInterface`. Единственный идентификатор auth subject — UUID identity:
+
+```php
+$subjectId = $identity->uuid->toString();
+```
+
+Отдельного auth-specific ID больше нет. Session, remember-me, one-time tokens, refresh grants и JWT `sub` используют одну UUID-строку. Persistence adapter может сопоставлять UUID внутреннему PK, но это не является частью API auth-компонента.
 
 ## Явная композиция Authenticator
 
 Порядок стратегий является частью security policy и задаётся явно:
 
 ```php
-use Componenta\Auth\Http\Strategy\Jwt\JwtStrategy;
-use Componenta\Auth\Http\Strategy\RememberMe\RememberMeStrategy;
-use Componenta\Auth\Http\Strategy\Session\SessionStrategy;
-
 return [
     'auth' => [
         'strategies' => [
             SessionStrategy::class,
             RememberMeStrategy::class,
+            PasswordStrategy::class,
             JwtStrategy::class,
         ],
         'events' => true,
@@ -43,131 +50,145 @@ return [
 ];
 ```
 
-`AuthenticatorFactory` сохраняет порядок и fail-fast отклоняет пустой список, дубли, отсутствующие сервисы и объекты, не реализующие `AuthenticationStrategyInterface`.
+`AuthenticatorFactory` сохраняет порядок и fail-fast отклоняет пустой список, дубли, отсутствующие services и значения неверного типа.
 
-Ручная сборка в composition root также поддерживается:
-
-```php
-$authenticator = new Authenticator(
-    $passwordStrategy,
-    $sessionStrategy,
-    $jwtStrategy,
-);
-
-$result = $authenticator->attempt($payload, new Context());
-```
-
-`Authenticator` пропускает неподдерживающие стратегии, возвращает первую успешную identity, последнюю причину отказа либо выбрасывает `NoStrategyFoundException`, если payload не поддержан ни одной стратегией.
+Password, OTP и magic-link verification handlers используют тот же `AuthenticatorInterface`; они больше не обходят общий event decorator прямым вызовом отдельной strategy.
 
 ## AuthenticationResult
 
+Результат содержит только типизированное состояние:
+
 | Свойство | Назначение |
 |---|---|
-| `$subject` | `IdentityInterface` при успехе или `DeniedReasonInterface` при отказе. |
-| `$transportPayload` | Подготовленная стратегией mutation для response transport. |
-| `$attributes` | Проверенное request-scoped состояние, например уже найденная `SessionInterface`. |
+| `$subject` | `IdentityInterface` при успехе либо `DeniedReasonInterface`. |
+| `$transportPayload` | Optional mutation response transport. |
+| `$session` | Проверенная request-local `SessionInterface`. |
 
-Отдельного boolean-флага успеха нет: успех представлен объектом `IdentityInterface`.
+Открытый `array $attributes` удалён. Request-local session state больше не записывается в identity entity, что исключает его протекание через ORM identity map или singleton provider в long-running worker.
 
-## Стратегии и HTTP extraction
+## Property-oriented API PHP 8.4
 
-Стратегия возвращает identity либо причину отказа. Обычные неверные credentials не являются исключением; исключения предназначены для некорректной конфигурации, malformed input и инфраструктурных ошибок.
+Состояние доступно через свойства:
 
-Password и OTP extractors проверяют типы и размеры значений до нормализации, хэширования, provider lookup и обращения к storage. Поле `remember` принимает только boolean, `0/1` и разрешённые текстовые значения. `InvalidPayloadMiddleware` преобразует `InvalidPayloadException` в HTTP 400.
+```php
+$context->attributes;
+$session->attributes;
+$sessions->empty;
+$transportState->empty;
+$transportState->cleared;
+$transportState->payloads;
+$refreshToken->revoked;
+```
+
+Методы сохраняются для действий и операций с аргументами: `getAttribute($name, $default)`, `find($id)`, `consume($token)`, `isExpired($now)`, `queue()` и `clear()`.
 
 ## Детерминированная запись credentials
 
-`AuthenticationMiddleware` создаёт request-scoped `CredentialTransportState`, передаёт состояние downstream handler и один раз применяет итоговые mutations после его завершения.
+`AuthenticationMiddleware` создаёт один request-scoped `CredentialTransportState` и применяет итоговое решение один раз после downstream handler.
 
-`CredentialTransportState::clear()` терминален: удаление credentials всегда сильнее уже подготовленной или будущей ротации. Поэтому remember-me recovery или обновление session chain не могут повторно установить cookie после logout.
-
-Custom handler может получить `CredentialTransportState::class` из request attributes и вызвать `clear()` при окончательном удалении credentials.
+`clear()` терминален: удаление всегда сильнее уже подготовленной или будущей ротации. При наличии terminal middleware `LogoutHandler` только отмечает clear и не удаляет те же cookies повторно.
 
 ## Sessions
 
-Session subsystem включает генерацию ID, idle/absolute expiration, ограниченную replacement chain, транзакционную регенерацию и lifecycle events.
+`SessionStrategy` и `RememberMeStrategy` возвращают уже проверенную session через `AuthenticationResult::$session`. `TouchSessionMiddleware` использует её без второго SELECT.
 
-`SessionStrategy` и `RememberMeStrategy` передают уже проверенную `SessionInterface` через `AuthenticationResult::$attributes`. `TouchSessionMiddleware` использует её без второго SELECT.
+Session manager:
 
-UPDATE активности ограничен `auth.session.touchInterval` — по умолчанию 60 секунд. `SessionManagerInterface::cleanup(int $limit)` удаляет только ограниченный batch. `SessionGarbageCollectionMiddleware` лишь ставит работу в `SessionCleanupSchedulerInterface`, не выполняя unbounded DELETE внутри HTTP request.
+- проверяет idle и absolute expiry перед touch;
+- ограничивает частоту UPDATE через `auth.session.touchInterval`;
+- использует conditional UPDATE;
+- сохраняет transaction + optimistic claim при regeneration;
+- повторно проверяет expiry перед удалением rows, выбранных bounded cleanup;
+- ограничивает размеры batch и входных ID.
+
+Metadata доступна через `$session->attributes`. `getAttribute()` различает отсутствующий ключ и явно записанный `null`.
+
+`SessionCollection::pluck()` читает только объявленные свойства session либо metadata attributes и отклоняет неизвестные ключи.
 
 ## Remember-me
 
-Remember-me credentials генерируются как случайные opaque tokens и хранятся в SHA-256 representation. Consume имеет одного победителя благодаря проверке affected rows.
+Remember-me token — 256-bit opaque credential, хранящийся как SHA-256 representation. Consume остаётся single-winner через affected rows.
 
-Termination/regeneration listeners подключены конфигурацией пакета и являются critical synchronous participants. Ошибка revoke больше не скрывается за формально успешным завершением session. Для группы sessions используется один `revokeForSessions()` вместо N отдельных DELETE.
+Termination/regeneration listeners включены по умолчанию и являются critical lifecycle participants. Bulk termination использует `revokeForSessions()` с chunking. Revoke-all-except удаляет и rows с `NULL session_id`.
+
+Housekeeping выполняется bounded методом `cleanup(int $limit): int` из worker/scheduler.
+
+## Password authentication
+
+Password provider получает только нормализованную identity-строку, а не payload с submitted password:
+
+```php
+public function findByIdentity(
+    string $identity,
+): null|(IdentityInterface&PasswordAwareInterface);
+```
+
+Пароль доступен только verifier. Dummy hash создаётся при construction/warm-up.
 
 ## JWT и refresh grants
 
-JWT используется как короткоживущий подписанный access credential. Opaque refresh token остаётся stateful grant.
+JWT validation является явным профилем. `issuer`, `audience` и token `type` обязательны; clock skew ограничен:
 
-`RefreshTokenStoreInterface` требует:
-
-- `storeInitial()` для первого token family;
-- `rotateAtomically()` для lookup, проверки expiry, revoke, создания successor и replay compromise в одном serialized transition;
-- `revoke()` и `revokeAllForUser()` для явной и account-wide invalidation.
-
-Store обязан иметь durable family/grant state. После replay в family не должно оставаться active descendants, а конкурентная transaction не должна вставить новый active token после compromise.
-
-Ответы с access/refresh tokens всегда получают:
-
-```text
-Cache-Control: no-store
-Pragma: no-cache
-Content-Type: application/json
+```php
+'auth' => [
+    'jwt' => [
+        'issuer' => 'https://issuer.example',
+        'audience' => 'componenta-api',
+        'type' => 'at+jwt',
+        'accessTtl' => 900,
+        'refreshTtl' => 604800,
+        'clockSkew' => 30,
+    ],
+],
 ```
 
-Если после ротации subject больше не существует, созданный successor немедленно отзывается.
+Проверяются signature, точные profile values, `iat`, `nbf`, `exp` и максимальная lifetime access token. Signer записывает explicit `typ` header и не разрешает custom claims заменять registered claims.
 
-## OTP
+Минимальный HMAC secret: 32/48/64 bytes для HS256/HS384/HS512.
 
-`CodeStoreInterface::verifyAndConsume()` объединяет attempts, expiry, сравнение verifier и consume одной locked/versioned challenge record. Нельзя реализовывать его последовательностью старых независимых методов.
+Refresh token и family ID содержат 32–64 random bytes. `rotateAtomically()` остаётся storage-level security boundary. Store обязан вернуть именно запрошенный successor с ожидаемым expiry и active state.
 
-Для короткого OTP production storage рекомендуется хранить keyed verifier, например HMAC, а не canonical code, если backing store может быть прочитан отдельно.
+Ответы с access/refresh credentials всегда получают `Cache-Control: no-store`, `Pragma: no-cache` и `Content-Type: application/json`.
 
-## Magic links, OTP delivery и password reset
+## OTP и delivery queues
 
-HTTP request path только ставит opaque work в `TokenRequestQueueInterface` или `OtpRequestQueueInterface`. Lookup пользователя, создание token/code, persistence и sender I/O выполняют `TokenRequestProcessor` / `OtpRequestProcessor` в worker. Для существующего и неизвестного аккаунта request-thread выполняет одинаковую работу.
+`CodeStoreInterface::verifyAndConsume()` объединяет attempts, expiry, verifier comparison и consume одной locked/versioned record. Expired и invalid outcomes различаются.
 
-`PasswordResetServiceInterface` владеет полной security transaction. `PasswordResetResult::Success` означает: reset token consumed, password изменён, прежние sessions, remember-me credentials и refresh grants инвалидированы.
+HTTP handlers внедряют `TokenRequestQueueInterface` или `OtpRequestQueueInterface` напрямую и ставят в очередь `TokenRequest`/`OtpRequest`. Пустые requester wrappers удалены.
 
-При разных stores используйте credential version, transactional outbox и идемпотентный retry вместо частично успешного reset.
+User lookup, generation, persistence и sender I/O выполняют `TokenRequestProcessor`/`OtpRequestProcessor` вне HTTP request thread.
+
+## Password reset
+
+`PasswordResetServiceInterface` владеет полной recovery transaction. `PasswordResetResult::Success` означает: reset token consumed, password изменён, прежние session, remember-me и refresh credentials durably либо logically invalidated.
+
+При разных stores необходимы credential version, transactional outbox и идемпотентный retry.
 
 ## События и публичные ошибки
 
-`EventingAuthenticator` передаёт в generic events только тип payload, но не raw password, OTP, bearer или refresh token.
+Generic authentication events содержат тип payload, но не raw password, OTP, bearer или refresh token.
 
-`CriticalEventListenerInterface` обозначает fail-closed security participant. Ошибки обычных observers — metrics, notifications — по-прежнему изолируются.
+`DeniedReasonInterface::$attributes` является trusted audit context. Default response публикует только stable error code. Явно разрешённые scalar details предоставляются через `PublicDeniedReasonInterface::$publicDetails`.
 
-`DeniedReasonInterface::$attributes` является внутренним audit context. Default `DeniedResponseFactory` публикует только стабильный `error`. Публичные детали требуют явного `PublicDeniedReasonInterface`.
+## Input и cookie validation
 
-## HTTP middleware
+Authentication inputs проверяются по типу и размеру до hash/provider/storage operations. `InvalidPayloadException` больше не удерживает credential payload.
 
-Пакет предоставляет:
-
-- `InvalidPayloadMiddleware`;
-- `AuthenticationMiddleware`;
-- `RequireAuthenticationMiddleware`;
-- `TouchSessionMiddleware`;
-- `SessionGarbageCollectionMiddleware`.
-
-Структуру routes, CSRF protection и endpoint-specific rate limiting определяет приложение.
+`CookieTransport` валидирует cookie names, Path, Domain, SameSite, требования `__Secure-`/`__Host-` и размеры credentials. `SameSite=None` требует `Secure`.
 
 ## Основные ключи конфигурации
 
 | Ключ | Назначение |
 |---|---|
 | `ConfigKey::AUTH` | Корень auth-конфигурации. |
-| `ConfigKey::STRATEGIES` | Упорядоченные service IDs стратегий. |
-| `ConfigKey::EVENTS` | Включение eventing decorator. |
-| `ConfigKey::SESSION` | Session storage и touch settings. |
-| `ConfigKey::REMEMBER_ME` | Remember-me persistence и cookie settings. |
-| `ConfigKey::JWT` | JWT/refresh TTL и claims. |
-| `ConfigKey::MAGIC_LINK` | Magic-link integration. |
-| `ConfigKey::PASSWORD_RESET` | Password-reset integration. |
-| `ConfigKey::DENIED` | Mapping HTTP-ответов при отказе. |
-| `ConfigKey::LISTENERS` | Auth event listener services. |
+| `ConfigKey::STRATEGIES` | Упорядоченные service IDs. |
+| `ConfigKey::EVENTS` | Eventing decorator. |
+| `ConfigKey::SESSION` | Session persistence и touch settings. |
+| `ConfigKey::REMEMBER_ME` | Remember-me settings. |
+| `ConfigKey::JWT` | Явный JWT/refresh profile. |
+| `ConfigKey::DENIED` | Mapping HTTP status. |
+| `ConfigKey::LISTENERS` | Lifecycle listeners. |
 
 ## Миграция
 
-В `v2` намеренно изменены security-critical contracts. Обновите adapters и composition по [MIGRATION-v2.md](MIGRATION-v2.md). Не имитируйте `rotateAtomically()` или `verifyAndConsume()` последовательными вызовами старых методов: это сохраняет устраняемые race conditions.
+`v2` содержит намеренные breaking security/API changes. См. [MIGRATION-v2.md](MIGRATION-v2.md). Нельзя имитировать `rotateAtomically()` или `verifyAndConsume()` последовательностью старых методов: это возвращает устранённые race conditions.

@@ -13,7 +13,7 @@ final readonly class MagicLinkRequestHandlerFactory
     public function __invoke(ContainerInterface $container): RequestHandler
     {
         return new RequestHandler(
-            requester: $container->get('auth.magicLink.requester'),
+            queue: $container->get('auth.magicLink.queue'),
             responseFactory: $container->get(ResponseFactoryInterface::class),
         );
     }

@@ -16,7 +16,7 @@ use Psr\Http\Server\RequestHandlerInterface;
 
 final readonly class RefreshHandler implements RequestHandlerInterface
 {
-    private const int MAX_REFRESH_TOKEN_LENGTH = 512;
+    private const int MAX_REFRESH_TOKEN_LENGTH = 128;
 
     public function __construct(
         private RefreshTokenManager $refreshManager,
@@ -28,16 +28,14 @@ final readonly class RefreshHandler implements RequestHandlerInterface
         private ClockInterface $clock = new Clock(),
     ) {}
 
+    #[\Override]
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
-        $parsed = $request->getParsedBody();
-        $body = is_array($parsed) ? $parsed : [];
-        $tokenId = $body['refresh_token'] ?? null;
+        $body = $request->getParsedBody();
+        $tokenId = is_array($body) ? ($body['refresh_token'] ?? null) : null;
 
         if (!is_string($tokenId) || $tokenId === '' || strlen($tokenId) > self::MAX_REFRESH_TOKEN_LENGTH) {
-            $response = $this->responseFactory->createResponse(400);
-            $response->getBody()->write(json_encode(['error' => 'invalid_refresh_token'], JSON_THROW_ON_ERROR));
-            return TokenResponseHeaders::apply($response);
+            return $this->invalidRequest();
         }
 
         $result = $this->refreshManager->rotate($tokenId);
@@ -46,10 +44,9 @@ final readonly class RefreshHandler implements RequestHandlerInterface
             return TokenResponseHeaders::apply($this->deniedResponseFactory->create($result));
         }
 
-        $user = $this->provider->findById($result->userId);
-        if ($user === null) {
-            // The atomic rotation already created a successor. Do not leave an
-            // undiscoverable active grant when its subject no longer exists.
+        $identity = $this->provider->findById($result->userId);
+
+        if ($identity === null) {
             $this->refreshManager->revoke($result->id);
 
             return TokenResponseHeaders::apply(
@@ -58,20 +55,30 @@ final readonly class RefreshHandler implements RequestHandlerInterface
         }
 
         $now = $this->clock->now()->getTimestamp();
-        $claims = new Claims(
-            subject: $user->uuid->toString(),
+        $accessToken = $this->signer->sign(new Claims(
+            subject: $identity->uuid->toString(),
             issuedAt: $now,
             expiresAt: $now + $this->config->accessTtl,
             issuer: $this->config->issuer,
             audience: $this->config->audience,
-        );
-        $accessToken = $this->signer->sign($claims);
+            type: $this->config->type,
+        ));
         $response = $this->responseFactory->createResponse(200);
         $response->getBody()->write(json_encode([
             'access_token' => $accessToken,
             'refresh_token' => $result->id,
             'token_type' => 'Bearer',
             'expires_in' => $this->config->accessTtl,
+        ], JSON_THROW_ON_ERROR));
+
+        return TokenResponseHeaders::apply($response);
+    }
+
+    private function invalidRequest(): ResponseInterface
+    {
+        $response = $this->responseFactory->createResponse(400);
+        $response->getBody()->write(json_encode([
+            'error' => 'invalid_refresh_token',
         ], JSON_THROW_ON_ERROR));
 
         return TokenResponseHeaders::apply($response);
