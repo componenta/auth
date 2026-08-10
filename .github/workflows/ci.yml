@@ -43,6 +43,15 @@ jobs:
             !composer.lock
           include-hidden-files: true
           retention-days: 1
+      - name: Export resolved DI 2 dependencies for remediation
+        if: always() && matrix.php == '8.4' && matrix.di == '2.*'
+        uses: actions/upload-artifact@v4
+        with:
+          name: auth-v2-vendor-${{ github.sha }}
+          path: |
+            vendor
+            composer.lock
+          retention-days: 1
       - name: Publish explicit commit status
         if: always() && github.event_name == 'push'
         env:
