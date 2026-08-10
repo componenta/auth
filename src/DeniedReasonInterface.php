@@ -4,27 +4,16 @@ declare(strict_types=1);
 
 namespace Componenta\Auth;
 
-/**
- * Represents a reason why authentication was denied.
- *
- * Implementations should be immutable and contain all relevant
- * information about the denial as public readonly properties.
- *
- */
+/** Represents a reason why authentication was denied. */
 interface DeniedReasonInterface
 {
-    /**
-     * A machine-readable code identifying the denial reason.
-     *
-     * Examples: 'invalid_credentials', 'user_disabled', 'rate_limited'
-     */
+    /** Machine-readable public error code. */
     public string $code { get; }
 
     /**
-     * Returns additional data about the denial.
-     *
-     * Used for logging, serialization, and HTTP response formatting.
-     * Should include all public properties as key-value pairs.
+     * Trusted audit context. The default HTTP responder never serializes it.
+     * Implement PublicDeniedReasonInterface to opt specific values into a
+     * public response.
      *
      * @return array<string, mixed>
      */

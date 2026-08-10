@@ -6,6 +6,7 @@ namespace Componenta\Auth;
 
 use Componenta\Auth\Event\EventDispatcher;
 use Componenta\Auth\Event\EventListenerProviderInterface;
+use Componenta\Auth\Factory\AuthenticatorFactory;
 use Componenta\Auth\Factory\DatabaseRememberMeTokenManagerConfigFactory;
 use Componenta\Auth\Factory\DatabaseRememberMeTokenManagerFactory;
 use Componenta\Auth\Factory\DatabaseSessionManagerConfigFactory;
@@ -27,10 +28,12 @@ use Componenta\Auth\Factory\RefreshHandlerFactory;
 use Componenta\Auth\Factory\RefreshTokenManagerFactory;
 use Componenta\Auth\Factory\RememberMeRegenerationListenerFactory;
 use Componenta\Auth\Factory\RememberMeTerminationListenerFactory;
+use Componenta\Auth\Factory\ResetPasswordHandlerFactory;
 use Componenta\Auth\Factory\RevokeHandlerFactory;
 use Componenta\Auth\Factory\TokenPairResponseFactory;
 use Componenta\Auth\Http\DeniedResponseFactoryInterface;
 use Componenta\Auth\Http\Handler\LogoutHandler;
+use Componenta\Auth\PasswordReset\ResetPasswordHandler;
 use Componenta\Auth\Http\Strategy\Jwt\JwtConfig;
 use Componenta\Auth\Http\Strategy\Jwt\MagicLink\TokenHandler as JwtMagicLinkTokenHandler;
 use Componenta\Auth\Http\Strategy\Jwt\Otp\TokenHandler as JwtOtpTokenHandler;
@@ -61,6 +64,7 @@ class ConfigProvider extends \Componenta\Config\ConfigProvider
     protected function getFactories(): array
     {
         return [
+            AuthenticatorInterface::class => AuthenticatorFactory::class,
             EventDispatcher::class => EventDispatcherFactory::class,
             EventListenerProviderInterface::class => PriorityListenerProviderFactory::class,
             DatabaseSessionManagerConfig::class => DatabaseSessionManagerConfigFactory::class,
@@ -74,6 +78,7 @@ class ConfigProvider extends \Componenta\Config\ConfigProvider
             OtpVerifyHandler::class => OtpVerifyHandlerFactory::class,
             OtpRequestHandler::class => OtpRequestHandlerFactory::class,
             LogoutHandler::class => LogoutHandlerFactory::class,
+            ResetPasswordHandler::class => ResetPasswordHandlerFactory::class,
             JwtConfig::class => JwtConfigFactory::class,
             RefreshTokenManager::class => RefreshTokenManagerFactory::class,
             TokenPairResponse::class => TokenPairResponseFactory::class,
@@ -104,6 +109,8 @@ class ConfigProvider extends \Componenta\Config\ConfigProvider
                 RememberMeRegenerationListener::class,
             ],
             ConfigKey::AUTH => [
+                ConfigKey::STRATEGIES => [],
+                ConfigKey::EVENTS => true,
                 ConfigKey::SESSION => [
                     'table' => 'sessions',
                     'dateFormat' => 'Y-m-d H:i:s',

@@ -5,18 +5,15 @@ declare(strict_types=1);
 namespace Componenta\Auth\Http;
 
 use Componenta\Auth\DeniedReasonInterface;
+use Componenta\Auth\PublicDeniedReasonInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 
-/**
- * Default implementation mapping denial reasons to JSON responses.
- */
+/** Default implementation mapping denial reasons to minimal JSON responses. */
 final readonly class DeniedResponseFactory implements DeniedResponseFactoryInterface
 {
     /**
-     * @param ResponseFactoryInterface $responseFactory PSR-17 response factory
-     * @param array<string, int> $statusMap Map of denial codes to HTTP status codes
-     * @param int $defaultStatus Default HTTP status code
+     * @param array<string, int> $statusMap
      */
     public function __construct(
         private ResponseFactoryInterface $responseFactory,
@@ -28,20 +25,16 @@ final readonly class DeniedResponseFactory implements DeniedResponseFactoryInter
     {
         $status = $this->statusMap[$reason->code] ?? $this->defaultStatus;
         $response = $this->responseFactory->createResponse($status);
+        $payload = ['error' => $reason->code];
 
-        try {
-            $body = json_encode([
-                'error' => $reason->code,
-                'details' => $reason->attributes,
-            ], JSON_THROW_ON_ERROR);
-        } catch (\JsonException) {
-            // attributes carry non-encodable payload (e.g., resource handles).
-            // Fall back to a minimal, guaranteed-serializable body so callers
-            // never get a 500 from the denial path.
-            $body = json_encode(['error' => $reason->code], JSON_THROW_ON_ERROR);
+        if ($reason instanceof PublicDeniedReasonInterface) {
+            $details = $reason->publicDetails();
+            if ($details !== []) {
+                $payload['details'] = $details;
+            }
         }
 
-        $response->getBody()->write($body);
+        $response->getBody()->write(json_encode($payload, JSON_THROW_ON_ERROR));
 
         return $response->withHeader('Content-Type', 'application/json');
     }

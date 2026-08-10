@@ -14,7 +14,7 @@ final readonly class AuthenticationDenied implements EventInterface
 
     public function __construct(
         public DeniedReasonInterface $reason,
-        public object $payload,
+        public string $payloadType,
         ?DateTimeImmutable $timestamp = null,
     ) {
         $this->timestamp = $timestamp ?? new Clock()->now();
