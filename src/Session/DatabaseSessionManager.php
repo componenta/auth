@@ -145,7 +145,7 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
         $rows = $this->database->select($this->config->idColumn)
             ->from($this->config->table)
             ->where(function ($query) use ($now): void {
-                $query->orWhere($this->config->expiresAtColumn, '<', $now)
+                $query->where($this->config->expiresAtColumn, '<', $now)
                     ->orWhere($this->config->absoluteExpiresAtColumn, '<', $now);
             })
             ->limit($limit)
