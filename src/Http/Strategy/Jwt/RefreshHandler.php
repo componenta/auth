@@ -14,17 +14,10 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 
-/**
- * Handles refresh token rotation.
- *
- * Accepts a refresh_token in the request body, rotates it
- * (revokes old, issues new), and returns a fresh token pair.
- *
- * If the presented token was already revoked, the entire token
- * family is revoked (reuse detection).
- */
 final readonly class RefreshHandler implements RequestHandlerInterface
 {
+    private const int MAX_REFRESH_TOKEN_LENGTH = 512;
+
     public function __construct(
         private RefreshTokenManager $refreshManager,
         private JwtUserProviderInterface $provider,
@@ -37,28 +30,27 @@ final readonly class RefreshHandler implements RequestHandlerInterface
 
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
-        $body = (array) $request->getParsedBody();
+        $parsed = $request->getParsedBody();
+        $body = is_array($parsed) ? $parsed : [];
         $tokenId = $body['refresh_token'] ?? null;
 
-        if (!is_string($tokenId) || $tokenId === '') {
+        if (!is_string($tokenId) || $tokenId === '' || strlen($tokenId) > self::MAX_REFRESH_TOKEN_LENGTH) {
             $response = $this->responseFactory->createResponse(400);
-            $response->getBody()->write(
-                json_encode(['error' => 'missing_refresh_token'], JSON_THROW_ON_ERROR)
-            );
-
-            return $response->withHeader('Content-Type', 'application/json');
+            $response->getBody()->write(json_encode(['error' => 'invalid_refresh_token'], JSON_THROW_ON_ERROR));
+            return TokenResponseHeaders::apply($response);
         }
 
         $result = $this->refreshManager->rotate($tokenId);
 
         if ($result instanceof DeniedReasonInterface) {
-            return $this->deniedResponseFactory->create($result);
+            return TokenResponseHeaders::apply($this->deniedResponseFactory->create($result));
         }
 
         $user = $this->provider->findById($result->userId);
-
         if ($user === null) {
-            return $this->deniedResponseFactory->create(new InvalidRefreshToken());
+            return TokenResponseHeaders::apply(
+                $this->deniedResponseFactory->create(new InvalidRefreshToken()),
+            );
         }
 
         $now = $this->clock->now()->getTimestamp();
@@ -69,9 +61,7 @@ final readonly class RefreshHandler implements RequestHandlerInterface
             issuer: $this->config->issuer,
             audience: $this->config->audience,
         );
-
         $accessToken = $this->signer->sign($claims);
-
         $response = $this->responseFactory->createResponse(200);
         $response->getBody()->write(json_encode([
             'access_token' => $accessToken,
@@ -80,6 +70,6 @@ final readonly class RefreshHandler implements RequestHandlerInterface
             'expires_in' => $this->config->accessTtl,
         ], JSON_THROW_ON_ERROR));
 
-        return $response->withHeader('Content-Type', 'application/json');
+        return TokenResponseHeaders::apply($response);
     }
 }

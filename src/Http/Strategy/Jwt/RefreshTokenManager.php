@@ -11,15 +11,6 @@ use Componenta\Auth\Http\Strategy\Jwt\Denied\TokenFamilyCompromised;
 use Componenta\Clock\Clock;
 use Psr\Clock\ClockInterface;
 
-/**
- * Manages refresh token lifecycle: issue, rotate, revoke.
- *
- * Implements token rotation with reuse detection:
- * - Each authentication creates a new token family
- * - Rotation issues a new token in the same family
- * - If a revoked token is reused, the entire family is revoked
- *   (indicates potential token theft)
- */
 final readonly class RefreshTokenManager
 {
     public function __construct(
@@ -29,12 +20,6 @@ final readonly class RefreshTokenManager
         private ClockInterface $clock = new Clock(),
     ) {}
 
-    /**
-     * Issues a new refresh token with a new family.
-     *
-     * Called after successful authentication to create
-     * the initial refresh token.
-     */
     public function issue(string $userId): RefreshToken
     {
         $token = new RefreshToken(
@@ -44,69 +29,38 @@ final readonly class RefreshTokenManager
             expiresAt: $this->now() + $this->config->refreshTtl,
         );
 
-        $this->store->store($token);
+        $this->store->storeInitial($token);
 
         return $token;
     }
 
-    /**
-     * Rotates a refresh token: revokes the old one, issues a new one.
-     *
-     * Reuse detection is enforced atomically: `revokeIfActive()` is a
-     * compare-and-swap that succeeds only if the token is still active.
-     * Two concurrent rotations of the same token can no longer both
-     * succeed - the loser treats this as theft and revokes the family.
-     *
-     * @return RefreshToken|DeniedReasonInterface New token on success, denial on failure
-     */
     public function rotate(string $tokenId): RefreshToken|DeniedReasonInterface
     {
-        $existing = $this->store->find($tokenId);
-
-        if ($existing === null) {
-            return new InvalidRefreshToken();
-        }
-
         $now = $this->now();
-
-        // Already revoked on read - classic reuse of a stolen token.
-        if ($existing->isRevoked()) {
-            $this->store->revokeFamily($existing->familyId, $now);
-
-            return new TokenFamilyCompromised();
-        }
-
-        if ($existing->isExpired($now)) {
-            return new RefreshTokenExpired();
-        }
-
-        // Atomic claim. If a concurrent rotation already revoked this token
-        // between our find() and here, revokeIfActive() returns false and
-        // we treat it as reuse - revoke the whole family.
-        if (!$this->store->revokeIfActive($tokenId, $now)) {
-            $this->store->revokeFamily($existing->familyId, $now);
-
-            return new TokenFamilyCompromised();
-        }
-
-        $newToken = new RefreshToken(
-            id: $this->generator->generate(),
-            userId: $existing->userId,
-            familyId: $existing->familyId,
-            expiresAt: $now + $this->config->refreshTtl,
+        $result = $this->store->rotateAtomically(
+            presentedTokenId: $tokenId,
+            successorTokenId: $this->generator->generate(),
+            successorExpiresAt: $now + $this->config->refreshTtl,
+            now: $now,
         );
 
-        $this->store->store($newToken);
-
-        return $newToken;
+        return match ($result->status) {
+            RefreshTokenRotationStatus::Rotated => $result->token
+                ?? throw new \LogicException('A rotated refresh result must contain the successor token.'),
+            RefreshTokenRotationStatus::Invalid => new InvalidRefreshToken(),
+            RefreshTokenRotationStatus::Expired => new RefreshTokenExpired(),
+            RefreshTokenRotationStatus::Reused => new TokenFamilyCompromised(),
+        };
     }
 
-    /**
-     * Revokes a single refresh token (e.g., on logout).
-     */
     public function revoke(string $tokenId): void
     {
         $this->store->revoke($tokenId, $this->now());
+    }
+
+    public function revokeAllForUser(string $userId): void
+    {
+        $this->store->revokeAllForUser($userId, $this->now());
     }
 
     private function now(): int

@@ -1,0 +1,20 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Componenta\Auth\Http\Strategy\Jwt;
+
+use Psr\Http\Message\ResponseInterface;
+
+final class TokenResponseHeaders
+{
+    private function __construct() {}
+
+    public static function apply(ResponseInterface $response): ResponseInterface
+    {
+        return $response
+            ->withHeader('Content-Type', 'application/json')
+            ->withHeader('Cache-Control', 'no-store')
+            ->withHeader('Pragma', 'no-cache');
+    }
+}
