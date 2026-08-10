@@ -4,7 +4,7 @@ on:
   push:
     branches: [v2]
     paths:
-      - .auth-v2-refactor.b64
+      - .auth-v2-refactor.ready
 
 permissions:
   contents: write
@@ -21,13 +21,24 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: v2
-          fetch-depth: 3
+          fetch-depth: 0
 
       - name: Verify immutable starting point
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD~2)" = "24fe425b1adff9a9b3fa63e604569a6bffc0fab7"
+          base="24fe425b1adff9a9b3fa63e604569a6bffc0fab7"
+          git merge-base --is-ancestor "$base" HEAD
+
+          while IFS= read -r path; do
+            case "$path" in
+              .github/workflows/apply-auth-v2-refactor.yml|.auth-v2-refactor.ready|.auth-v2-refactor.part-*) ;;
+              *)
+                echo "Unexpected branch drift before refactor application: $path" >&2
+                exit 1
+                ;;
+            esac
+          done < <(git diff --name-only "$base"...HEAD)
 
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
@@ -42,7 +53,8 @@ jobs:
         run: |
           set -euo pipefail
           work="$(mktemp -d)"
-          base64 --decode .auth-v2-refactor.b64 > "$work/refactor.tar.gz"
+          cat .auth-v2-refactor.part-* | base64 --decode > "$work/refactor.tar.gz"
+          test "$(sha256sum "$work/refactor.tar.gz" | cut -d' ' -f1)" = "5d2305308bedab314423b3f9e0cc3006d3ce57e9ef759ecffc3cf3a83a71005f"
           mkdir "$work/unpacked"
           tar -xzf "$work/refactor.tar.gz" -C "$work/unpacked"
 
@@ -53,7 +65,7 @@ jobs:
           done < "$work/unpacked/delete-list.txt"
 
           cp -a "$work/unpacked/replacement/." .
-          rm -f .auth-v2-refactor.b64
+          rm -f .auth-v2-refactor.ready .auth-v2-refactor.part-*
           rm -f .github/workflows/apply-auth-v2-refactor.yml
 
       - name: Install dependencies
