@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Denied;
 
-use Componenta\Auth\PublicDeniedReasonInterface;
+use Componenta\Auth\DeniedReasonInterface;
 
 /** User account is disabled. Internal identifiers and notes are audit-only. */
-final class UserDisabled implements PublicDeniedReasonInterface
+final class UserDisabled implements DeniedReasonInterface
 {
     public string $code {
         get => 'user_disabled';
@@ -25,10 +25,5 @@ final class UserDisabled implements PublicDeniedReasonInterface
                 'reason' => $this->reason,
             ], static fn(?string $value): bool => $value !== null);
         }
-    }
-
-    public function publicDetails(): array
-    {
-        return [];
     }
 }
