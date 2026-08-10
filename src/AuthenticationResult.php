@@ -9,13 +9,18 @@ use Componenta\Identity\IdentityInterface;
 /**
  * Result of an authentication attempt.
  *
- * Wraps the authenticated identity (or denial reason) and an optional
- * transport payload that should be stored via PayloadStorageInterface.
+ * In addition to a response transport payload, a strategy may expose verified
+ * request-scoped state (for example the resolved SessionInterface) so later
+ * middleware does not repeat security-sensitive lookups.
  */
 final readonly class AuthenticationResult
 {
+    /**
+     * @param array<string, mixed> $attributes Verified request-scoped state
+     */
     public function __construct(
         public IdentityInterface|DeniedReasonInterface $subject,
         public ?object $transportPayload = null,
+        public array $attributes = [],
     ) {}
 }

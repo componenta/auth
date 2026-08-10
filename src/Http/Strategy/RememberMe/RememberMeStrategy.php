@@ -13,18 +13,10 @@ use Componenta\Auth\Http\Transport\SessionPayload;
 use Componenta\Auth\RememberMe\RememberMeTokenManagerInterface;
 use Componenta\Auth\Session\SessionAttributeExtractor;
 use Componenta\Auth\Session\SessionAttributeExtractorInterface;
+use Componenta\Auth\Session\SessionInterface;
 use Componenta\Auth\Session\SessionManagerInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
-/**
- * Authenticates users via remember-me cookie.
- *
- * Supports SessionPayload with a remember-me token (both cookies present,
- * or only remember-me cookie with sessionId=null).
- *
- * On success: atomically consumes the token, creates new session
- * and new token, and returns transport payload for cookie update.
- */
 final readonly class RememberMeStrategy implements AuthenticationStrategyInterface
 {
     public function __construct(
@@ -54,22 +46,16 @@ final readonly class RememberMeStrategy implements AuthenticationStrategyInterfa
             return new AuthenticationResult(new InvalidCredentials());
         }
 
-        // Terminate the old session first to avoid orphan sessions
-        // if subsequent operations fail.
         if ($consumed->sessionId !== null) {
             $this->sessionManager->terminate($consumed->sessionId);
         }
 
         $request = $context->getAttribute(ServerRequestInterface::class);
-
-        // Auto-login: create new session
-        $attributes = $request !== null
+        $attributes = $request instanceof ServerRequestInterface
             ? $this->attributeExtractor->extract($request)
             : [];
 
         $session = $this->sessionManager->create($consumed->userId, $attributes);
-
-        // Create new token linked to the new session
         $newToken = $this->tokenManager->create($consumed->userId, $session->id);
 
         $user->currentSessionId = $session->id;
@@ -77,6 +63,7 @@ final readonly class RememberMeStrategy implements AuthenticationStrategyInterfa
         return new AuthenticationResult(
             subject: $user,
             transportPayload: new SessionPayload($session->id, $newToken),
+            attributes: [SessionInterface::class => $session],
         );
     }
 }

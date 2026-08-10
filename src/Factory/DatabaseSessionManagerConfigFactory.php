@@ -24,9 +24,7 @@ final readonly class DatabaseSessionManagerConfigFactory implements LazyServiceF
 
     public function __invoke(ContainerInterface $container): DatabaseSessionManagerConfig
     {
-        /**
-         * @var Config $config
-         */
+        /** @var Config $config */
         $config = $container->get('config');
         $config = $config->array(new ConfigPath(ConfigKey::AUTH . '.' . ConfigKey::SESSION), []);
 
@@ -38,6 +36,7 @@ final readonly class DatabaseSessionManagerConfigFactory implements LazyServiceF
             absoluteTimeout: $config['absoluteTimeout'] ?? 28800,
             regenerationInterval: $config['regenerationInterval'] ?? 300,
             regenerationGracePeriod: $config['regenerationGracePeriod'] ?? 30,
+            touchInterval: $config['touchInterval'] ?? 60,
             idColumn: $config['columns']['id'] ?? 'id',
             userIdColumn: $config['columns']['userId'] ?? 'user_id',
             ipColumn: $config['columns']['ip'] ?? 'ip',

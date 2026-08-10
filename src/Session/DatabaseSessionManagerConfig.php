@@ -14,6 +14,7 @@ final readonly class DatabaseSessionManagerConfig
         public int $absoluteTimeout = 28800,
         public int $regenerationInterval = 300,
         public int $regenerationGracePeriod = 30,
+        public int $touchInterval = 60,
         public string $idColumn = 'id',
         public string $userIdColumn = 'user_id',
         public string $ipColumn = 'ip',
@@ -25,5 +26,9 @@ final readonly class DatabaseSessionManagerConfig
         public string $createdAtColumn = 'created_at',
         public string $lastActiveAtColumn = 'last_active_at',
         public string $attributesColumn = 'attributes',
-    ) {}
+    ) {
+        if ($this->touchInterval < 0) {
+            throw new \InvalidArgumentException('touchInterval must be greater than or equal to zero.');
+        }
+    }
 }

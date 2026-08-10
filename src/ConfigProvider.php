@@ -46,6 +46,8 @@ use Componenta\Auth\Http\Strategy\Otp\RequestHandler as OtpRequestHandler;
 use Componenta\Auth\Http\Strategy\Otp\VerifyHandler as OtpVerifyHandler;
 use Componenta\Auth\Http\Strategy\Password\LoginHandler;
 use Componenta\Auth\RememberMe\DatabaseRememberMeTokenManagerConfig;
+use Componenta\Auth\RememberMe\RememberMeRegenerationListener;
+use Componenta\Auth\RememberMe\RememberMeTerminationListener;
 use Componenta\Auth\RememberMe\RememberMeTokenManagerInterface;
 use Componenta\Auth\Session\DatabaseSessionManagerConfig;
 use Componenta\Auth\Session\SessionAttributeExtractor;
@@ -80,8 +82,8 @@ class ConfigProvider extends \Componenta\Config\ConfigProvider
             JwtOtpTokenHandler::class => JwtOtpTokenHandlerFactory::class,
             RefreshHandler::class => RefreshHandlerFactory::class,
             RevokeHandler::class => RevokeHandlerFactory::class,
-            RememberMe\RememberMeTerminationListener::class => RememberMeTerminationListenerFactory::class,
-            RememberMe\RememberMeRegenerationListener::class => RememberMeRegenerationListenerFactory::class,
+            RememberMeTerminationListener::class => RememberMeTerminationListenerFactory::class,
+            RememberMeRegenerationListener::class => RememberMeRegenerationListenerFactory::class,
         ];
     }
 
@@ -97,6 +99,10 @@ class ConfigProvider extends \Componenta\Config\ConfigProvider
     protected function getConfig(): array
     {
         return [
+            ConfigKey::LISTENERS => [
+                RememberMeTerminationListener::class,
+                RememberMeRegenerationListener::class,
+            ],
             ConfigKey::AUTH => [
                 ConfigKey::SESSION => [
                     'table' => 'sessions',
@@ -106,59 +112,40 @@ class ConfigProvider extends \Componenta\Config\ConfigProvider
                     'absoluteTimeout' => 28800,
                     'regenerationInterval' => 300,
                     'regenerationGracePeriod' => 30,
+                    'touchInterval' => 60,
                     'columns' => [
-                        'id' => 'id',
-                        'userId' => 'user_id',
-                        'ip' => 'ip',
-                        'userAgent' => 'user_agent',
-                        'expiresAt' => 'expires_at',
+                        'id' => 'id', 'userId' => 'user_id', 'ip' => 'ip',
+                        'userAgent' => 'user_agent', 'expiresAt' => 'expires_at',
                         'absoluteExpiresAt' => 'absolute_expires_at',
-                        'regenerateAt' => 'regenerate_at',
-                        'replacedBy' => 'replaced_by',
-                        'createdAt' => 'created_at',
-                        'lastActiveAt' => 'last_active_at',
+                        'regenerateAt' => 'regenerate_at', 'replacedBy' => 'replaced_by',
+                        'createdAt' => 'created_at', 'lastActiveAt' => 'last_active_at',
                         'attributes' => 'attributes',
                     ],
                 ],
                 ConfigKey::REMEMBER_ME => [
-                    'table' => 'remember_me_tokens',
-                    'dateFormat' => 'Y-m-d H:i:s',
-                    'ttl' => 2592000,
-                    'cookieName' => 'rmid',
+                    'table' => 'remember_me_tokens', 'dateFormat' => 'Y-m-d H:i:s',
+                    'ttl' => 2592000, 'cookieName' => 'rmid',
                     'columns' => [
-                        'id' => 'id',
-                        'userId' => 'user_id',
-                        'sessionId' => 'session_id',
-                        'token' => 'token',
-                        'expiresAt' => 'expires_at',
-                        'createdAt' => 'created_at',
+                        'id' => 'id', 'userId' => 'user_id', 'sessionId' => 'session_id',
+                        'token' => 'token', 'expiresAt' => 'expires_at', 'createdAt' => 'created_at',
                     ],
                 ],
                 ConfigKey::DENIED => [
                     'defaultStatus' => 401,
                     'statusMap' => [
-                        'unauthorized' => 401,
-                        'invalid_credentials' => 401,
-                        'invalid_token' => 401,
-                        'token_expired' => 401,
-                        'token_already_used' => 401,
-                        'user_disabled' => 403,
-                        'invalid_code' => 401,
-                        'code_expired' => 401,
-                        'too_many_attempts' => 429,
-                        'rate_limited' => 429,
-                        'invalid_access_token' => 401,
-                        'access_token_expired' => 401,
-                        'invalid_refresh_token' => 401,
-                        'refresh_token_expired' => 401,
+                        'unauthorized' => 401, 'invalid_credentials' => 401,
+                        'invalid_token' => 401, 'token_expired' => 401,
+                        'token_already_used' => 401, 'user_disabled' => 403,
+                        'invalid_code' => 401, 'code_expired' => 401,
+                        'too_many_attempts' => 429, 'rate_limited' => 429,
+                        'invalid_access_token' => 401, 'access_token_expired' => 401,
+                        'invalid_refresh_token' => 401, 'refresh_token_expired' => 401,
                         'token_family_compromised' => 401,
                     ],
                 ],
                 ConfigKey::JWT => [
-                    'accessTtl' => 900,
-                    'refreshTtl' => 604800,
-                    'issuer' => '',
-                    'audience' => '',
+                    'accessTtl' => 900, 'refreshTtl' => 604800,
+                    'issuer' => '', 'audience' => '',
                 ],
             ],
         ];

@@ -6,14 +6,6 @@ namespace Componenta\Auth\Event;
 
 use Psr\Log\LoggerInterface;
 
-/**
- * Dispatches authentication and session events to registered listeners.
- *
- * A failing listener must not prevent the remaining ones from running -
- * side effects like "revoke remember-me on logout" should still fire even
- * if an unrelated listener throws. Exceptions are isolated per-listener
- * and reported to the logger when one is provided.
- */
 final readonly class EventDispatcher
 {
     public function __construct(
@@ -23,6 +15,8 @@ final readonly class EventDispatcher
 
     public function dispatch(EventInterface $event): void
     {
+        $criticalFailure = null;
+
         foreach ($this->provider->provideFor($event) as $listener) {
             try {
                 $listener->handleEvent($event);
@@ -32,10 +26,19 @@ final readonly class EventDispatcher
                     [
                         'event' => $event::class,
                         'listener' => $listener::class,
+                        'critical' => $listener instanceof CriticalEventListenerInterface,
                         'exception' => $e,
                     ],
                 );
+
+                if ($criticalFailure === null && $listener instanceof CriticalEventListenerInterface) {
+                    $criticalFailure = $e;
+                }
             }
+        }
+
+        if ($criticalFailure instanceof \Throwable) {
+            throw $criticalFailure;
         }
     }
 }

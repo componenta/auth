@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Http\Middleware;
 
+use Componenta\Auth\Http\CredentialTransportState;
 use Componenta\Auth\Http\PayloadStorageInterface;
 use Componenta\Auth\Http\Transport\SessionPayload;
 use Componenta\Auth\Session\SessionAwareInterface;
+use Componenta\Auth\Session\SessionInterface;
 use Componenta\Auth\Session\SessionManagerInterface;
 use Componenta\Clock\DateTimeFactoryInterface;
 use Componenta\Identity\IdentityInterface;
@@ -16,63 +18,54 @@ use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 
 /**
- * Updates session last activity timestamp and handles canary regeneration.
- *
- * Should be placed after AuthenticationMiddleware.
+ * Uses the session already resolved by SessionStrategy/RememberMeStrategy.
  */
 final readonly class TouchSessionMiddleware implements MiddlewareInterface
 {
     public function __construct(
         private SessionManagerInterface $manager,
         private DateTimeFactoryInterface $dateTimeFactory,
-        private ?PayloadStorageInterface $storage = null,
+        private PayloadStorageInterface $storage,
     ) {}
 
     public function process(
         ServerRequestInterface $request,
         RequestHandlerInterface $handler,
     ): ResponseInterface {
+        $session = $request->getAttribute(SessionInterface::class);
+
+        if (!$session instanceof SessionInterface) {
+            return $handler->handle($request);
+        }
+
         $user = $request->getAttribute(IdentityInterface::class);
-
-        if (!$user instanceof SessionAwareInterface) {
-            return $handler->handle($request);
-        }
-
-        if ($user->currentSessionId === null) {
-            throw new \LogicException(
-                'TouchSessionMiddleware requires currentSessionId to be set. '
-                . 'Ensure SessionStrategy is configured.',
-            );
-        }
-
-        $session = $this->manager->find($user->currentSessionId);
-
-        if ($session === null) {
-            return $handler->handle($request);
-        }
-
-        // Canary: regenerate session ID
         $now = $this->dateTimeFactory->now();
 
         if ($session->regenerateAt <= $now) {
             $newSession = $this->manager->regenerate($session->id);
-            $user->currentSessionId = $newSession->id;
 
-            $response = $handler->handle($request);
-
-            if ($this->storage !== null) {
-                $response = $this->storage->store(
-                    $request,
-                    $response,
-                    new SessionPayload($newSession->id),
-                );
+            if ($user instanceof SessionAwareInterface) {
+                $user->currentSessionId = $newSession->id;
             }
 
-            return $response;
+            $request = $request->withAttribute(SessionInterface::class, $newSession);
+            $payload = new SessionPayload($newSession->id);
+            $transportState = $request->getAttribute(CredentialTransportState::class);
+
+            if ($transportState instanceof CredentialTransportState) {
+                $transportState->queue($payload);
+
+                return $handler->handle($request);
+            }
+
+            return $this->storage->store(
+                $request,
+                $handler->handle($request),
+                $payload,
+            );
         }
 
-        // Normal touch: update idle timeout
-        $this->manager->touch($session->id);
+        $this->manager->touch($session->id, $session->lastActiveAt);
 
         return $handler->handle($request);
     }

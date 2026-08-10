@@ -9,14 +9,9 @@ use Componenta\Auth\AuthenticationStrategyInterface;
 use Componenta\Auth\ContextInterface;
 use Componenta\Auth\Denied\InvalidCredentials;
 use Componenta\Auth\Http\Transport\SessionPayload;
+use Componenta\Auth\Session\SessionInterface;
 use Componenta\Auth\Session\SessionManagerInterface;
 
-/**
- * Authenticates users via session cookie.
- *
- * Resolves session from SessionPayload, loads user via UserProviderInterface,
- * and sets currentSessionId on the user.
- */
 final readonly class SessionStrategy implements AuthenticationStrategyInterface
 {
     public function __construct(
@@ -46,12 +41,14 @@ final readonly class SessionStrategy implements AuthenticationStrategyInterface
 
         $user->currentSessionId = $session->id;
 
-        // If find() followed the replacement chain, update the cookie
-        // to the current session ID so the browser stops sending the old one.
         $transportPayload = $session->id !== $payload->sessionId
             ? new SessionPayload($session->id)
             : null;
 
-        return new AuthenticationResult($user, $transportPayload);
+        return new AuthenticationResult(
+            subject: $user,
+            transportPayload: $transportPayload,
+            attributes: [SessionInterface::class => $session],
+        );
     }
 }

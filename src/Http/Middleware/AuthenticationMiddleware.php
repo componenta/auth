@@ -8,6 +8,7 @@ use Componenta\Auth\AuthenticatorInterface;
 use Componenta\Auth\Context;
 use Componenta\Auth\ContextInterface;
 use Componenta\Auth\DeniedReasonInterface;
+use Componenta\Auth\Http\CredentialTransportState;
 use Componenta\Auth\Http\PayloadExtractorInterface;
 use Componenta\Auth\Http\PayloadStorageInterface;
 use Componenta\Identity\IdentityInterface;
@@ -17,11 +18,8 @@ use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 
 /**
- * Authenticates requests using extractor and authenticator.
- *
- * Extracts payload from request, delegates authentication to the
- * authenticator chain, and stores transport payload (cookies) when
- * a strategy provides one (e.g. remember-me auto-login).
+ * Authenticates a request and commits all credential transport mutations once,
+ * after the downstream handler has made its final security decision.
  */
 final readonly class AuthenticationMiddleware implements MiddlewareInterface
 {
@@ -41,28 +39,42 @@ final readonly class AuthenticationMiddleware implements MiddlewareInterface
             return $handler->handle($request);
         }
 
+        $transportState = new CredentialTransportState();
         $result = $this->authenticator->attempt($payload, new Context([
             ServerRequestInterface::class => $request,
             ContextInterface::EXTRACTOR => $this->extractor,
+            CredentialTransportState::class => $transportState,
         ]));
 
-        $key = $result->subject instanceof IdentityInterface
-            ? IdentityInterface::class : DeniedReasonInterface::class;
-
-        $request = $request->withAttribute($key, $result->subject);
-        $response = $handler->handle($request);
-
         if ($result->transportPayload !== null) {
-            if ($this->storage === null) {
-                throw new \LogicException(
-                    'Strategy returned a transport payload, but no PayloadStorageInterface is configured. '
-                    . 'Provide a storage implementation to AuthenticationMiddleware.',
-                );
-            }
-
-            $response = $this->storage->store($request, $response, $result->transportPayload);
+            $transportState->queue($result->transportPayload);
         }
 
-        return $response;
+        $key = $result->subject instanceof IdentityInterface
+            ? IdentityInterface::class
+            : DeniedReasonInterface::class;
+
+        $request = $request
+            ->withAttribute($key, $result->subject)
+            ->withAttribute(CredentialTransportState::class, $transportState);
+
+        foreach ($result->attributes as $attribute => $value) {
+            $request = $request->withAttribute($attribute, $value);
+        }
+
+        $response = $handler->handle($request);
+
+        if ($transportState->isEmpty()) {
+            return $response;
+        }
+
+        if ($this->storage === null) {
+            throw new \LogicException(
+                'Authentication transport mutation is pending, but no PayloadStorageInterface is configured. '
+                . 'Provide a storage implementation to AuthenticationMiddleware.',
+            );
+        }
+
+        return $transportState->apply($this->storage, $request, $response);
     }
 }
