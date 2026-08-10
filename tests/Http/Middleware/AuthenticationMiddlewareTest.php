@@ -32,7 +32,9 @@ final class AuthenticationMiddlewareTest extends TestCase
             },
         );
         $request->method('getAttribute')->willReturnCallback(
-            static fn(string $name, mixed $default = null): mixed => $attributes[$name] ?? $default,
+            static function (string $name, mixed $default = null) use (&$attributes): mixed {
+                return $attributes[$name] ?? $default;
+            },
         );
 
         $extractor = $this->createMock(PayloadExtractorInterface::class);
