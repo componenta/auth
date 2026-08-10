@@ -10,17 +10,11 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 
-/**
- * Handles magic link request (send) step.
- *
- * Extracts the user identity from the request body and
- * delegates to MagicLinkRequester to generate and send the token.
- *
- * Always returns 200 regardless of whether the user exists,
- * to prevent user enumeration attacks.
- */
 final readonly class RequestHandler implements RequestHandlerInterface
 {
+    private const int MAX_IDENTITY_LENGTH = 320;
+    private const int MAX_REDIRECT_LENGTH = 2048;
+
     public function __construct(
         private TokenRequester $requester,
         private ResponseFactoryInterface $responseFactory,
@@ -29,37 +23,29 @@ final readonly class RequestHandler implements RequestHandlerInterface
 
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
-        $body = $request->getParsedBody() ?? [];
-
-        if (!is_array($body)) {
-            $body = get_object_vars($body);
-        }
-
+        $parsed = $request->getParsedBody();
+        $body = is_array($parsed) ? $parsed : [];
         $identity = $body[$this->identityField] ?? null;
 
-        if ($identity === null || $identity === '') {
-            $response = $this->responseFactory->createResponse(400);
-            $response->getBody()->write(
-                json_encode(['error' => 'missing_identity'], JSON_THROW_ON_ERROR)
-            );
-
-            return $response->withHeader('Content-Type', 'application/json');
+        if (!is_string($identity) || $identity === '' || strlen($identity) > self::MAX_IDENTITY_LENGTH) {
+            return $this->json(400, ['error' => 'invalid_identity']);
         }
 
         $context = [];
         $redirect = $body['redirect'] ?? null;
-
-        if (is_string($redirect) && $redirect !== '') {
+        if (is_string($redirect) && $redirect !== '' && strlen($redirect) <= self::MAX_REDIRECT_LENGTH) {
             $context['redirect'] = $redirect;
         }
-
         $this->requester->request($identity, context: $context);
 
-        $response = $this->responseFactory->createResponse(200);
-        $response->getBody()->write(json_encode([
-            'message' => 'If the account exists, a link has been sent.',
-        ], JSON_THROW_ON_ERROR));
+        return $this->json(200, ['message' => 'If the account exists, a link has been sent.']);
+    }
 
+    /** @param array<string, mixed> $data */
+    private function json(int $status, array $data): ResponseInterface
+    {
+        $response = $this->responseFactory->createResponse($status);
+        $response->getBody()->write(json_encode($data, JSON_THROW_ON_ERROR));
         return $response->withHeader('Content-Type', 'application/json');
     }
 }

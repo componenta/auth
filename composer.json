@@ -5,6 +5,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.4",
+        "ext-mbstring": "*",
         "componenta/arrayable": "^1.0",
         "componenta/clock": "^1.0",
         "componenta/config": "^2.0",
