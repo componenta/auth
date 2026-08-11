@@ -6,7 +6,7 @@ namespace Componenta\Auth\Http\Strategy\Otp;
 
 use Componenta\Identity\UuidInterface;
 
-final readonly class StoredCode
+final readonly class StoredCode implements \JsonSerializable
 {
     public function __construct(
         public UuidInterface $subjectId,
@@ -40,5 +40,24 @@ final readonly class StoredCode
         if ($this->attempts < 0) {
             throw new \InvalidArgumentException('OTP attempts must not be negative.');
         }
+    }
+
+    /** @return array{subjectId: string, code: string, destination: string, expiresAt: int, attempts: int} */
+    public function __debugInfo(): array
+    {
+        return [
+            'subjectId' => $this->subjectId->toString(),
+            'code' => '[REDACTED]',
+            'destination' => $this->destination,
+            'expiresAt' => $this->expiresAt,
+            'attempts' => $this->attempts,
+        ];
+    }
+
+    /** @return array{subjectId: string, code: string, destination: string, expiresAt: int, attempts: int} */
+    #[\Override]
+    public function jsonSerialize(): array
+    {
+        return $this->__debugInfo();
     }
 }
