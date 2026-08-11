@@ -205,7 +205,9 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
             return;
         }
 
-        $this->database->transaction(function () use ($ids): void {
+        $event = new SessionsTerminated($ids);
+
+        $this->database->transaction(function () use ($ids, $event): void {
             foreach (array_chunk($ids, self::DELETE_CHUNK_SIZE) as $chunk) {
                 $this->database
                     ->delete($this->config->table)
@@ -213,8 +215,10 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
                     ->run();
             }
 
-            $this->dispatcher->dispatch(new SessionsTerminated($ids));
+            $this->dispatcher->dispatchCritical($event);
         });
+
+        $this->dispatcher->dispatchBestEffort($event);
     }
 
     #[\Override]
@@ -224,7 +228,9 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
             self::assertSessionId($exceptSessionId);
         }
 
-        $this->database->transaction(function () use ($subjectId, $exceptSessionId): void {
+        $event = new AllSessionsTerminated($subjectId, $exceptSessionId);
+
+        $this->database->transaction(function () use ($subjectId, $exceptSessionId, $event): void {
             $query = $this->database
                 ->delete($this->config->table)
                 ->where($this->config->subjectIdColumn, $subjectId->toString());
@@ -234,10 +240,10 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
             }
 
             $query->run();
-            $this->dispatcher->dispatch(
-                new AllSessionsTerminated($subjectId, $exceptSessionId),
-            );
+            $this->dispatcher->dispatchCritical($event);
         });
+
+        $this->dispatcher->dispatchBestEffort($event);
     }
 
     #[\Override]
@@ -346,9 +352,10 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
             lastActiveAt: $now,
             attributes: $old->attributes,
         );
+        $event = new SessionRegenerated($sessionId, $new->id);
 
         try {
-            $this->database->transaction(function () use ($sessionId, $new, $now): void {
+            $this->database->transaction(function () use ($sessionId, $new, $now, $event): void {
                 $ip = $new->getAttribute(self::ATTR_IP);
                 $userAgent = $new->getAttribute(self::ATTR_USER_AGENT);
 
@@ -376,12 +383,14 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
                     throw new ConcurrentRegenerationException();
                 }
 
-                $this->dispatcher->dispatch(new SessionRegenerated($sessionId, $new->id));
+                $this->dispatcher->dispatchCritical($event);
             });
         } catch (ConcurrentRegenerationException) {
             return $this->find($sessionId)
                 ?? throw new \InvalidArgumentException('Session not found');
         }
+
+        $this->dispatcher->dispatchBestEffort($event);
 
         return $new;
     }
@@ -575,5 +584,4 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
 
         return (string) $value;
     }
-
 }
