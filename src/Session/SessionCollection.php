@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Session;
 
-final readonly class SessionCollection implements SessionCollectionInterface
+final readonly class SessionCollection implements SessionCollectionInterface, \JsonSerializable
 {
     private const array PROPERTIES = [
         'id', 'subjectId', 'expiresAt', 'absoluteExpiresAt', 'regenerateAt',
@@ -27,6 +27,22 @@ final readonly class SessionCollection implements SessionCollectionInterface
 
         $this->sessions = $indexed;
         $this->empty = $indexed === [];
+    }
+
+    /** @return array{count: int, empty: bool} */
+    public function __debugInfo(): array
+    {
+        return [
+            'count' => count($this->sessions),
+            'empty' => $this->empty,
+        ];
+    }
+
+    /** @return array{count: int, empty: bool} */
+    #[\Override]
+    public function jsonSerialize(): array
+    {
+        return $this->__debugInfo();
     }
 
     #[\Override]
