@@ -63,7 +63,7 @@ final readonly class JwtStrategy implements AuthenticationStrategyInterface
 
         $identity = $this->provider->findByUuid($subjectId);
 
-        return $identity === null
+        return $identity === null || !$subjectId->equals($identity->uuid)
             ? new AuthenticationResult(new InvalidAccessToken())
             : new AuthenticationResult($identity);
     }
