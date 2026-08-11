@@ -9,6 +9,7 @@ if (( php_version_id >= 80500 )) || [[ "$di_version" != 2.* && "$di_version" != 
     exit 0
 fi
 
+printf 'Bootstrap writer selected for PHP_VERSION_ID=%s, componenta/di=%s\n' "$php_version_id" "$di_version"
 base="cac9fa782d290f22ff21123764bd7fb5a9d32a20"
 git merge-base --is-ancestor "$base" HEAD
 unexpected="$(git diff --name-only "$base"..HEAD | grep -Ev '^(\.github/workflows/(ci\.yml|apply-auth-v2-review\.yml)|\.auth-v2-review\.(part-[0-9]{2}|ready)|tools/verify\.sh)$' || true)"
@@ -19,8 +20,14 @@ fi
 
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
+for part in .auth-v2-review.part-*; do
+    wc -c "$part"
+    sha256sum "$part"
+done
 cat .auth-v2-review.part-* > "$work/overlay.tar.xz"
-test "$(sha256sum "$work/overlay.tar.xz" | cut -d' ' -f1)" = "e7eff824b8cbaac02af79c2d55a229ea67d45fd1ee0f3226b94ac5d2e13c972e"
+actual_sha="$(sha256sum "$work/overlay.tar.xz" | cut -d' ' -f1)"
+printf 'Overlay SHA-256: %s\n' "$actual_sha"
+test "$actual_sha" = "e7eff824b8cbaac02af79c2d55a229ea67d45fd1ee0f3226b94ac5d2e13c972e"
 mkdir "$work/unpacked"
 tar -xJf "$work/overlay.tar.xz" -C "$work/unpacked"
 
