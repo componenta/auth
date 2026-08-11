@@ -59,7 +59,7 @@ final readonly class MagicLinkStrategy implements AuthenticationStrategyInterfac
 
         $user = $this->provider->findByUuid($token->subjectId);
 
-        if ($user === null) {
+        if ($user === null || !$token->subjectId->equals($user->uuid)) {
             return new AuthenticationResult(new InvalidToken());
         }
 
