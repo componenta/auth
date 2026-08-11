@@ -44,6 +44,27 @@ final class EventDispatcherTest extends TestCase
         }
     }
 
+    public function testCriticalFailureStopsLaterCriticalParticipants(): void
+    {
+        $laterCriticalRan = false;
+        $dispatcher = new EventDispatcher(new ListenerProviderFixture([
+            new CriticalThrowingListenerFixture(),
+            new CriticalCallbackListenerFixture(
+                static function () use (&$laterCriticalRan): void {
+                    $laterCriticalRan = true;
+                },
+            ),
+        ]));
+
+        try {
+            $dispatcher->dispatchCritical(new EventFixture());
+            self::fail('Critical listener failure was not surfaced.');
+        } catch (\RuntimeException $exception) {
+            self::assertSame('critical failure', $exception->getMessage());
+            self::assertFalse($laterCriticalRan);
+        }
+    }
+
     public function testCriticalPhaseRunsBeforeBestEffortObservers(): void
     {
         $calls = [];
