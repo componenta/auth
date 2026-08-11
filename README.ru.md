@@ -171,7 +171,8 @@ Refresh token и family ID содержат 32–64 random bytes. Default bindin
 - использует отдельную family-row как serialization point для rotation, replay handling и bulk revocation;
 - выполняет consume presented token и создание successor в одной DB transaction;
 - откатывает claim старого token, если insert successor завершился ошибкой;
-- при replay помечает family compromised и отзывает все активные descendants;
+- хранит обычный revoke family отдельно от replay compromise, поэтому password reset/logout-all не маскируются под атаку;
+- при реальном replay помечает family как compromised и отзывает все активные descendants;
 - читает security state только с primary/write connection.
 
 Минимальные требования к schema:
@@ -180,6 +181,7 @@ Refresh token и family ID содержат 32–64 random bytes. Default bindin
 refresh_token_families
   family_id       PRIMARY KEY или UNIQUE
   user_id         NOT NULL, index
+  revoked_at      nullable
   compromised_at  nullable
   lock_nonce      NOT NULL
 
@@ -192,7 +194,7 @@ refresh_tokens
   revoked_at      nullable
 ```
 
-Названия таблиц и колонок настраиваются. `token_hash` содержит 64-символьный SHA-256 hex, а не bearer token.
+Названия таблиц и колонок настраиваются. `token_hash` содержит 64-символьный SHA-256 hex, а не bearer token. `familyRevokedAt` и `compromisedAt` являются отдельными настраиваемыми состояниями family, даже если token table также использует колонку `revoked_at`.
 
 `RefreshTokenStoreInterface::rotateAtomically()` остаётся security contract для custom implementations. Custom store обязан обеспечить эквивалентную сериализацию family и replay semantics.
 
