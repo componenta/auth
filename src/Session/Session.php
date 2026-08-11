@@ -6,15 +6,17 @@ namespace Componenta\Auth\Session;
 
 use Componenta\Identity\UuidInterface;
 
-final readonly class Session implements SessionInterface
+final readonly class Session implements SessionInterface, \JsonSerializable
 {
     /** @param array<string, mixed> $attributes */
     public function __construct(
+        #[\SensitiveParameter]
         public string $id,
         public UuidInterface $subjectId,
         public \DateTimeImmutable $expiresAt,
         public \DateTimeImmutable $absoluteExpiresAt,
         public \DateTimeImmutable $regenerateAt,
+        #[\SensitiveParameter]
         public ?string $replacedBy,
         public \DateTimeImmutable $createdAt,
         public \DateTimeImmutable $lastActiveAt,
@@ -56,9 +58,7 @@ final readonly class Session implements SessionInterface
             );
         }
 
-        if (
-            $this->regenerateAt < $this->createdAt
-        ) {
+        if ($this->regenerateAt < $this->createdAt) {
             throw new \InvalidArgumentException(
                 'Session regeneration time is invalid.',
             );
@@ -69,6 +69,39 @@ final readonly class Session implements SessionInterface
                 'Session last-active time cannot precede creation.',
             );
         }
+    }
+
+    /** @return array<string, mixed> */
+    public function __debugInfo(): array
+    {
+        return [
+            'id' => '[REDACTED]',
+            'subjectId' => $this->subjectId->toString(),
+            'expiresAt' => $this->expiresAt,
+            'absoluteExpiresAt' => $this->absoluteExpiresAt,
+            'regenerateAt' => $this->regenerateAt,
+            'replacedBy' => $this->replacedBy === null ? null : '[REDACTED]',
+            'createdAt' => $this->createdAt,
+            'lastActiveAt' => $this->lastActiveAt,
+            'attributeKeys' => array_keys($this->attributes),
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    #[\Override]
+    public function jsonSerialize(): array
+    {
+        return [
+            'id' => '[REDACTED]',
+            'subjectId' => $this->subjectId->toString(),
+            'expiresAt' => $this->expiresAt->format(DATE_ATOM),
+            'absoluteExpiresAt' => $this->absoluteExpiresAt->format(DATE_ATOM),
+            'regenerateAt' => $this->regenerateAt->format(DATE_ATOM),
+            'replacedBy' => $this->replacedBy === null ? null : '[REDACTED]',
+            'createdAt' => $this->createdAt->format(DATE_ATOM),
+            'lastActiveAt' => $this->lastActiveAt->format(DATE_ATOM),
+            'attributeKeys' => array_keys($this->attributes),
+        ];
     }
 
     #[\Override]
