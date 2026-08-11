@@ -17,16 +17,49 @@ final class ResetPasswordHandlerTest extends TestCase
 {
     public function testDelegatesOneCompletedSecurityTransitionToResetService(): void
     {
-        $request = $this->createStub(ServerRequestInterface::class);
-        $request->method('getParsedBody')->willReturn([
-            'token' => 'reset-token',
-            'password' => 'new-password',
-            'passwordConfirmation' => 'new-password',
-        ]);
+        $request = self::request('new-password');
         $service = $this->createMock(PasswordResetServiceInterface::class);
         $service->expects(self::once())->method('reset')
             ->with('reset-token', 'new-password')
             ->willReturn(PasswordResetResult::Success);
+        [$responseFactory, $response] = $this->responseFactory(200);
+
+        self::assertSame(
+            $response,
+            (new ResetPasswordHandler($service, $responseFactory))->handle($request),
+        );
+    }
+
+    public function testApplicationPasswordPolicyCanRejectOtherwiseValidInput(): void
+    {
+        $request = self::request('shortpw');
+        $service = $this->createMock(PasswordResetServiceInterface::class);
+        $service->expects(self::once())->method('reset')
+            ->with('reset-token', 'shortpw')
+            ->willReturn(PasswordResetResult::PasswordRejected);
+        [$responseFactory, $response] = $this->responseFactory(422);
+
+        self::assertSame(
+            $response,
+            (new ResetPasswordHandler($service, $responseFactory))->handle($request),
+        );
+    }
+
+    private static function request(string $password): ServerRequestInterface
+    {
+        $request = self::createStub(ServerRequestInterface::class);
+        $request->method('getParsedBody')->willReturn([
+            'token' => 'reset-token',
+            'password' => $password,
+            'passwordConfirmation' => $password,
+        ]);
+
+        return $request;
+    }
+
+    /** @return array{ResponseFactoryInterface, ResponseInterface} */
+    private function responseFactory(int $status): array
+    {
         $stream = $this->createStub(StreamInterface::class);
         $stream->method('write')->willReturn(1);
         $response = $this->createStub(ResponseInterface::class);
@@ -35,9 +68,9 @@ final class ResetPasswordHandlerTest extends TestCase
         $responseFactory = $this->createMock(ResponseFactoryInterface::class);
         $responseFactory->expects(self::once())
             ->method('createResponse')
-            ->with(200)
+            ->with($status)
             ->willReturn($response);
 
-        self::assertSame($response, (new ResetPasswordHandler($service, $responseFactory))->handle($request));
+        return [$responseFactory, $response];
     }
 }
