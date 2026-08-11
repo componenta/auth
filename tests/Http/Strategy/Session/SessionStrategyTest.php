@@ -103,6 +103,34 @@ final class SessionStrategyTest extends TestCase
         self::assertNull($result->transportPayload);
     }
 
+    public function testProviderCannotSubstituteDifferentIdentity(): void
+    {
+        $subjectId = self::subjectId();
+        $session = self::session(
+            'current-session',
+            $subjectId,
+            new DateTimeImmutable('@1300'),
+        );
+        $otherId = Uuid::fromString(
+            '018f6d5d-3f7a-7a9b-8c2f-123456789abd',
+        );
+        $manager = $this->createMock(SessionManagerInterface::class);
+        $manager->method('find')->willReturn($session);
+        $manager->expects(self::never())->method('regenerate');
+        $provider = $this->createStub(UserProviderInterface::class);
+        $provider->method('findByUuid')->willReturn(self::identity($otherId));
+        $clock = $this->createStub(DateTimeFactoryInterface::class);
+
+        $result = (new SessionStrategy($manager, $provider, $clock))->attempt(
+            new SessionPayload('current-session'),
+            new Context(),
+        );
+
+        self::assertInstanceOf(InvalidCredentials::class, $result->subject);
+        self::assertNull($result->session);
+        self::assertNull($result->transportPayload);
+    }
+
     private static function session(
         string $id,
         UuidInterface $subjectId,
