@@ -8,6 +8,7 @@ use Componenta\Identity\Uuid;
 use Componenta\Identity\UuidInterface;
 use Cycle\Database\DatabaseInterface;
 use Cycle\Database\Query\OnConflict;
+use Cycle\Database\Query\SelectQuery;
 
 /**
  * SQL OTP store using a keyed verifier and optimistic challenge-version CAS.
@@ -109,7 +110,7 @@ final readonly class DatabaseCodeStore implements CodeStoreInterface
         );
 
         for ($attempt = 0; $attempt < self::MAX_CAS_RETRIES; ++$attempt) {
-            $row = $this->find($destination);
+            $row = $this->find($this->database, $destination);
 
             if ($row === null) {
                 hash_equals($this->dummyVerifier, $presentedVerifier);
@@ -238,16 +239,37 @@ final readonly class DatabaseCodeStore implements CodeStoreInterface
     }
 
     /** @return array<array-key, mixed>|null */
-    private function find(string $destination): ?array
-    {
-        $row = $this->database
-            ->select()
+    private function find(
+        DatabaseInterface $database,
+        string $destination,
+    ): ?array {
+        $row = $this->writeSelect($database)
             ->from($this->config->table)
             ->where($this->config->destinationColumn, $destination)
             ->run()
             ->fetch();
 
         return is_array($row) ? $row : null;
+    }
+
+    /**
+     * OTP state must never be read from a lagging replica because the CAS
+     * mutation is executed on the primary/write connection.
+     */
+    private function writeSelect(DatabaseInterface $database): SelectQuery
+    {
+        $query = $database->select()->withDriver(
+            $database->getDriver(DatabaseInterface::WRITE),
+            $database->getPrefix(),
+        );
+
+        if (!$query instanceof SelectQuery) {
+            throw new \LogicException(
+                'Cycle must preserve SelectQuery when pinning the write driver.',
+            );
+        }
+
+        return $query;
     }
 
     private function verifier(
