@@ -62,8 +62,18 @@ final readonly class TokenManager implements TokenManagerInterface
             return null;
         }
 
-        $row = $this->database
-            ->select()
+        $query = $this->database->select()->withDriver(
+            $this->database->getDriver(DatabaseInterface::WRITE),
+            $this->database->getPrefix(),
+        );
+
+        if (!$query instanceof SelectQuery) {
+            throw new \LogicException(
+                'Cycle must preserve SelectQuery when pinning the write driver.',
+            );
+        }
+
+        $row = $query
             ->from($this->config->table)
             ->where($this->config->tokenColumn, self::hash($plainToken))
             ->run()
