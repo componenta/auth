@@ -24,13 +24,13 @@ final readonly class EventDispatcher
     }
 
     /**
-     * Executes only security-critical participants and surfaces the first
-     * failure after giving every critical participant a chance to run.
+     * Executes security-critical participants in provider order and stops on
+     * the first failure. Continuing after a failed critical participant could
+     * create irreversible side effects even though the owning transition is
+     * going to fail or roll back.
      */
     public function dispatchCritical(EventInterface $event): void
     {
-        $criticalFailure = null;
-
         foreach ($this->provider->provideFor($event) as $listener) {
             if (!$listener instanceof CriticalEventListenerInterface) {
                 continue;
@@ -40,12 +40,8 @@ final readonly class EventDispatcher
                 $listener->handleEvent($event);
             } catch (\Throwable $e) {
                 $this->logFailure($event, $listener, $e, true);
-                $criticalFailure ??= $e;
+                throw $e;
             }
-        }
-
-        if ($criticalFailure instanceof \Throwable) {
-            throw $criticalFailure;
         }
     }
 
