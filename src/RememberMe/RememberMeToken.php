@@ -6,11 +6,12 @@ namespace Componenta\Auth\RememberMe;
 
 use Componenta\Identity\UuidInterface;
 
-final readonly class RememberMeToken
+final readonly class RememberMeToken implements \JsonSerializable
 {
     public function __construct(
         public int $id,
         public UuidInterface $subjectId,
+        #[\SensitiveParameter]
         public ?string $sessionId,
         public \DateTimeImmutable $expiresAt,
         public \DateTimeImmutable $createdAt,
@@ -39,5 +40,24 @@ final readonly class RememberMeToken
                 'Remember-me expiry must follow creation.',
             );
         }
+    }
+
+    /** @return array<string, int|string|null|bool> */
+    public function __debugInfo(): array
+    {
+        return [
+            'id' => $this->id,
+            'subjectId' => $this->subjectId->toString(),
+            'sessionId' => $this->sessionId === null ? null : '[REDACTED]',
+            'expiresAt' => $this->expiresAt->getTimestamp(),
+            'createdAt' => $this->createdAt->getTimestamp(),
+        ];
+    }
+
+    /** @return array<string, int|string|null|bool> */
+    #[\Override]
+    public function jsonSerialize(): array
+    {
+        return $this->__debugInfo();
     }
 }
