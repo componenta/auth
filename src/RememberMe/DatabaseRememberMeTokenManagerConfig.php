@@ -6,11 +6,13 @@ namespace Componenta\Auth\RememberMe;
 
 final readonly class DatabaseRememberMeTokenManagerConfig
 {
+    public const string DATE_FORMAT = 'Y-m-d H:i:s';
+
     private const int MAX_TTL = 315360000;
 
     public function __construct(
         public string $table = 'remember_me_tokens',
-        public string $dateFormat = 'Y-m-d H:i:s',
+        public string $dateFormat = self::DATE_FORMAT,
         public int $ttl = 2592000,
         public string $idColumn = 'id',
         public string $subjectIdColumn = 'user_id',
@@ -26,8 +28,11 @@ final readonly class DatabaseRememberMeTokenManagerConfig
             ));
         }
 
-        if ($this->dateFormat === '') {
-            throw new \InvalidArgumentException('Date format must not be empty.');
+        if ($this->dateFormat !== self::DATE_FORMAT) {
+            throw new \InvalidArgumentException(sprintf(
+                'Remember-me database timestamps must use the sortable format %s.',
+                self::DATE_FORMAT,
+            ));
         }
 
         foreach ([
