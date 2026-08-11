@@ -48,7 +48,9 @@ readonly class LogoutHandler implements RequestHandlerInterface
         }
 
         if ($identity instanceof IdentityInterface) {
-            $this->dispatcher?->dispatch(new LoggedOut($identity->uuid, $this->clock->now()));
+            $this->dispatcher?->dispatchObservers(
+                new LoggedOut($identity->uuid, $this->clock->now()),
+            );
         }
 
         return $response;
