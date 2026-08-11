@@ -14,7 +14,6 @@ use Psr\Http\Server\RequestHandlerInterface;
 final readonly class RequestHandler implements RequestHandlerInterface
 {
     private const int MAX_IDENTITY_LENGTH = 320;
-    private const int MAX_REDIRECT_LENGTH = 2048;
 
     public function __construct(
         private TokenRequestQueueInterface $queue,
@@ -42,23 +41,11 @@ final readonly class RequestHandler implements RequestHandlerInterface
             return $this->json(400, ['error' => 'invalid_identity']);
         }
 
-        $context = [];
-        $redirect = $body['redirect'] ?? null;
-
-        if ($redirect !== null) {
-            if (
-                !is_string($redirect)
-                || $redirect === ''
-                || strlen($redirect) > self::MAX_REDIRECT_LENGTH
-                || preg_match('/[\x00-\x1F\x7F]/', $redirect) === 1
-            ) {
-                return $this->json(400, ['error' => 'invalid_redirect']);
-            }
-
-            $context['redirect'] = $redirect;
+        if (array_key_exists('redirect', $body)) {
+            return $this->json(400, ['error' => 'redirect_not_supported']);
         }
 
-        $this->queue->enqueue(new TokenRequest($identity, context: $context));
+        $this->queue->enqueue(new TokenRequest($identity));
 
         return $this->json(200, ['message' => 'If the account exists, a link has been sent.']);
     }
