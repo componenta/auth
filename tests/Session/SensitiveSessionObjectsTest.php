@@ -9,6 +9,7 @@ use Componenta\Auth\Event\SessionRegenerated;
 use Componenta\Auth\Event\SessionsTerminated;
 use Componenta\Auth\RememberMe\RememberMeToken;
 use Componenta\Auth\Session\Session;
+use Componenta\Auth\Session\SessionCollection;
 use Componenta\Identity\Uuid;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
@@ -41,6 +42,7 @@ final class SensitiveSessionObjectsTest extends TestCase
         );
         $objects = [
             $session,
+            new SessionCollection([$session]),
             $remember,
             new SessionRegenerated('session-secret', 'replacement-secret', $createdAt),
             new SessionsTerminated(['session-secret', 'replacement-secret'], $createdAt),
