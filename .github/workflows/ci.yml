@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  statuses: write
 
 jobs:
   quality:
@@ -30,5 +31,44 @@ jobs:
       - name: Resolve DI matrix dependencies
         run: composer update --with "componenta/di:${{ matrix.di }}" --prefer-dist --no-interaction --no-progress
 
-      - name: Verify package
-        run: bash tools/verify.sh
+      - name: Verify package and publish status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+          CONTEXT: auth-ci/php-${{ matrix.php }}-di-${{ matrix.di }}
+        shell: bash
+        run: |
+          set +e
+          bash tools/verify.sh
+          exit_code=$?
+          set -e
+
+          if (( exit_code == 0 )); then
+            state=success
+            description='Auth v2 verification passed'
+          else
+            state=failure
+            description='Auth v2 verification failed'
+          fi
+
+          payload="$(STATE="$state" DESCRIPTION="$description" php -r 'echo json_encode([
+              "state" => getenv("STATE"),
+              "context" => getenv("CONTEXT"),
+              "description" => getenv("DESCRIPTION"),
+              "target_url" => sprintf(
+                  "https://github.com/%s/actions/runs/%s",
+                  getenv("GITHUB_REPOSITORY"),
+                  getenv("GITHUB_RUN_ID"),
+              ),
+          ], JSON_THROW_ON_ERROR);')"
+
+          curl --fail --silent --show-error \
+            --request POST \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header 'Accept: application/vnd.github+json' \
+            --header 'X-GitHub-Api-Version: 2022-11-28' \
+            --data "$payload" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${SHA}" \
+            >/dev/null
+
+          exit "$exit_code"
