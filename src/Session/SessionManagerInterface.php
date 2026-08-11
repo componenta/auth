@@ -14,8 +14,10 @@ interface SessionManagerInterface
         array $attributes = [],
     ): SessionInterface;
 
+    /** Returns true only for a currently authenticatable session credential. */
     public function exists(string $sessionId): bool;
 
+    /** Returns only a currently authenticatable, non-replaced session. */
     public function find(string $sessionId): ?SessionInterface;
 
     public function all(UuidInterface $subjectId): SessionCollectionInterface;
@@ -39,6 +41,10 @@ interface SessionManagerInterface
         ?string $exceptSessionId = null,
     ): void;
 
+    /**
+     * Rotates one active credential. A concurrent loser must fail instead of
+     * receiving the winning successor ID.
+     */
     public function regenerate(string $sessionId): SessionInterface;
 
     /** Removes at most $limit expired sessions and returns affected rows. */
