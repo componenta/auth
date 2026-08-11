@@ -12,6 +12,10 @@ use Componenta\Auth\ContextInterface;
 use Componenta\Auth\Denied\DeniedReason;
 use Componenta\Auth\Exception\AuthenticatorConfigurationException;
 use Componenta\Auth\Factory\AuthenticatorFactory;
+use Componenta\Auth\Http\Strategy\RememberMe\RememberMeStrategy;
+use Componenta\Auth\Http\Strategy\Session\UserProviderInterface;
+use Componenta\Auth\RememberMe\RememberMeTokenManagerInterface;
+use Componenta\Auth\Session\SessionManagerInterface;
 use Componenta\Config\Config;
 use Componenta\Identity\IdentityInterface;
 use Componenta\Identity\Uuid;
@@ -46,6 +50,30 @@ final class AuthenticatorFactoryTest extends TestCase
             'same' => new OrderedStrategyFixture('same', $recorder, new AuthenticationResult(new DeniedReason('x'))),
         ]));
     }
+
+    public function testRejectsBuiltInRememberMeStrategyWhenFeatureIsDisabled(): void
+    {
+        $rememberMe = new RememberMeStrategy(
+            $this->createStub(RememberMeTokenManagerInterface::class),
+            $this->createStub(SessionManagerInterface::class),
+            $this->createStub(UserProviderInterface::class),
+        );
+        $container = new FactoryContainerFixture([
+            ConfigKey::CONFIG => new Config([
+                ConfigKey::AUTH => [
+                    ConfigKey::STRATEGIES => ['remember'],
+                    ConfigKey::EVENTS => false,
+                    ConfigKey::REMEMBER_ME => [ConfigKey::ENABLED => false],
+                ],
+            ]),
+            'remember' => $rememberMe,
+        ]);
+
+        $this->expectException(AuthenticatorConfigurationException::class);
+        $this->expectExceptionMessage('auth.rememberMe.enabled=true');
+
+        (new AuthenticatorFactory())($container);
+    }
 }
 
 final class FactoryContainerFixture implements ContainerInterface
@@ -55,7 +83,6 @@ final class FactoryContainerFixture implements ContainerInterface
     public function get(string $id): mixed { return $this->services[$id] ?? throw new \RuntimeException($id); }
     public function has(string $id): bool { return array_key_exists($id, $this->services); }
 }
-
 
 final class StrategyCallRecorder
 {
