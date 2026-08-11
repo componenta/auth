@@ -50,7 +50,10 @@ final readonly class RememberMeStrategy implements AuthenticationStrategyInterfa
 
         $identity = $this->provider->findByUuid($consumed->subjectId);
 
-        if ($identity === null) {
+        if (
+            $identity === null
+            || !$consumed->subjectId->equals($identity->uuid)
+        ) {
             return new AuthenticationResult(new InvalidCredentials());
         }
 
