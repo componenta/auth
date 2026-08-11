@@ -20,10 +20,6 @@ fi
 
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
-for part in .auth-v2-review.part-*; do
-    wc -c "$part"
-    sha256sum "$part"
-done
 
 cat \
     .auth-v2-review.part-00 \
@@ -41,6 +37,10 @@ test "$actual_sha" = "e7eff824b8cbaac02af79c2d55a229ea67d45fd1ee0f3226b94ac5d2e1
 mkdir "$work/unpacked"
 tar -xJf "$work/overlay.tar.xz" -C "$work/unpacked"
 
+cp "$work/unpacked/replacement/tools/verify.sh" "$work/final-verify.sh"
+chmod 0755 "$work/final-verify.sh"
+rm "$work/unpacked/replacement/tools/verify.sh"
+
 while IFS= read -r path; do
     if [[ -n "$path" ]]; then
         rm -rf -- "$path"
@@ -52,7 +52,8 @@ rm -f .auth-v2-review.part-* .auth-v2-review.ready
 rm -f .github/workflows/apply-auth-v2-review.yml
 
 composer update --with 'componenta/di:2.*' --prefer-dist --no-interaction --no-progress
-bash tools/verify.sh
+bash "$work/final-verify.sh"
+install -m 0755 "$work/final-verify.sh" tools/verify.sh
 
 rm -rf vendor var composer.lock
 git config user.name "Andrey Shelamkoff"
