@@ -6,7 +6,10 @@ namespace Componenta\Auth\Tests\Http\Transport;
 
 use Componenta\Auth\Exception\InvalidPayloadException;
 use Componenta\Auth\Http\Transport\CookieTransport;
+use Componenta\Auth\Http\Transport\SessionPayload;
+use Componenta\Clock\FrozenClock;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 final class CookieTransportTest extends TestCase
@@ -35,5 +38,34 @@ final class CookieTransportTest extends TestCase
 
         $this->expectException(InvalidPayloadException::class);
         (new CookieTransport())->extract($request);
+    }
+
+    public function testCookieExpiryUsesInjectedClock(): void
+    {
+        $request = $this->createStub(ServerRequestInterface::class);
+        $response = $this->createMock(ResponseInterface::class);
+        $response->method('getHeader')->with('Set-Cookie')->willReturn([]);
+        $response->method('withoutHeader')->with('Set-Cookie')->willReturnSelf();
+        $response->expects(self::once())
+            ->method('withAddedHeader')
+            ->with(
+                'Set-Cookie',
+                self::callback(static fn(string $value): bool => str_contains(
+                    $value,
+                    'Expires=Thu, 01 Jan 1970 00:16:50 GMT',
+                ) && str_contains($value, 'Max-Age=10')),
+            )
+            ->willReturnSelf();
+
+        $result = (new CookieTransport(
+            ttl: 10,
+            clock: new FrozenClock(1000, 'Europe/Copenhagen'),
+        ))->store(
+            $request,
+            $response,
+            new SessionPayload('session-id'),
+        );
+
+        self::assertSame($response, $result);
     }
 }
