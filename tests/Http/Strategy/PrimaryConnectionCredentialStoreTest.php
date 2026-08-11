@@ -226,6 +226,7 @@ final class PrimaryConnectionCredentialStoreTest extends TestCase
             CREATE TABLE refresh_token_families (
                 family_id TEXT PRIMARY KEY,
                 user_id TEXT NOT NULL,
+                revoked_at INTEGER NULL,
                 compromised_at INTEGER NULL,
                 lock_nonce TEXT NOT NULL
             )
