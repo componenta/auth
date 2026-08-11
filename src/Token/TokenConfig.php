@@ -6,12 +6,14 @@ namespace Componenta\Auth\Token;
 
 final readonly class TokenConfig
 {
+    public const string DATE_FORMAT = 'Y-m-d H:i:s';
+
     private const int MAX_TTL = 31536000;
 
     public function __construct(
         public string $table,
         public int $ttl = 300,
-        public string $dateFormat = 'Y-m-d H:i:s',
+        public string $dateFormat = self::DATE_FORMAT,
         public string $idColumn = 'id',
         public string $subjectIdColumn = 'user_id',
         public string $tokenColumn = 'token',
@@ -26,8 +28,11 @@ final readonly class TokenConfig
             ));
         }
 
-        if ($this->dateFormat === '') {
-            throw new \InvalidArgumentException('Date format must not be empty.');
+        if ($this->dateFormat !== self::DATE_FORMAT) {
+            throw new \InvalidArgumentException(sprintf(
+                'One-time token database timestamps must use the sortable format %s.',
+                self::DATE_FORMAT,
+            ));
         }
 
         foreach ([
