@@ -1,6 +1,6 @@
 # Migrating to componenta/auth v2
 
-Version 2 intentionally changes storage, identity, composition and property contracts. The former APIs could not enforce credential-lifecycle invariants under concurrency, partial failure and long-running workers.
+Version 2 intentionally changes storage, identity, composition and property contracts. The former APIs could not enforce credential-lifecycle invariants under concurrency, partial failure, replica lag and long-running workers.
 
 ## Canonical identity UUID
 
@@ -87,7 +87,7 @@ Componenta\Auth\Http\Strategy\MagicLink\Denied\TokenAlreadyUsed
 Componenta\Auth\Http\Strategy\MagicLink\Denied\TokenExpired
 ```
 
-Magic-link verification has always collapsed negative outcomes to `InvalidToken`; the two removed denial classes had no execution path.
+Magic-link verification collapses negative outcomes to `InvalidToken`; the removed denial classes had no execution path.
 
 Inject `TokenRequestQueueInterface` or `OtpRequestQueueInterface` directly and enqueue `TokenRequest`/`OtpRequest`.
 
@@ -115,10 +115,13 @@ Define every active strategy explicitly:
         JwtStrategy::class,
     ],
     'events' => true,
+    'rememberMe' => [
+        'enabled' => true,
+    ],
 ],
 ```
 
-Empty, duplicate, missing and non-strategy services fail fast.
+Empty, duplicate, missing and non-strategy services fail fast. The built-in `RememberMeStrategy` also requires `auth.rememberMe.enabled=true`; this prevents enabling credential issuance/consumption without the critical termination and regeneration listeners required by the feature.
 
 ## JWT profile
 
@@ -141,25 +144,128 @@ HMAC secrets must meet the digest-size minimum for the selected algorithm.
 
 `RefreshTokenGenerator` accepts 32–64 bytes only. Test fixtures that used short generators must be updated.
 
-## Refresh store
+## Built-in refresh store
 
-Implement the atomic store contract:
+`RefreshTokenStoreInterface` now has a secure default binding: `DatabaseRefreshTokenStore`.
+
+The store owns these atomic transitions:
 
 - `storeInitial()` persists the first family member;
-- `rotateAtomically()` serializes validation, revocation, replay compromise and successor creation;
-- `revokeAllForSubject()` supports account recovery.
+- `rotateAtomically()` serializes validation, presented-token consumption, replay compromise and successor creation;
+- `revoke()` serializes with concurrent family transitions;
+- `revokeAllForSubject()` compromises existing subject families and revokes their active tokens.
 
-A `Rotated` result must return the exact successor ID and expiry supplied to `rotateAtomically()`, an active token, a valid family ID and a non-empty subject ID.
+The implementation persists only SHA-256 representations of bearer token IDs. A separate family row is mutated on every family transition and acts as the serialization point. If successor insertion fails, the database transaction rolls the presented-token claim back. Replay marks the family compromised and revokes active descendants before returning `Reused`.
 
-## OTP store
+Default configuration:
 
-Replace separate lookup/attempt/consume operations with `verifyAndConsume()`. The operation must use one locked or versioned challenge record. Return `Expired` when expiry is known; it is no longer collapsed into `Invalid` inside the strategy.
+```php
+'auth' => [
+    'jwt' => [
+        'refreshStore' => [
+            'tokenTable' => 'refresh_tokens',
+            'familyTable' => 'refresh_token_families',
+            'columns' => [
+                'tokenHash' => 'token_hash',
+                'familyId' => 'family_id',
+                'subjectId' => 'user_id',
+                'expiresAt' => 'expires_at',
+                'consumedAt' => 'consumed_at',
+                'revokedAt' => 'revoked_at',
+                'compromisedAt' => 'compromised_at',
+                'lockNonce' => 'lock_nonce',
+            ],
+        ],
+    ],
+],
+```
+
+Minimum schema contract:
+
+```text
+refresh_token_families
+  family_id       PRIMARY KEY or UNIQUE
+  user_id         NOT NULL, indexed
+  compromised_at  nullable
+  lock_nonce      NOT NULL
+
+refresh_tokens
+  token_hash      PRIMARY KEY or UNIQUE
+  family_id       NOT NULL, indexed/FK to family_id
+  user_id         NOT NULL, indexed
+  expires_at      NOT NULL
+  consumed_at     nullable
+  revoked_at      nullable
+```
+
+`token_hash` must be able to hold a 64-character SHA-256 hex value. Do not persist the bearer token ID itself.
+
+If the application overrides `RefreshTokenStoreInterface`, the replacement must provide equivalent atomic rotation, rollback, family replay compromise and primary-read guarantees. Do not rebuild the old `find -> revoke -> store` sequence around the interface.
+
+## Built-in OTP store
+
+`CodeStoreInterface` now defaults to `DatabaseCodeStore`.
+
+The store persists a keyed verifier rather than the low-entropy numeric OTP:
+
+```text
+HMAC-SHA-256(destination || NUL || code, auth.otp.hmacKey)
+```
+
+Configure a dedicated secret of at least 32 bytes:
+
+```php
+'auth' => [
+    'otp' => [
+        'hmacKey' => $_ENV['AUTH_OTP_HMAC_KEY'],
+        'store' => [
+            'table' => 'otp_codes',
+        ],
+    ],
+],
+```
+
+The default key is empty intentionally. `DatabaseCodeStoreFactory` fails fast until a valid application secret is supplied. Do not reuse a JWT signing key.
+
+Minimum schema contract:
+
+```text
+otp_codes
+  destination   PRIMARY KEY or UNIQUE
+  user_id       NOT NULL
+  challenge_id  NOT NULL
+  verifier      NOT NULL
+  expires_at    NOT NULL
+  attempts      NOT NULL
+```
+
+`challenge_id` is regenerated on every replacement and is the optimistic version for attempt updates and consume/expiry deletes. A verification that started on an older challenge cannot consume or increment attempts on a replacement challenge. A correct code is single-winner because successful verification conditionally deletes exactly that challenge version.
+
+Custom `CodeStoreInterface` implementations must preserve the same versioned challenge, single-winner, bounded-attempt and primary-read semantics.
+
+## Primary/write reads for credential state
+
+This is an important migration requirement when Cycle Database is configured with a separate READ driver.
+
+Cycle `Database::select()` normally uses the READ driver, while credential mutation uses the WRITE driver. Reading authentication state from a lagging replica can resurrect a terminated session, observe an obsolete one-time challenge or make a security transition reason about stale rows.
+
+V2 therefore pins authoritative credential-state reads to `DatabaseInterface::WRITE` in the built-in:
+
+- `DatabaseSessionManager` (`exists`, `find`, regeneration source and active-session collection);
+- `DatabaseRememberMeTokenManager::consume()`;
+- `TokenManager::find()`;
+- `DatabaseRefreshTokenStore`;
+- `DatabaseCodeStore`.
+
+Deploy these readers and the corresponding writers together. Do not route them through an eventually consistent replica. Bounded housekeeping may still select candidates on a read replica when the actual delete rechecks the expiry/used predicate on the primary.
 
 ## Password reset
 
 Register `PasswordResetServiceInterface`. The service receives the plaintext reset token and new password, validates/locks the token before expensive hashing, and owns the complete security transition. `PasswordResetResult::Success` means: reset token consumed, password changed, and old session, remember-me and refresh credentials invalidated.
 
 `PasswordUpdaterInterface` has been removed because the HTTP handler no longer orchestrates the security transition itself.
+
+A generic library cannot create one physical transaction across an application-owned password repository and every credential store. If they are separate resources, use credential versioning plus a transactional outbox and idempotent retry; never return `Success` after a partial transition.
 
 ## Session and transport lifecycle
 
@@ -169,7 +275,14 @@ Register `PasswordResetServiceInterface`. The service receives the plaintext res
 - Custom authentication middleware must attach the verified `SessionInterface` if logout should terminate that server-side session.
 - Session touch rechecks idle/absolute expiry.
 - Session cleanup is bounded and rechecks expiry before delete.
+- Session termination/regeneration executes critical lifecycle listeners inside the database transaction; best-effort observers run only after commit.
 - `SessionCollection::pluck()` rejects unknown keys.
+
+## Malformed payload mapping
+
+Strict auth extractors throw `InvalidPayloadException` for malformed client input. Built-in handlers must run behind `InvalidPayloadMiddleware` or an equivalent application exception mapper that turns this exception into a stable HTTP 400 response.
+
+Without that mapping malformed-input behavior is delegated to the application's global exception handler and is not a supported production composition.
 
 ## One-time token storage
 
@@ -177,11 +290,11 @@ Register `PasswordResetServiceInterface`. The service receives the plaintext res
 
 ## Remember-me feature flag
 
-Remember-me is disabled by default. Set `auth.rememberMe.enabled=true` only when `RememberMeTokenManagerInterface` is configured. Enabling the feature automatically adds the built-in termination and regeneration listeners; custom listener lists are deduplicated.
+Remember-me is disabled by default. Set `auth.rememberMe.enabled=true` only when the feature is intended to be active. Enabling it automatically adds the built-in termination and regeneration listeners; custom listener lists are deduplicated.
 
 ## Housekeeping signatures
 
-The following methods are now bounded and return affected rows:
+The following methods are bounded and return affected rows:
 
 ```php
 SessionManagerInterface::cleanup(int $limit = 1000): int;
@@ -193,7 +306,7 @@ Invoke them from a worker, cron task or scheduler.
 
 ## Composer requirements
 
-The package now declares its direct PSR-17 and PSR-15 handler dependencies:
+The package declares its direct PSR-17 and PSR-15 handler dependencies:
 
 ```text
 psr/http-factory
@@ -220,9 +333,11 @@ ConfigKey::PASSWORD_RESET
 
 ## Secure rollout order
 
-1. Update identity/provider and storage adapters.
-2. Deploy atomic refresh and OTP store implementations.
-3. Register delivery queues and processors.
-4. Configure ordered strategies and explicit JWT profile.
-5. Deploy handlers and property-API consumers.
-6. Run concurrency, DB integration, PHPUnit and PHPStan gates before production rollout.
+1. Update identity/provider contracts to canonical UUID ownership.
+2. Create/alter refresh family/token and OTP challenge tables with the constraints above.
+3. Configure `auth.otp.hmacKey` and the explicit JWT profile.
+4. Deploy credential writers and the primary-pinned credential readers together.
+5. Register delivery queues/processors and the application `PasswordResetServiceInterface`.
+6. Configure ordered authentication strategies and remember-me feature state.
+7. Put strict auth handlers behind `InvalidPayloadMiddleware` or an equivalent 400 mapper.
+8. Run DB integration/concurrency tests, PHPUnit, PHPStan and dependency audit before production rollout.
