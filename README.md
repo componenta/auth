@@ -179,7 +179,8 @@ The built-in refresh store:
 - keeps a separate family row as the serialization point for rotation, replay handling and bulk revocation;
 - performs presented-token consumption and successor creation in one database transaction;
 - rolls the presented-token claim back if successor persistence fails;
-- marks the family compromised on replay and revokes every active descendant;
+- records ordinary family revocation separately from replay compromise, so password reset/logout-all does not masquerade as an attack;
+- marks the family compromised on actual replay and revokes every active descendant;
 - pins security-state reads to the primary/write connection.
 
 The schema must enforce at least:
@@ -188,6 +189,7 @@ The schema must enforce at least:
 refresh_token_families
   family_id       PRIMARY KEY or UNIQUE
   user_id         NOT NULL, indexed
+  revoked_at      nullable
   compromised_at  nullable
   lock_nonce      NOT NULL
 
@@ -200,7 +202,7 @@ refresh_tokens
   revoked_at      nullable
 ```
 
-Configured table and column names may differ. `token_hash` contains the 64-character SHA-256 hex representation, never the bearer token itself.
+Configured table and column names may differ. `token_hash` contains the 64-character SHA-256 hex representation, never the bearer token itself. `familyRevokedAt` and `compromisedAt` are separate configurable family-state columns even when the token table also uses a column named `revoked_at`.
 
 `RefreshTokenStoreInterface::rotateAtomically()` remains the contract for custom implementations. A rotated result must contain the exact successor requested by the manager, with the expected expiry and active state. A custom implementation must provide equivalent family serialization and replay guarantees.
 
