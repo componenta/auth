@@ -178,21 +178,12 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
             );
         }
 
-        $idleExpiresAt = $now->modify("+{$this->config->idleTimeout} seconds");
-        $absoluteExpiresAt = $this->find($sessionId)?->absoluteExpiresAt;
-
-        if ($absoluteExpiresAt === null) {
-            return;
-        }
-
         $query
             ->values([
                 $this->config->lastActiveAtColumn => $now->format($this->config->dateFormat),
-                $this->config->expiresAtColumn => (
-                    $idleExpiresAt < $absoluteExpiresAt
-                        ? $idleExpiresAt
-                        : $absoluteExpiresAt
-                )->format($this->config->dateFormat),
+                $this->config->expiresAtColumn => $now
+                    ->modify("+{$this->config->idleTimeout} seconds")
+                    ->format($this->config->dateFormat),
             ])
             ->run();
     }
