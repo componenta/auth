@@ -64,6 +64,37 @@ final class JwtStrategyTest extends TestCase
             $strategy->attempt(new BearerPayload('token'), new Context())->subject,
         );
     }
+
+    public function testProviderCannotSubstituteDifferentIdentity(): void
+    {
+        $subjectId = Uuid::fromString(
+            '018f6d5d-3f7a-7a9b-8c2f-123456789abc',
+        );
+        $other = new class implements IdentityInterface {
+            public UuidInterface $uuid {
+                get => Uuid::fromString(
+                    '018f6d5d-3f7a-7a9b-8c2f-123456789abd',
+                );
+            }
+        };
+        $strategy = new JwtStrategy(
+            new JwtSignerFixture(new Claims(
+                subject: $subjectId->toString(),
+                issuedAt: 900,
+                expiresAt: 1100,
+                issuer: 'https://issuer.example',
+                audience: 'componenta-api',
+                type: 'at+jwt',
+            )),
+            new JwtProviderFixture($other),
+            new JwtConfig('https://issuer.example', 'componenta-api'),
+            new JwtClockFixture(),
+        );
+
+        $result = $strategy->attempt(new BearerPayload('token'), new Context());
+
+        self::assertInstanceOf(InvalidAccessToken::class, $result->subject);
+    }
 }
 
 final readonly class JwtSignerFixture implements SignerInterface
