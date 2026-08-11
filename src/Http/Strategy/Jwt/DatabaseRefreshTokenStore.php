@@ -383,7 +383,18 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
         DatabaseInterface $database,
         string $tokenHash,
     ): ?array {
-        $row = $this->writeSelect($database)
+        $query = $database->select()->withDriver(
+            $database->getDriver(DatabaseInterface::WRITE),
+            $database->getPrefix(),
+        );
+
+        if (!$query instanceof SelectQuery) {
+            throw new \LogicException(
+                'Cycle must preserve SelectQuery when pinning the write driver.',
+            );
+        }
+
+        $row = $query
             ->from($this->config->tokenTable)
             ->where($this->config->tokenHashColumn, $tokenHash)
             ->run()
@@ -397,21 +408,6 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
         DatabaseInterface $database,
         string $familyId,
     ): ?array {
-        $row = $this->writeSelect($database)
-            ->from($this->config->familyTable)
-            ->where($this->config->familyIdColumn, $familyId)
-            ->run()
-            ->fetch();
-
-        return is_array($row) ? $row : null;
-    }
-
-    /**
-     * Security-state reads must use the same primary/write connection as the
-     * transaction. Cycle Database::select() otherwise prefers a read replica.
-     */
-    private function writeSelect(DatabaseInterface $database): SelectQuery
-    {
         $query = $database->select()->withDriver(
             $database->getDriver(DatabaseInterface::WRITE),
             $database->getPrefix(),
@@ -423,7 +419,13 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
             );
         }
 
-        return $query;
+        $row = $query
+            ->from($this->config->familyTable)
+            ->where($this->config->familyIdColumn, $familyId)
+            ->run()
+            ->fetch();
+
+        return is_array($row) ? $row : null;
     }
 
     private static function lockNonce(): string
