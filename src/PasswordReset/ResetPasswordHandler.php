@@ -77,13 +77,14 @@ final readonly class ResetPasswordHandler implements RequestHandlerInterface
         /** @var non-empty-string $password */
         $result = $this->resetService->reset($token, $password);
 
-        if ($result === PasswordResetResult::InvalidToken) {
-            return $this->json(400, ['error' => 'invalid_token']);
-        }
-
-        return $this->json(200, [
-            'message' => 'Password has been reset successfully.',
-        ]);
+        return match ($result) {
+            PasswordResetResult::Success => $this->json(200, [
+                'message' => 'Password has been reset successfully.',
+            ]),
+            PasswordResetResult::InvalidToken => $this->json(400, [
+                'error' => 'invalid_token',
+            ]),
+        };
     }
 
     /** @param array<string, mixed> $data */
