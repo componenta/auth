@@ -2,7 +2,7 @@
 
 Контракты аутентификации и PSR-7/PSR-15 компоненты для приложений Componenta на PHP 8.4+.
 
-Пакет поддерживает password login, stateful sessions, remember-me cookie, подписанные JWT access-токены со stateful opaque refresh grants, OTP, magic links, password reset и lifecycle events.
+Пакет поддерживает password login, stateful sessions, remember-me cookie, подписанные JWT access-токены со stateful opaque refresh grants, OTP, magic links, password reset и authentication lifecycle events.
 
 Для браузерных приложений рекомендуемый профиль — stateful `HttpOnly` session. JWT access token должен быть короткоживущим, а opaque refresh token остаётся серверным grant с атомарной ротацией и обнаружением replay.
 
@@ -20,7 +20,8 @@ composer require componenta/auth
 - `ext-mbstring`;
 - реализации PSR-7, PSR-15 и PSR-17;
 - Componenta DI 2 или 3;
-- application adapters для используемых stores и delivery queues.
+- Cycle Database для встроенных session, remember-me, one-time, refresh и OTP stores;
+- application adapters для delivery queues, password reset и stores, которые приложение намеренно переопределяет.
 
 ## Единственный идентификатор identity
 
@@ -30,7 +31,7 @@ composer require componenta/auth
 $subjectId = $identity->uuid->toString();
 ```
 
-Отдельного auth-specific ID больше нет. Session, remember-me, one-time tokens, refresh grants и JWT `sub` используют одну UUID-строку. Persistence adapter может сопоставлять UUID внутреннему PK, но это не является частью API auth-компонента.
+Отдельного auth-specific ID больше нет. Session, remember-me, one-time tokens, OTP challenges, refresh grants и JWT `sub` используют одну UUID-строку. Persistence adapter может сопоставлять UUID внутреннему PK, но это не является частью API auth-компонента.
 
 ## Явная композиция Authenticator
 
@@ -53,7 +54,7 @@ return [
 ];
 ```
 
-`AuthenticatorFactory` сохраняет порядок и fail-fast отклоняет пустой список, дубли, отсутствующие services и значения неверного типа.
+`AuthenticatorFactory` сохраняет порядок и fail-fast отклоняет пустой список, дубли, отсутствующие services и значения неверного типа. Встроенный `RememberMeStrategy` дополнительно запрещён при `auth.rememberMe.enabled=false`, потому что эта стратегия требует активных critical termination/regeneration listeners.
 
 Password, OTP и magic-link verification handlers используют тот же `AuthenticatorInterface`; они больше не обходят общий event decorator прямым вызовом отдельной strategy.
 
@@ -101,12 +102,21 @@ Session manager:
 - ограничивает частоту UPDATE через `auth.session.touchInterval`;
 - использует conditional UPDATE;
 - сохраняет transaction + optimistic claim при regeneration;
+- выполняет critical lifecycle participants внутри DB transaction, а best-effort observers — только после commit;
 - повторно проверяет expiry перед удалением rows, выбранных bounded cleanup;
 - ограничивает размеры batch и входных ID.
 
 Metadata доступна через `$session->attributes`. `getAttribute()` различает отсутствующий ключ и явно записанный `null`.
 
 `SessionCollection::pluck()` читает только объявленные свойства session либо metadata attributes и отклоняет неизвестные ключи.
+
+## Primary reads для credential state
+
+Cycle Database может использовать отдельные READ и WRITE drivers. Replica lag недопустим для состояния аутентификации: удалённая на primary session не должна оставаться действительной только потому, что read replica ещё содержит старую строку.
+
+Поэтому встроенные session, remember-me, one-time-token, refresh и OTP stores принудительно читают security state через `DatabaseInterface::WRITE`. Read replica допустима только для неавторитетной housekeeping-выборки, если последующая write-операция повторно проверяет security predicate на primary.
+
+Custom credential store обязан сохранить это правило либо предоставить эквивалентную linearizable consistency guarantee.
 
 ## Remember-me
 
@@ -141,6 +151,10 @@ JWT validation является явным профилем. `issuer`, `audience
         'accessTtl' => 900,
         'refreshTtl' => 604800,
         'clockSkew' => 30,
+        'refreshStore' => [
+            'tokenTable' => 'refresh_tokens',
+            'familyTable' => 'refresh_token_families',
+        ],
     ],
 ],
 ```
@@ -149,35 +163,99 @@ JWT validation является явным профилем. `issuer`, `audience
 
 Минимальный HMAC secret: 32/48/64 bytes для HS256/HS384/HS512.
 
-Refresh token и family ID содержат 32–64 random bytes. `rotateAtomically()` остаётся storage-level security boundary. Store обязан вернуть именно запрошенный successor с ожидаемым expiry и active state.
+Refresh token и family ID содержат 32–64 random bytes. Default binding `RefreshTokenStoreInterface` — `DatabaseRefreshTokenStore`.
+
+Встроенный refresh store:
+
+- сохраняет только SHA-256 representation bearer token ID;
+- использует отдельную family-row как serialization point для rotation, replay handling и bulk revocation;
+- выполняет consume presented token и создание successor в одной DB transaction;
+- откатывает claim старого token, если insert successor завершился ошибкой;
+- при replay помечает family compromised и отзывает все активные descendants;
+- читает security state только с primary/write connection.
+
+Минимальные требования к schema:
+
+```text
+refresh_token_families
+  family_id       PRIMARY KEY или UNIQUE
+  user_id         NOT NULL, index
+  compromised_at  nullable
+  lock_nonce      NOT NULL
+
+refresh_tokens
+  token_hash      PRIMARY KEY или UNIQUE
+  family_id       NOT NULL, index/FK -> refresh_token_families.family_id
+  user_id         NOT NULL, index
+  expires_at      NOT NULL
+  consumed_at     nullable
+  revoked_at      nullable
+```
+
+Названия таблиц и колонок настраиваются. `token_hash` содержит 64-символьный SHA-256 hex, а не bearer token.
+
+`RefreshTokenStoreInterface::rotateAtomically()` остаётся security contract для custom implementations. Custom store обязан обеспечить эквивалентную сериализацию family и replay semantics.
 
 Ответы с access/refresh credentials всегда получают `Cache-Control: no-store`, `Pragma: no-cache` и `Content-Type: application/json`.
 
 ## OTP и delivery queues
 
-`CodeStoreInterface::verifyAndConsume()` объединяет attempts, expiry, verifier comparison и consume одной locked/versioned record. Expired и invalid outcomes различаются.
+`CodeStoreInterface::verifyAndConsume()` объединяет attempt accounting, expiry, verifier comparison и consume над одной versioned challenge.
 
-HTTP handlers внедряют `TokenRequestQueueInterface` или `OtpRequestQueueInterface` напрямую и ставят в очередь `TokenRequest`/`OtpRequest`. Пустые requester wrappers удалены.
+Default binding `CodeStoreInterface` — `DatabaseCodeStore`. Plain OTP в БД не хранится. Вместо него используется `HMAC-SHA-256(destination || NUL || code)` с отдельным application secret:
 
-User lookup, generation, persistence и sender I/O выполняют `TokenRequestProcessor`/`OtpRequestProcessor` вне HTTP request thread.
+```php
+'auth' => [
+    'otp' => [
+        'hmacKey' => $_ENV['AUTH_OTP_HMAC_KEY'], // минимум 32 bytes
+        'store' => [
+            'table' => 'otp_codes',
+        ],
+    ],
+],
+```
 
-Встроенный SQL manager one-time tokens заменяет challenge субъекта одним atomic UPSERT. Поэтому таблица обязана иметь `UNIQUE` constraint на колонке canonical subject UUID. OTP stores остаются application adapters и должны атомарно реализовывать `verifyAndConsume()` над одной locked/versioned record.
+Пустой default `auth.otp.hmacKey` намеренно неработоспособен: built-in SQL store fail-fast не создаётся, пока приложение не передаст secret длиной минимум 32 bytes. Не переиспользуйте JWT signing key.
+
+`DatabaseCodeStore` использует random `challenge_id` как optimistic version. UPDATE attempts и DELETE при success/expiry включают эту версию. Если challenge заменяется во время verification, stale operation завершается как invalid и не списывает попытку у replacement и не consume его.
+
+Schema должна гарантировать один текущий challenge на destination:
+
+```text
+otp_codes
+  destination   PRIMARY KEY или UNIQUE
+  user_id       NOT NULL
+  challenge_id  NOT NULL
+  verifier      NOT NULL
+  expires_at    NOT NULL
+  attempts      NOT NULL
+```
+
+Встроенный SQL manager one-time tokens для magic links/password-reset delivery заменяет challenge субъекта одним atomic UPSERT. Поэтому таблица обязана иметь `UNIQUE` constraint на canonical subject UUID.
+
+HTTP handlers внедряют `TokenRequestQueueInterface` или `OtpRequestQueueInterface` напрямую и ставят в очередь `TokenRequest`/`OtpRequest`. User lookup, generation, persistence и sender I/O выполняют `TokenRequestProcessor`/`OtpRequestProcessor` вне HTTP request thread.
+
+Custom `CodeStoreInterface` обязан сохранить single-winner, atomic attempt accounting, isolation replacement challenge и primary-read semantics.
 
 ## Password reset
 
-`PasswordResetServiceInterface` владеет полной recovery transaction, включая проверку reset token и дорогое хэширование нового пароля. `PasswordResetResult::Success` означает: reset token consumed, password изменён, прежние session, remember-me и refresh credentials durably либо logically invalidated.
+`PasswordResetServiceInterface` владеет полной recovery transition, включая проверку reset token и дорогое хэширование нового пароля. `PasswordResetResult::Success` означает: reset token consumed, password изменён, прежние session, remember-me и refresh credentials durably либо logically invalidated.
 
-При разных stores необходимы credential version, transactional outbox и идемпотентный retry.
+Пакет не может создать общую транзакцию вокруг application-owned password repository. Если password state и credentials находятся в разных stores, необходимы credential version, transactional outbox и идемпотентный retry вместо сообщения об успехе после частичного изменения.
 
 ## События и публичные ошибки
 
 Generic authentication events содержат тип payload, но не raw password, OTP, bearer или refresh token.
+
+Critical session lifecycle listeners выполняются до best-effort observers. Для DB-backed session transitions critical listeners входят в transaction, а observers видят event только после commit.
 
 `DeniedReasonInterface::$attributes` является trusted audit context. Default response публикует только stable error code. Явно разрешённые scalar details предоставляются через `PublicDeniedReasonInterface::$publicDetails`.
 
 ## Input и cookie validation
 
 Authentication inputs проверяются по типу и размеру до hash/provider/storage operations. `InvalidPayloadException` больше не удерживает credential payload.
+
+Built-in HTTP handlers со strict extractors должны находиться за `InvalidPayloadMiddleware` либо application-level mapper, который преобразует `InvalidPayloadException` в стабильный HTTP 400. Без такого mapper malformed request зависит от глобального exception handler и не является поддерживаемой production composition.
 
 `CookieTransport` валидирует cookie names, Path, Domain, SameSite, требования `__Secure-`/`__Host-` и размеры credentials. `SameSite=None` требует `Secure`.
 
@@ -190,10 +268,13 @@ Authentication inputs проверяются по типу и размеру д�
 | `ConfigKey::EVENTS` | Eventing decorator. |
 | `ConfigKey::SESSION` | Session persistence и touch settings. |
 | `ConfigKey::REMEMBER_ME` | Feature flag и settings remember-me; по умолчанию выключен. |
-| `ConfigKey::JWT` | Явный JWT/refresh profile. |
+| `ConfigKey::OTP` | OTP store settings и отдельный HMAC verifier key. |
+| `ConfigKey::JWT` | JWT profile и settings встроенного refresh store. |
 | `ConfigKey::DENIED` | Mapping HTTP status. |
 | `ConfigKey::LISTENERS` | Lifecycle listeners. |
 
 ## Миграция
 
 `v2` содержит намеренные breaking security/API changes. См. [MIGRATION-v2.md](MIGRATION-v2.md). Нельзя имитировать `rotateAtomically()` или `verifyAndConsume()` последовательностью старых методов: это возвращает устранённые race conditions.
+
+Если Cycle Database использует отдельный READ driver, все credential-state consumers должны быть обновлены вместе с пакетом: `v2` намеренно читает auth state через primary/write driver, чтобы replica lag не мог «воскресить» отозванный credential.
