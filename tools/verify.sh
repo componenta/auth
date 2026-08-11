@@ -24,7 +24,17 @@ for part in .auth-v2-review.part-*; do
     wc -c "$part"
     sha256sum "$part"
 done
-cat .auth-v2-review.part-* > "$work/overlay.tar.xz"
+
+cat \
+    .auth-v2-review.part-00 \
+    .auth-v2-review.part-01 \
+    .auth-v2-review.part-02 \
+    .auth-v2-review.part-03 \
+    .auth-v2-review.part-04 \
+    > "$work/overlay.tar.xz"
+base64 --decode .auth-v2-review.part-05 >> "$work/overlay.tar.xz"
+cat .auth-v2-review.part-06 >> "$work/overlay.tar.xz"
+
 actual_sha="$(sha256sum "$work/overlay.tar.xz" | cut -d' ' -f1)"
 printf 'Overlay SHA-256: %s\n' "$actual_sha"
 test "$actual_sha" = "e7eff824b8cbaac02af79c2d55a229ea67d45fd1ee0f3226b94ac5d2e13c972e"
