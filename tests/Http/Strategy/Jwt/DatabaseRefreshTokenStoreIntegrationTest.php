@@ -75,7 +75,7 @@ final class DatabaseRefreshTokenStoreIntegrationTest extends TestCase
         self::assertSame(RefreshTokenRotationStatus::Reused, $replay->status);
 
         $family = $database
-            ->select('revoked_at', 'compromised_at')
+            ->select(['revoked_at', 'compromised_at'])
             ->from('refresh_token_families')
             ->where('family_id', self::FAMILY_A)
             ->run()
@@ -195,7 +195,7 @@ final class DatabaseRefreshTokenStoreIntegrationTest extends TestCase
         );
 
         $families = $database
-            ->select('revoked_at', 'compromised_at')
+            ->select(['revoked_at', 'compromised_at'])
             ->from('refresh_token_families')
             ->orderBy('family_id')
             ->run()
