@@ -17,18 +17,7 @@ final readonly class ResetPasswordHandler implements RequestHandlerInterface
     public function __construct(
         private PasswordResetServiceInterface $resetService,
         private ResponseFactoryInterface $responseFactory,
-        private int $minPasswordLength = 8,
-    ) {
-        if (
-            $this->minPasswordLength < 1
-            || $this->minPasswordLength > self::MAX_PASSWORD_LENGTH
-        ) {
-            throw new \InvalidArgumentException(sprintf(
-                'Minimum password length must be between 1 and %d.',
-                self::MAX_PASSWORD_LENGTH,
-            ));
-        }
-    }
+    ) {}
 
     #[\Override]
     public function handle(ServerRequestInterface $request): ResponseInterface
@@ -53,13 +42,6 @@ final readonly class ResetPasswordHandler implements RequestHandlerInterface
             $errors['password'] = ['Password is required.'];
         } elseif (strlen($password) > self::MAX_PASSWORD_LENGTH) {
             $errors['password'] = ['Password is too long.'];
-        } elseif (mb_strlen($password) < $this->minPasswordLength) {
-            $errors['password'] = [
-                sprintf(
-                    'Password must be at least %d characters long.',
-                    $this->minPasswordLength,
-                ),
-            ];
         }
 
         if (
@@ -83,6 +65,11 @@ final readonly class ResetPasswordHandler implements RequestHandlerInterface
             ]),
             PasswordResetResult::InvalidToken => $this->json(400, [
                 'error' => 'invalid_token',
+            ]),
+            PasswordResetResult::PasswordRejected => $this->json(422, [
+                'errors' => [
+                    'password' => ['Password does not satisfy policy.'],
+                ],
             ]),
         };
     }
