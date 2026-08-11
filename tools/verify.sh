@@ -36,22 +36,88 @@ printf 'Overlay SHA-256: %s\n' "$actual_sha"
 test "$actual_sha" = "e7eff824b8cbaac02af79c2d55a229ea67d45fd1ee0f3226b94ac5d2e13c972e"
 mkdir "$work/unpacked"
 tar -xJf "$work/overlay.tar.xz" -C "$work/unpacked"
-
-cp "$work/unpacked/replacement/tools/verify.sh" "$work/final-verify.sh"
-chmod 0755 "$work/final-verify.sh"
 rm "$work/unpacked/replacement/tools/verify.sh"
-python3 - "$work/final-verify.sh" <<'PY'
-from pathlib import Path
-import sys
 
-path = Path(sys.argv[1])
-text = path.read_text()
-old = "if grep -R --line-number -E '\\b(TokenAlreadyUsed|TokenExpired)\\b' src tests; then"
-new = "if grep -R --line-number -E '(^|[^[:alnum:]_])(TokenAlreadyUsed|TokenExpired)([^[:alnum:]_]|$)' src tests; then"
-if old not in text:
-    raise SystemExit('Expected verification pattern was not found.')
-path.write_text(text.replace(old, new))
-PY
+cat > "$work/final-verify.sh" <<'VERIFY'
+#!/usr/bin/env bash
+set -euo pipefail
+
+composer validate --strict
+composer check-platform-reqs
+composer lint
+
+for removed in \
+    AuthSubject \
+    AuthSubjectInterface \
+    RememberMeAwareInterface \
+    PasswordUpdaterInterface \
+    TokenRequester \
+    OtpRequester
+do
+    if grep -R --line-number --fixed-strings "$removed" src tests; then
+        echo "Removed symbol still referenced: $removed" >&2
+        exit 1
+    fi
+done
+
+for removed_file in \
+    src/Http/Strategy/MagicLink/Denied/TokenAlreadyUsed.php \
+    src/Http/Strategy/MagicLink/Denied/TokenExpired.php
+do
+    if [[ -e "$removed_file" ]]; then
+        echo "Removed magic-link denial still exists: $removed_file" >&2
+        exit 1
+    fi
+done
+
+if grep -R --line-number -E '(^|[^[:alnum:]_])(TokenAlreadyUsed|TokenExpired)([^[:alnum:]_]|$)' src tests; then
+    echo 'Removed magic-link denial symbol is still referenced.' >&2
+    exit 1
+fi
+
+if [[ ! -f src/Session/SessionAwareInterface.php ]]; then
+    echo 'SessionAwareInterface must expose the identity session collection.' >&2
+    exit 1
+fi
+
+if ! grep -q 'public SessionCollectionInterface \$sessions { get; }' src/Session/SessionAwareInterface.php; then
+    echo 'SessionAwareInterface must expose the read-only $sessions property.' >&2
+    exit 1
+fi
+
+if grep -R --line-number --fixed-strings 'currentSessionId' src; then
+    echo 'Request-local currentSessionId must not be stored on an identity.' >&2
+    exit 1
+fi
+
+if grep -R --line-number -E 'getAuthSubjectId\(|getAttributes\(|isEmpty\(|shouldClear\(|payloads\(|publicDetails\(|isRevoked\(' src tests; then
+    echo 'Legacy getter-style state API is still referenced.' >&2
+    exit 1
+fi
+
+if compgen -G '.auth-v2-review.part-*' >/dev/null; then
+    echo 'Temporary staging payload remains.' >&2
+    exit 1
+fi
+
+for forbidden in .auth-v2-review.ready .github/workflows/apply-auth-v2-review.yml; do
+    if [[ -e "$forbidden" ]]; then
+        echo "Temporary staging artifact remains: $forbidden" >&2
+        exit 1
+    fi
+done
+
+if grep -R --line-number -E 'function (create|all|terminateAll|revokeAllForSubject|replaceForSubject)\(int\|string' src; then
+    echo 'Credential ownership APIs must use the canonical UUID contract.' >&2
+    exit 1
+fi
+
+composer test
+composer phpstan
+composer audit --no-interaction
+git diff --check
+VERIFY
+chmod 0755 "$work/final-verify.sh"
 
 while IFS= read -r path; do
     if [[ -n "$path" ]]; then
