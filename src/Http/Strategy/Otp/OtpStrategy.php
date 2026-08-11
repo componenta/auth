@@ -54,7 +54,7 @@ final readonly class OtpStrategy implements AuthenticationStrategyInterface
 
         $identity = $this->provider->findByUuid($result->subjectId);
 
-        return $identity === null
+        return $identity === null || !$result->subjectId->equals($identity->uuid)
             ? new AuthenticationResult(new InvalidCode())
             : new AuthenticationResult($identity);
     }
