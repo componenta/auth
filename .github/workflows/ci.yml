@@ -17,13 +17,31 @@ jobs:
         php: ['8.4', '8.5']
         di: ['2.*', '3.*']
     runs-on: ubuntu-latest
+    env:
+      AUTH_TEST_MYSQL_DSN: mysql:host=127.0.0.1;port=3306;dbname=auth_test
+      AUTH_TEST_MYSQL_USER: root
+      AUTH_TEST_MYSQL_PASSWORD: root
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_ROOT_HOST: '%'
+          MYSQL_DATABASE: auth_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
     steps:
       - uses: actions/checkout@v6
 
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: mbstring, pdo_sqlite
+          extensions: mbstring, pdo_sqlite, pdo_mysql
           coverage: none
           tools: composer:v2
 
