@@ -9,6 +9,7 @@ for removed in \
     AuthSubject \
     AuthSubjectInterface \
     RememberMeAwareInterface \
+    SessionAwareInterface \
     PasswordUpdaterInterface \
     TokenRequester \
     OtpRequester
@@ -31,16 +32,6 @@ done
 
 if grep -R --line-number -E '(^|[^[:alnum:]_])(TokenAlreadyUsed|TokenExpired)([^[:alnum:]_]|$)' src tests; then
     echo 'Removed magic-link denial symbol is still referenced.' >&2
-    exit 1
-fi
-
-if [[ ! -f src/Session/SessionAwareInterface.php ]]; then
-    echo 'SessionAwareInterface must expose the identity session collection.' >&2
-    exit 1
-fi
-
-if ! grep -q 'public SessionCollectionInterface \$sessions { get; }' src/Session/SessionAwareInterface.php; then
-    echo 'SessionAwareInterface must expose the read-only $sessions property.' >&2
     exit 1
 fi
 
