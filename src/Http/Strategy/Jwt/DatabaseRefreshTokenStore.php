@@ -7,6 +7,7 @@ namespace Componenta\Auth\Http\Strategy\Jwt;
 use Componenta\Identity\Uuid;
 use Componenta\Identity\UuidInterface;
 use Cycle\Database\DatabaseInterface;
+use Cycle\Database\Query\SelectQuery;
 
 /**
  * SQL refresh-grant store with family-level serialization.
@@ -83,7 +84,7 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
         }
 
         $presentedHash = self::hashToken($presentedTokenId);
-        $candidate = $this->findToken($presentedHash);
+        $candidate = $this->findToken($this->database, $presentedHash);
 
         if ($candidate === null) {
             return RefreshTokenRotationResult::invalid();
@@ -106,7 +107,7 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
                     return RefreshTokenRotationResult::reused();
                 }
 
-                $family = $this->findFamily($familyId);
+                $family = $this->findFamily($database, $familyId);
 
                 if ($family === null) {
                     throw new \UnexpectedValueException(
@@ -114,7 +115,7 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
                     );
                 }
 
-                $token = $this->findToken($presentedHash);
+                $token = $this->findToken($database, $presentedHash);
 
                 if ($token === null) {
                     throw new \UnexpectedValueException(
@@ -225,7 +226,7 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
         }
 
         $tokenHash = self::hashToken($tokenId);
-        $candidate = $this->findToken($tokenHash);
+        $candidate = $this->findToken($this->database, $tokenHash);
 
         if ($candidate === null) {
             return;
@@ -313,7 +314,7 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
             return true;
         }
 
-        $family = $this->findFamily($familyId);
+        $family = $this->findFamily($database, $familyId);
 
         if ($family === null) {
             throw new \UnexpectedValueException(
@@ -378,10 +379,11 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
     }
 
     /** @return array<array-key, mixed>|null */
-    private function findToken(string $tokenHash): ?array
-    {
-        $row = $this->database
-            ->select()
+    private function findToken(
+        DatabaseInterface $database,
+        string $tokenHash,
+    ): ?array {
+        $row = $this->writeSelect($database)
             ->from($this->config->tokenTable)
             ->where($this->config->tokenHashColumn, $tokenHash)
             ->run()
@@ -391,16 +393,37 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
     }
 
     /** @return array<array-key, mixed>|null */
-    private function findFamily(string $familyId): ?array
-    {
-        $row = $this->database
-            ->select()
+    private function findFamily(
+        DatabaseInterface $database,
+        string $familyId,
+    ): ?array {
+        $row = $this->writeSelect($database)
             ->from($this->config->familyTable)
             ->where($this->config->familyIdColumn, $familyId)
             ->run()
             ->fetch();
 
         return is_array($row) ? $row : null;
+    }
+
+    /**
+     * Security-state reads must use the same primary/write connection as the
+     * transaction. Cycle Database::select() otherwise prefers a read replica.
+     */
+    private function writeSelect(DatabaseInterface $database): SelectQuery
+    {
+        $query = $database->select()->withDriver(
+            $database->getDriver(DatabaseInterface::WRITE),
+            $database->getPrefix(),
+        );
+
+        if (!$query instanceof SelectQuery) {
+            throw new \LogicException(
+                'Cycle must preserve SelectQuery when pinning the write driver.',
+            );
+        }
+
+        return $query;
     }
 
     private static function lockNonce(): string
