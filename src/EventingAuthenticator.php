@@ -24,7 +24,7 @@ final readonly class EventingAuthenticator implements AuthenticatorInterface
     public function attempt(object $payload, ContextInterface $context): AuthenticationResult
     {
         $payloadType = $payload::class;
-        $this->dispatcher->dispatch(new AuthenticationAttempted(
+        $this->dispatcher->dispatchObservers(new AuthenticationAttempted(
             $payloadType,
             $this->clock->now(),
         ));
@@ -32,13 +32,13 @@ final readonly class EventingAuthenticator implements AuthenticatorInterface
         $result = $this->authenticator->attempt($payload, $context);
 
         if ($result->subject instanceof IdentityInterface) {
-            $this->dispatcher->dispatch(new AuthenticationSucceeded(
+            $this->dispatcher->dispatchObservers(new AuthenticationSucceeded(
                 $result->subject->uuid,
                 $payloadType,
                 $this->clock->now(),
             ));
         } else {
-            $this->dispatcher->dispatch(new AuthenticationDenied(
+            $this->dispatcher->dispatchObservers(new AuthenticationDenied(
                 $result->subject,
                 $payloadType,
                 $this->clock->now(),
