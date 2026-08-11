@@ -27,8 +27,9 @@ final class SessionRegenerationSecurityTest extends TestCase
         $old = $manager->create(self::subjectId(), self::attributes());
         $new = $manager->regenerate($old->id);
 
-        self::assertTrue($manager->exists($old->id));
+        self::assertFalse($manager->exists($old->id));
         self::assertNull($manager->find($old->id));
+        self::assertTrue($manager->exists($new->id));
         self::assertSame($new->id, $manager->find($new->id)?->id);
     }
 
