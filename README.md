@@ -193,6 +193,8 @@ Generic authentication events contain the payload type, never the raw password, 
 
 Authentication inputs are type-checked and bounded before hashing, provider lookup or storage access. Malformed credentials are represented by `InvalidPayloadException` without retaining the credential payload inside the exception.
 
+Built-in HTTP handlers that invoke strict extractors must run behind `InvalidPayloadMiddleware` or an application-level equivalent that maps `InvalidPayloadException` to a stable 400 response. Omitting this mapping makes malformed-client behavior depend on the application's global exception handler and is not a supported production composition.
+
 `CookieTransport` validates cookie names, path, domain, `SameSite`, `__Secure-`/`__Host-` requirements and credential lengths. `SameSite=None` requires `Secure`.
 
 ## Main configuration keys
