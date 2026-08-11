@@ -8,7 +8,7 @@ use Componenta\Auth\DeniedReasonInterface;
 use Componenta\Identity\UuidInterface;
 
 /** Disabled account denial; subject identity and notes remain audit-only. */
-final class UserDisabled implements DeniedReasonInterface
+final class UserDisabled implements DeniedReasonInterface, \JsonSerializable
 {
     public string $code {
         get => 'user_disabled';
@@ -27,5 +27,18 @@ final class UserDisabled implements DeniedReasonInterface
                 'reason' => $this->reason,
             ], static fn(?string $value): bool => $value !== null);
         }
+    }
+
+    /** @return array{code: string} */
+    public function __debugInfo(): array
+    {
+        return ['code' => $this->code];
+    }
+
+    /** @return array{code: string} */
+    #[\Override]
+    public function jsonSerialize(): array
+    {
+        return $this->__debugInfo();
     }
 }
