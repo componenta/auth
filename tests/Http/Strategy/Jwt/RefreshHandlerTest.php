@@ -15,6 +15,7 @@ use Componenta\Auth\Http\Strategy\Jwt\RefreshTokenManager;
 use Componenta\Auth\Http\Strategy\Jwt\RefreshTokenRotationResult;
 use Componenta\Auth\Http\Strategy\Jwt\RefreshTokenStoreInterface;
 use Componenta\Auth\Http\Strategy\Jwt\SignerInterface;
+use Componenta\Identity\IdentityInterface;
 use Componenta\Identity\Uuid;
 use Componenta\Identity\UuidInterface;
 use DateTimeImmutable;
@@ -31,6 +32,36 @@ final class RefreshHandlerTest extends TestCase
     public function testRevokesRotatedSuccessorWhenSubjectNoLongerExists(): void
     {
         $store = new RefreshHandlerStoreFixture();
+        $provider = $this->createMock(JwtUserProviderInterface::class);
+        $provider->expects(self::once())
+            ->method('findByUuid')
+            ->with(self::isInstanceOf(UuidInterface::class))
+            ->willReturn(null);
+
+        $this->assertInvalidProviderResultRevokesSuccessor($store, $provider);
+    }
+
+    public function testRevokesRotatedSuccessorWhenProviderReturnsDifferentUuid(): void
+    {
+        $store = new RefreshHandlerStoreFixture();
+        $provider = $this->createMock(JwtUserProviderInterface::class);
+        $provider->expects(self::once())
+            ->method('findByUuid')
+            ->willReturn(new class implements IdentityInterface {
+                public UuidInterface $uuid {
+                    get => Uuid::fromString(
+                        '018f6d5d-3f7a-7a9b-8c2f-123456789abd',
+                    );
+                }
+            });
+
+        $this->assertInvalidProviderResultRevokesSuccessor($store, $provider);
+    }
+
+    private function assertInvalidProviderResultRevokesSuccessor(
+        RefreshHandlerStoreFixture $store,
+        JwtUserProviderInterface $provider,
+    ): void {
         $clock = new RefreshHandlerClockFixture();
         $config = new JwtConfig('https://issuer.example', 'componenta-api', refreshTtl: 60);
         $manager = new RefreshTokenManager(
@@ -39,11 +70,6 @@ final class RefreshHandlerTest extends TestCase
             $config,
             $clock,
         );
-        $provider = $this->createMock(JwtUserProviderInterface::class);
-        $provider->expects(self::once())
-            ->method('findByUuid')
-            ->with(self::isInstanceOf(UuidInterface::class))
-            ->willReturn(null);
         $signer = $this->createMock(SignerInterface::class);
         $signer->expects(self::never())->method('sign');
         $response = $this->createStub(ResponseInterface::class);
