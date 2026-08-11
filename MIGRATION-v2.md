@@ -153,9 +153,9 @@ The store owns these atomic transitions:
 - `storeInitial()` persists the first family member;
 - `rotateAtomically()` serializes validation, presented-token consumption, replay compromise and successor creation;
 - `revoke()` serializes with concurrent family transitions;
-- `revokeAllForSubject()` compromises existing subject families and revokes their active tokens.
+- `revokeAllForSubject()` marks existing subject families revoked and revokes their active tokens without falsely labelling them compromised.
 
-The implementation persists only SHA-256 representations of bearer token IDs. A separate family row is mutated on every family transition and acts as the serialization point. If successor insertion fails, the database transaction rolls the presented-token claim back. Replay marks the family compromised and revokes active descendants before returning `Reused`.
+The implementation persists only SHA-256 representations of bearer token IDs. A separate family row is mutated on every family transition and acts as the serialization point. If successor insertion fails, the database transaction rolls the presented-token claim back. Actual replay marks the family `compromised_at` and revokes active descendants before returning `Reused`; ordinary revoke-all marks `revoked_at`, so a later presentation is `Invalid`, not `TokenFamilyCompromised`.
 
 Default configuration:
 
@@ -172,6 +172,7 @@ Default configuration:
                 'expiresAt' => 'expires_at',
                 'consumedAt' => 'consumed_at',
                 'revokedAt' => 'revoked_at',
+                'familyRevokedAt' => 'revoked_at',
                 'compromisedAt' => 'compromised_at',
                 'lockNonce' => 'lock_nonce',
             ],
@@ -186,6 +187,7 @@ Minimum schema contract:
 refresh_token_families
   family_id       PRIMARY KEY or UNIQUE
   user_id         NOT NULL, indexed
+  revoked_at      nullable
   compromised_at  nullable
   lock_nonce      NOT NULL
 
@@ -198,9 +200,9 @@ refresh_tokens
   revoked_at      nullable
 ```
 
-`token_hash` must be able to hold a 64-character SHA-256 hex value. Do not persist the bearer token ID itself.
+`token_hash` must be able to hold a 64-character SHA-256 hex value. Do not persist the bearer token ID itself. The family `familyRevokedAt` and `compromisedAt` states are distinct even if token and family tables both use a column named `revoked_at` in their own tables.
 
-If the application overrides `RefreshTokenStoreInterface`, the replacement must provide equivalent atomic rotation, rollback, family replay compromise and primary-read guarantees. Do not rebuild the old `find -> revoke -> store` sequence around the interface.
+If the application overrides `RefreshTokenStoreInterface`, the replacement must provide equivalent atomic rotation, rollback, family replay compromise, ordinary-revocation semantics and primary-read guarantees. Do not rebuild the old `find -> revoke -> store` sequence around the interface.
 
 ## Built-in OTP store
 
@@ -334,7 +336,7 @@ ConfigKey::PASSWORD_RESET
 ## Secure rollout order
 
 1. Update identity/provider contracts to canonical UUID ownership.
-2. Create/alter refresh family/token and OTP challenge tables with the constraints above.
+2. Create/alter refresh family/token and OTP challenge tables with the constraints above, including both family `revoked_at` and `compromised_at`.
 3. Configure `auth.otp.hmacKey` and the explicit JWT profile.
 4. Deploy credential writers and the primary-pinned credential readers together.
 5. Register delivery queues/processors and the application `PasswordResetServiceInterface`.
