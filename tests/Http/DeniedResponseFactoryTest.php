@@ -7,7 +7,6 @@ namespace Componenta\Auth\Tests\Http;
 use Componenta\Auth\Denied\DeniedReason;
 use Componenta\Auth\Denied\RateLimited;
 use Componenta\Auth\Denied\UserDisabled;
-use Componenta\Auth\DeniedReasonInterface;
 use Componenta\Auth\Event\AuthenticationDenied;
 use Componenta\Auth\Http\DeniedResponseFactory;
 use Componenta\Auth\PublicDeniedReasonInterface;
@@ -137,7 +136,7 @@ final class DeniedResponseFactoryTest extends TestCase
     }
 }
 
-final readonly class PublicReasonFixture implements PublicDeniedReasonInterface
+final class PublicReasonFixture implements PublicDeniedReasonInterface
 {
     public string $code {
         get => 'rate_limited';
@@ -152,7 +151,7 @@ final readonly class PublicReasonFixture implements PublicDeniedReasonInterface
     }
 }
 
-final readonly class InvalidPublicReasonFixture implements PublicDeniedReasonInterface
+final class InvalidPublicReasonFixture implements PublicDeniedReasonInterface
 {
     public string $code {
         get => 'invalid_public';
