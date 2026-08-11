@@ -20,6 +20,9 @@ use PHPUnit\Framework\TestCase;
 
 final class MagicLinkStrategyTest extends TestCase
 {
+    private const string PLAIN_TOKEN =
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+
     public function testProviderCannotSubstituteDifferentIdentity(): void
     {
         $subjectId = Uuid::fromString(
@@ -34,10 +37,10 @@ final class MagicLinkStrategyTest extends TestCase
         );
         $manager = $this->createMock(TokenManagerInterface::class);
         $manager->expects(self::once())->method('find')
-            ->with('plain-token')
+            ->with(self::PLAIN_TOKEN)
             ->willReturn($token);
         $manager->expects(self::once())->method('consume')
-            ->with('plain-token')
+            ->with(self::PLAIN_TOKEN)
             ->willReturn(true);
         $provider = $this->createStub(UserProviderInterface::class);
         $provider->method('findByUuid')->willReturn(
@@ -53,7 +56,7 @@ final class MagicLinkStrategyTest extends TestCase
         $clock->method('now')->willReturn(new DateTimeImmutable('@1000'));
 
         $result = (new MagicLinkStrategy($provider, $manager, $clock))->attempt(
-            new VerifyPayload('plain-token'),
+            new VerifyPayload(self::PLAIN_TOKEN),
             new Context(),
         );
 
