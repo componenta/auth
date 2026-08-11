@@ -9,13 +9,16 @@ use Componenta\Auth\AuthenticationStrategyInterface;
 use Componenta\Auth\ContextInterface;
 use Componenta\Auth\Denied\InvalidCredentials;
 use Componenta\Auth\Http\Transport\SessionPayload;
+use Componenta\Auth\Session\ConcurrentRegenerationException;
 use Componenta\Auth\Session\SessionManagerInterface;
+use Componenta\Clock\DateTimeFactoryInterface;
 
 final readonly class SessionStrategy implements AuthenticationStrategyInterface
 {
     public function __construct(
         private SessionManagerInterface $sessionManager,
         private UserProviderInterface $provider,
+        private DateTimeFactoryInterface $dateTimeFactory,
     ) {}
 
     #[\Override]
@@ -36,7 +39,7 @@ final readonly class SessionStrategy implements AuthenticationStrategyInterface
 
         $session = $this->sessionManager->find($sessionId);
 
-        if ($session === null) {
+        if ($session === null || $session->id !== $sessionId) {
             return new AuthenticationResult(new InvalidCredentials());
         }
 
@@ -46,9 +49,24 @@ final readonly class SessionStrategy implements AuthenticationStrategyInterface
             return new AuthenticationResult(new InvalidCredentials());
         }
 
-        $transportPayload = $session->id === $sessionId
-            ? null
-            : new SessionPayload($session->id);
+        $transportPayload = null;
+
+        if ($session->regenerateAt <= $this->dateTimeFactory->now()) {
+            try {
+                $regenerated = $this->sessionManager->regenerate($sessionId);
+            } catch (ConcurrentRegenerationException|\InvalidArgumentException) {
+                return new AuthenticationResult(new InvalidCredentials());
+            }
+
+            if (!$regenerated->subjectId->equals($identity->uuid)) {
+                throw new \UnexpectedValueException(
+                    'Regenerated session does not belong to the authenticated identity.',
+                );
+            }
+
+            $session = $regenerated;
+            $transportPayload = new SessionPayload($session->id);
+        }
 
         return new AuthenticationResult(
             subject: $identity,
