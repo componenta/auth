@@ -33,6 +33,7 @@ final class SensitiveSessionObjectsTest extends TestCase
             lastActiveAt: new DateTimeImmutable('@1100'),
             attributes: ['private' => 'attribute-secret'],
         );
+        $collection = new SessionCollection([$session]);
         $remember = new RememberMeToken(
             id: 1,
             subjectId: $subjectId,
@@ -42,7 +43,7 @@ final class SensitiveSessionObjectsTest extends TestCase
         );
         $objects = [
             $session,
-            new SessionCollection([$session]),
+            $collection,
             $remember,
             new SessionRegenerated('session-secret', 'replacement-secret', $createdAt),
             new SessionsTerminated(['session-secret', 'replacement-secret'], $createdAt),
@@ -56,5 +57,14 @@ final class SensitiveSessionObjectsTest extends TestCase
             self::assertStringNotContainsString('replacement-secret', $json);
             self::assertStringNotContainsString('attribute-secret', $json);
         }
+
+        ob_start();
+        var_dump($collection);
+        $dump = ob_get_clean();
+
+        self::assertIsString($dump);
+        self::assertStringNotContainsString('session-secret', $dump);
+        self::assertStringNotContainsString('replacement-secret', $dump);
+        self::assertStringNotContainsString('attribute-secret', $dump);
     }
 }
