@@ -6,6 +6,8 @@ namespace Componenta\Auth\Http\Transport;
 
 use Componenta\Auth\Exception\InvalidPayloadException;
 use Componenta\Auth\Http\TransportInterface;
+use Componenta\Clock\Clock;
+use Psr\Clock\ClockInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
@@ -29,6 +31,7 @@ final readonly class CookieTransport implements TransportInterface
         public int $ttl = 0,
         public string $rememberMeName = '',
         public int $rememberMeTtl = 2592000,
+        private ClockInterface $clock = new Clock(),
     ) {
         self::assertCookieName($this->name, 'Session cookie');
 
@@ -189,8 +192,7 @@ final readonly class CookieTransport implements TransportInterface
         array $cookies,
         string $name,
         int $maxLength,
-    ): ?string
-    {
+    ): ?string {
         if (!array_key_exists($name, $cookies)) {
             return null;
         }
@@ -287,7 +289,10 @@ final readonly class CookieTransport implements TransportInterface
         if ($ttl !== 0) {
             $parts[] = sprintf(
                 'Expires=%s',
-                gmdate('D, d M Y H:i:s T', time() + $ttl),
+                gmdate(
+                    'D, d M Y H:i:s T',
+                    $this->clock->now()->getTimestamp() + $ttl,
+                ),
             );
             $parts[] = sprintf('Max-Age=%d', max(0, $ttl));
         }
