@@ -9,6 +9,7 @@ use Componenta\Identity\Uuid;
 use Componenta\Identity\UuidInterface;
 use Cycle\Database\DatabaseInterface;
 use Cycle\Database\Query\DeleteQuery;
+use Cycle\Database\Query\SelectQuery;
 
 final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenManagerInterface
 {
@@ -53,8 +54,18 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
             return null;
         }
 
-        $row = $this->database
-            ->select()
+        $query = $this->database->select()->withDriver(
+            $this->database->getDriver(DatabaseInterface::WRITE),
+            $this->database->getPrefix(),
+        );
+
+        if (!$query instanceof SelectQuery) {
+            throw new \LogicException(
+                'Cycle must preserve SelectQuery when pinning the write driver.',
+            );
+        }
+
+        $row = $query
             ->from($this->config->table)
             ->where($this->config->tokenColumn, self::hash($plainToken))
             ->run()
