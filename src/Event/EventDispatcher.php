@@ -64,6 +64,25 @@ final readonly class EventDispatcher
         }
     }
 
+    /**
+     * Executes every listener as an isolated observer.
+     *
+     * Use this only for post-transition audit/notification events where there
+     * is no owning transaction left to roll back. A listener carrying the
+     * critical marker is intentionally not allowed to turn such an observer
+     * notification into a second security commit point.
+     */
+    public function dispatchObservers(EventInterface $event): void
+    {
+        foreach ($this->provider->provideFor($event) as $listener) {
+            try {
+                $listener->handleEvent($event);
+            } catch (\Throwable $e) {
+                $this->logFailure($event, $listener, $e, false);
+            }
+        }
+    }
+
     private function logFailure(
         EventInterface $event,
         EventListenerInterface $listener,
