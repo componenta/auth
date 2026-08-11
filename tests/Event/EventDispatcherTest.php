@@ -77,6 +77,19 @@ final class EventDispatcherTest extends TestCase
 
         self::assertSame(['critical', 'observer'], $calls);
     }
+
+    public function testObserverModeRunsAllListenersAndIsolatesCriticalMarkerFailure(): void
+    {
+        $ran = false;
+        $dispatcher = new EventDispatcher(new ListenerProviderFixture([
+            new CriticalThrowingListenerFixture(),
+            new CallbackListenerFixture(static function () use (&$ran): void { $ran = true; }),
+        ]));
+
+        $dispatcher->dispatchObservers(new EventFixture());
+
+        self::assertTrue($ran);
+    }
 }
 
 final readonly class EventFixture implements EventInterface
