@@ -45,7 +45,10 @@ final readonly class SessionStrategy implements AuthenticationStrategyInterface
 
         $identity = $this->provider->findByUuid($session->subjectId);
 
-        if ($identity === null) {
+        if (
+            $identity === null
+            || !$session->subjectId->equals($identity->uuid)
+        ) {
             return new AuthenticationResult(new InvalidCredentials());
         }
 
