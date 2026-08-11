@@ -15,6 +15,7 @@ final readonly class DatabaseRefreshTokenStoreConfig
         public string $expiresAtColumn = 'expires_at',
         public string $consumedAtColumn = 'consumed_at',
         public string $revokedAtColumn = 'revoked_at',
+        public string $familyRevokedAtColumn = 'revoked_at',
         public string $compromisedAtColumn = 'compromised_at',
         public string $lockNonceColumn = 'lock_nonce',
     ) {
@@ -27,6 +28,7 @@ final readonly class DatabaseRefreshTokenStoreConfig
             'expiresAtColumn' => $this->expiresAtColumn,
             'consumedAtColumn' => $this->consumedAtColumn,
             'revokedAtColumn' => $this->revokedAtColumn,
+            'familyRevokedAtColumn' => $this->familyRevokedAtColumn,
             'compromisedAtColumn' => $this->compromisedAtColumn,
             'lockNonceColumn' => $this->lockNonceColumn,
         ] as $name => $identifier) {
