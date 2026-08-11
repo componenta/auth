@@ -19,6 +19,14 @@ final class OtpConfigTest extends TestCase
         new OtpConfig(length: $length);
     }
 
+    #[DataProvider('invalidTtls')]
+    public function testRejectsOutOfBandTtlBeyondTenMinutes(int $ttl): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        new OtpConfig(ttl: $ttl);
+    }
+
     public function testGeneratorSupportsMaximumLengthWithoutIntegerOverflow(): void
     {
         $code = (new CodeGenerator(new OtpConfig(length: 18)))->generate();
@@ -29,8 +37,17 @@ final class OtpConfigTest extends TestCase
     /** @return iterable<string, array{int}> */
     public static function invalidLengths(): iterable
     {
+        yield 'below OOB minimum' => [5];
         yield 'too short' => [3];
         yield 'too long' => [19];
         yield 'unbounded' => [100];
+    }
+
+    /** @return iterable<string, array{int}> */
+    public static function invalidTtls(): iterable
+    {
+        yield 'zero' => [0];
+        yield 'over ten minutes' => [601];
+        yield 'one day' => [86400];
     }
 }
