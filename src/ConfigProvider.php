@@ -7,6 +7,10 @@ namespace Componenta\Auth;
 use Componenta\Auth\Event\EventDispatcher;
 use Componenta\Auth\Event\EventListenerProviderInterface;
 use Componenta\Auth\Factory\AuthenticatorFactory;
+use Componenta\Auth\Factory\DatabaseCodeStoreConfigFactory;
+use Componenta\Auth\Factory\DatabaseCodeStoreFactory;
+use Componenta\Auth\Factory\DatabaseRefreshTokenStoreConfigFactory;
+use Componenta\Auth\Factory\DatabaseRefreshTokenStoreFactory;
 use Componenta\Auth\Factory\DatabaseRememberMeTokenManagerConfigFactory;
 use Componenta\Auth\Factory\DatabaseRememberMeTokenManagerFactory;
 use Componenta\Auth\Factory\DatabaseSessionManagerConfigFactory;
@@ -34,6 +38,7 @@ use Componenta\Auth\Factory\RevokeHandlerFactory;
 use Componenta\Auth\Factory\TokenPairResponseFactory;
 use Componenta\Auth\Http\DeniedResponseFactoryInterface;
 use Componenta\Auth\Http\Handler\LogoutHandler;
+use Componenta\Auth\Http\Strategy\Jwt\DatabaseRefreshTokenStoreConfig;
 use Componenta\Auth\Http\Strategy\Jwt\JwtConfig;
 use Componenta\Auth\Http\Strategy\Jwt\MagicLink\TokenHandler as JwtMagicLinkTokenHandler;
 use Componenta\Auth\Http\Strategy\Jwt\Otp\TokenHandler as JwtOtpTokenHandler;
@@ -41,10 +46,13 @@ use Componenta\Auth\Http\Strategy\Jwt\Password\TokenHandler as JwtPasswordTokenH
 use Componenta\Auth\Http\Strategy\Jwt\RefreshHandler;
 use Componenta\Auth\Http\Strategy\Jwt\RefreshTokenGenerator;
 use Componenta\Auth\Http\Strategy\Jwt\RefreshTokenManager;
+use Componenta\Auth\Http\Strategy\Jwt\RefreshTokenStoreInterface;
 use Componenta\Auth\Http\Strategy\Jwt\RevokeHandler;
 use Componenta\Auth\Http\Strategy\Jwt\TokenPairResponse;
 use Componenta\Auth\Http\Strategy\MagicLink\RequestHandler as MagicLinkRequestHandler;
 use Componenta\Auth\Http\Strategy\MagicLink\VerifyHandler as MagicLinkVerifyHandler;
+use Componenta\Auth\Http\Strategy\Otp\CodeStoreInterface;
+use Componenta\Auth\Http\Strategy\Otp\DatabaseCodeStoreConfig;
 use Componenta\Auth\Http\Strategy\Otp\RequestHandler as OtpRequestHandler;
 use Componenta\Auth\Http\Strategy\Otp\VerifyHandler as OtpVerifyHandler;
 use Componenta\Auth\Http\Strategy\Password\LoginHandler;
@@ -74,6 +82,10 @@ class ConfigProvider extends \Componenta\Config\ConfigProvider
             SessionManagerInterface::class => DatabaseSessionManagerFactory::class,
             DatabaseRememberMeTokenManagerConfig::class => DatabaseRememberMeTokenManagerConfigFactory::class,
             RememberMeTokenManagerInterface::class => DatabaseRememberMeTokenManagerFactory::class,
+            DatabaseRefreshTokenStoreConfig::class => DatabaseRefreshTokenStoreConfigFactory::class,
+            RefreshTokenStoreInterface::class => DatabaseRefreshTokenStoreFactory::class,
+            DatabaseCodeStoreConfig::class => DatabaseCodeStoreConfigFactory::class,
+            CodeStoreInterface::class => DatabaseCodeStoreFactory::class,
             DeniedResponseFactoryInterface::class => DeniedResponseFactoryFactory::class,
             LoginHandler::class => LoginHandlerFactory::class,
             MagicLinkVerifyHandler::class => MagicLinkVerifyHandlerFactory::class,
@@ -143,6 +155,20 @@ class ConfigProvider extends \Componenta\Config\ConfigProvider
                         'token' => 'token', 'expiresAt' => 'expires_at', 'createdAt' => 'created_at',
                     ],
                 ],
+                ConfigKey::OTP => [
+                    ConfigKey::HMAC_KEY => '',
+                    ConfigKey::STORE => [
+                        'table' => 'otp_codes',
+                        'columns' => [
+                            'destination' => 'destination',
+                            'subjectId' => 'user_id',
+                            'challengeId' => 'challenge_id',
+                            'verifier' => 'verifier',
+                            'expiresAt' => 'expires_at',
+                            'attempts' => 'attempts',
+                        ],
+                    ],
+                ],
                 ConfigKey::DENIED => [
                     'defaultStatus' => 401,
                     'statusMap' => [
@@ -163,6 +189,20 @@ class ConfigProvider extends \Componenta\Config\ConfigProvider
                     'audience' => '',
                     'type' => 'at+jwt',
                     'clockSkew' => 30,
+                    ConfigKey::REFRESH_STORE => [
+                        'tokenTable' => 'refresh_tokens',
+                        'familyTable' => 'refresh_token_families',
+                        'columns' => [
+                            'tokenHash' => 'token_hash',
+                            'familyId' => 'family_id',
+                            'subjectId' => 'user_id',
+                            'expiresAt' => 'expires_at',
+                            'consumedAt' => 'consumed_at',
+                            'revokedAt' => 'revoked_at',
+                            'compromisedAt' => 'compromised_at',
+                            'lockNonce' => 'lock_nonce',
+                        ],
+                    ],
                 ],
             ],
         ];
