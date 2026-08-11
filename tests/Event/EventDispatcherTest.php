@@ -27,12 +27,12 @@ final class EventDispatcherTest extends TestCase
         self::assertTrue($ran);
     }
 
-    public function testCriticalFailureRunsRemainingListenersThenSurfaces(): void
+    public function testCriticalFailureDoesNotPublishBestEffortObservers(): void
     {
-        $ran = false;
+        $observerRan = false;
         $dispatcher = new EventDispatcher(new ListenerProviderFixture([
+            new CallbackListenerFixture(static function () use (&$observerRan): void { $observerRan = true; }),
             new CriticalThrowingListenerFixture(),
-            new CallbackListenerFixture(static function () use (&$ran): void { $ran = true; }),
         ]));
 
         try {
@@ -40,8 +40,21 @@ final class EventDispatcherTest extends TestCase
             self::fail('Critical listener failure was not surfaced.');
         } catch (\RuntimeException $exception) {
             self::assertSame('critical failure', $exception->getMessage());
-            self::assertTrue($ran);
+            self::assertFalse($observerRan);
         }
+    }
+
+    public function testCriticalPhaseRunsBeforeBestEffortObservers(): void
+    {
+        $calls = [];
+        $dispatcher = new EventDispatcher(new ListenerProviderFixture([
+            new CallbackListenerFixture(static function () use (&$calls): void { $calls[] = 'observer'; }),
+            new CriticalCallbackListenerFixture(static function () use (&$calls): void { $calls[] = 'critical'; }),
+        ]));
+
+        $dispatcher->dispatch(new EventFixture());
+
+        self::assertSame(['critical', 'observer'], $calls);
     }
 }
 
@@ -83,6 +96,19 @@ final class CriticalThrowingListenerFixture extends ThrowingListenerFixture impl
 }
 
 final readonly class CallbackListenerFixture implements EventListenerInterface
+{
+    /** @param \Closure(): void $callback */
+    public function __construct(private \Closure $callback) {}
+
+    public function handleEvent(EventInterface $event): void
+    {
+        ($this->callback)();
+    }
+}
+
+final readonly class CriticalCallbackListenerFixture implements
+    EventListenerInterface,
+    CriticalEventListenerInterface
 {
     /** @param \Closure(): void $callback */
     public function __construct(private \Closure $callback) {}
