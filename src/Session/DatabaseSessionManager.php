@@ -27,13 +27,17 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
     private const int DELETE_CHUNK_SIZE = 500;
     private const int MAX_CLEANUP_LIMIT = 10000;
 
+    private DateTimeFactoryInterface $dateTimeFactory;
+
     public function __construct(
         private DatabaseInterface $database,
         private SessionIdGeneratorInterface $idGenerator,
-        private DateTimeFactoryInterface $dateTimeFactory,
+        DateTimeFactoryInterface $dateTimeFactory,
         private EventDispatcher $dispatcher,
         private DatabaseSessionManagerConfig $config = new DatabaseSessionManagerConfig(),
-    ) {}
+    ) {
+        $this->dateTimeFactory = $dateTimeFactory->withTimezone('UTC');
+    }
 
     #[\Override]
     public function create(UuidInterface $subjectId, array $attributes = []): SessionInterface
