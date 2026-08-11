@@ -28,7 +28,15 @@ jobs:
           tools: composer:v2
 
       - name: Resolve DI matrix dependencies
-        run: composer update --with "componenta/di:${{ matrix.di }}" --prefer-dist --no-interaction --no-progress
+        shell: bash
+        run: |
+          set -euo pipefail
+          command=(composer update --with "componenta/di:${{ matrix.di }}" --prefer-dist --no-interaction --no-progress)
+          if ! "${command[@]}"; then
+            echo "Composer dependency resolution failed; retrying once for transient transport errors." >&2
+            sleep 3
+            "${command[@]}"
+          fi
 
       - name: Verify package
         run: bash tools/verify.sh
