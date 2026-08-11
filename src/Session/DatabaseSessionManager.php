@@ -20,7 +20,6 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
     public const string ATTR_IP = 'ip';
     public const string ATTR_USER_AGENT = 'user_agent';
 
-    private const int MAX_CHAIN_DEPTH = 10;
     private const int MAX_SESSION_ID_LENGTH = 512;
     private const int MAX_IP_LENGTH = 45;
     private const int MAX_USER_AGENT_LENGTH = 1024;
@@ -113,17 +112,6 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
     public function find(string $sessionId): ?SessionInterface
     {
         self::assertSessionId($sessionId);
-
-        return $this->findWithDepth($sessionId, 0);
-    }
-
-    private function findWithDepth(string $sessionId, int $depth): ?SessionInterface
-    {
-        if ($depth > self::MAX_CHAIN_DEPTH) {
-            return null;
-        }
-
-        self::assertSessionId($sessionId);
         $query = $this->database->select()->withDriver(
             $this->database->getDriver(DatabaseInterface::WRITE),
             $this->database->getPrefix(),
@@ -148,13 +136,11 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
         $session = $this->hydrate($row);
         $now = $this->dateTimeFactory->now();
 
-        if ($session->replacedBy !== null) {
-            return $session->expiresAt <= $now
-                ? null
-                : $this->findWithDepth($session->replacedBy, $depth + 1);
-        }
-
-        if ($session->absoluteExpiresAt <= $now || $session->expiresAt <= $now) {
+        if (
+            $session->replacedBy !== null
+            || $session->absoluteExpiresAt <= $now
+            || $session->expiresAt <= $now
+        ) {
             return null;
         }
 
@@ -357,8 +343,7 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
         $now = $this->dateTimeFactory->now();
 
         if ($old->replacedBy !== null) {
-            return $this->find($old->replacedBy)
-                ?? throw new \InvalidArgumentException('Session not found');
+            throw new ConcurrentRegenerationException();
         }
 
         if ($old->absoluteExpiresAt <= $now || $old->expiresAt <= $now) {
@@ -367,11 +352,14 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
 
         $newSessionId = $this->idGenerator->generate();
         self::assertSessionId($newSessionId);
+        $idleExpiresAt = $now->modify("+{$this->config->idleTimeout} seconds");
 
         $new = new Session(
             id: $newSessionId,
             subjectId: $old->subjectId,
-            expiresAt: $now->modify("+{$this->config->idleTimeout} seconds"),
+            expiresAt: $idleExpiresAt < $old->absoluteExpiresAt
+                ? $idleExpiresAt
+                : $old->absoluteExpiresAt,
             absoluteExpiresAt: $old->absoluteExpiresAt,
             regenerateAt: $now->modify("+{$this->config->regenerationInterval} seconds"),
             replacedBy: null,
@@ -380,42 +368,46 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
             attributes: $old->attributes,
         );
         $event = new SessionRegenerated($sessionId, $new->id);
+        $formattedNow = $now->format($this->config->dateFormat);
 
-        try {
-            $this->database->transaction(function () use ($sessionId, $new, $now, $event): void {
-                $ip = $new->getAttribute(self::ATTR_IP);
-                $userAgent = $new->getAttribute(self::ATTR_USER_AGENT);
+        $this->database->transaction(function () use (
+            $sessionId,
+            $new,
+            $now,
+            $formattedNow,
+            $event,
+        ): void {
+            $ip = $new->getAttribute(self::ATTR_IP);
+            $userAgent = $new->getAttribute(self::ATTR_USER_AGENT);
 
-                if (!is_string($ip) || !is_string($userAgent)) {
-                    throw new \UnexpectedValueException(
-                        'Regenerated session is missing transport metadata.',
-                    );
-                }
+            if (!is_string($ip) || !is_string($userAgent)) {
+                throw new \UnexpectedValueException(
+                    'Regenerated session is missing transport metadata.',
+                );
+            }
 
-                $this->insert($new, $ip, $userAgent);
+            $this->insert($new, $ip, $userAgent);
 
-                $affectedRows = $this->database
-                    ->update($this->config->table)
-                    ->where($this->config->idColumn, $sessionId)
-                    ->where($this->config->replacedByColumn, null)
-                    ->values([
-                        $this->config->replacedByColumn => $new->id,
-                        $this->config->expiresAtColumn => $now
-                            ->modify("+{$this->config->regenerationGracePeriod} seconds")
-                            ->format($this->config->dateFormat),
-                    ])
-                    ->run();
+            $affectedRows = $this->database
+                ->update($this->config->table)
+                ->where($this->config->idColumn, $sessionId)
+                ->where($this->config->replacedByColumn, null)
+                ->where($this->config->expiresAtColumn, '>', $formattedNow)
+                ->where($this->config->absoluteExpiresAtColumn, '>', $formattedNow)
+                ->values([
+                    $this->config->replacedByColumn => $new->id,
+                    $this->config->expiresAtColumn => $now
+                        ->modify("+{$this->config->regenerationGracePeriod} seconds")
+                        ->format($this->config->dateFormat),
+                ])
+                ->run();
 
-                if ($affectedRows === 0) {
-                    throw new ConcurrentRegenerationException();
-                }
+            if ($affectedRows !== 1) {
+                throw new ConcurrentRegenerationException();
+            }
 
-                $this->dispatcher->dispatchCritical($event);
-            });
-        } catch (ConcurrentRegenerationException) {
-            return $this->find($sessionId)
-                ?? throw new \InvalidArgumentException('Session not found');
-        }
+            $this->dispatcher->dispatchCritical($event);
+        });
 
         $this->dispatcher->dispatchBestEffort($event);
 
