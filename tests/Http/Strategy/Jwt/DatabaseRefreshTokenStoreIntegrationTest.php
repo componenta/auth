@@ -74,6 +74,16 @@ final class DatabaseRefreshTokenStoreIntegrationTest extends TestCase
 
         self::assertSame(RefreshTokenRotationStatus::Reused, $replay->status);
 
+        $family = $database
+            ->select('revoked_at', 'compromised_at')
+            ->from('refresh_token_families')
+            ->where('family_id', self::FAMILY_A)
+            ->run()
+            ->fetch();
+        self::assertIsArray($family);
+        self::assertNull($family['revoked_at'] ?? null);
+        self::assertSame(1001, $family['compromised_at'] ?? null);
+
         $successor = $database
             ->select('revoked_at')
             ->from('refresh_tokens')
@@ -142,7 +152,7 @@ final class DatabaseRefreshTokenStoreIntegrationTest extends TestCase
         );
     }
 
-    public function testBulkRevocationSerializesEveryExistingFamily(): void
+    public function testBulkRevocationDoesNotPretendTheFamilyWasCompromised(): void
     {
         self::requireSqlite();
         $database = SqliteDatabaseFixture::create();
@@ -166,7 +176,7 @@ final class DatabaseRefreshTokenStoreIntegrationTest extends TestCase
         $store->revokeAllForSubject($subjectId, 1000);
 
         self::assertSame(
-            RefreshTokenRotationStatus::Reused,
+            RefreshTokenRotationStatus::Invalid,
             $store->rotateAtomically(
                 self::TOKEN_A,
                 self::SUCCESSOR,
@@ -175,7 +185,7 @@ final class DatabaseRefreshTokenStoreIntegrationTest extends TestCase
             )->status,
         );
         self::assertSame(
-            RefreshTokenRotationStatus::Reused,
+            RefreshTokenRotationStatus::Invalid,
             $store->rotateAtomically(
                 self::TOKEN_B,
                 self::SUCCESSOR,
@@ -183,6 +193,20 @@ final class DatabaseRefreshTokenStoreIntegrationTest extends TestCase
                 1001,
             )->status,
         );
+
+        $families = $database
+            ->select('revoked_at', 'compromised_at')
+            ->from('refresh_token_families')
+            ->orderBy('family_id')
+            ->run()
+            ->fetchAll();
+
+        self::assertCount(2, $families);
+        foreach ($families as $family) {
+            self::assertIsArray($family);
+            self::assertSame(1000, $family['revoked_at'] ?? null);
+            self::assertNull($family['compromised_at'] ?? null);
+        }
     }
 
     public function testManualRevocationIsInvalidButNotReplay(): void
@@ -233,6 +257,7 @@ final class DatabaseRefreshTokenStoreIntegrationTest extends TestCase
             CREATE TABLE refresh_token_families (
                 family_id TEXT PRIMARY KEY,
                 user_id TEXT NOT NULL,
+                revoked_at INTEGER NULL,
                 compromised_at INTEGER NULL,
                 lock_nonce TEXT NOT NULL
             )
