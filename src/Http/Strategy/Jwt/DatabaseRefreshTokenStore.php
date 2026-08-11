@@ -41,6 +41,7 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
                 ->values([
                     $this->config->familyIdColumn => $token->familyId,
                     $this->config->subjectIdColumn => $token->subjectId->toString(),
+                    $this->config->familyRevokedAtColumn => null,
                     $this->config->compromisedAtColumn => null,
                     $this->config->lockNonceColumn => self::lockNonce(),
                 ])
@@ -103,8 +104,16 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
                 $now,
                 $familyId,
             ): RefreshTokenRotationResult {
-                if (!$this->claimActiveFamily($database, $familyId)) {
-                    return RefreshTokenRotationResult::reused();
+                $blocked = $this->claimActiveFamily($database, $familyId);
+
+                if ($blocked !== null) {
+                    return match ($blocked) {
+                        RefreshTokenRotationStatus::Reused => RefreshTokenRotationResult::reused(),
+                        RefreshTokenRotationStatus::Invalid => RefreshTokenRotationResult::invalid(),
+                        default => throw new \LogicException(
+                            'Unexpected refresh-family claim status.',
+                        ),
+                    };
                 }
 
                 $family = $this->findFamily($database, $familyId);
@@ -278,9 +287,9 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
                 $database
                     ->update($this->config->familyTable)
                     ->where($this->config->subjectIdColumn, $subject)
-                    ->where($this->config->compromisedAtColumn, null)
+                    ->where($this->config->familyRevokedAtColumn, null)
                     ->values([
-                        $this->config->compromisedAtColumn => $revokedAt,
+                        $this->config->familyRevokedAtColumn => $revokedAt,
                         $this->config->lockNonceColumn => self::lockNonce(),
                     ])
                     ->run();
@@ -297,13 +306,18 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
         );
     }
 
+    /**
+     * Returns null when the family is claimed for rotation, otherwise the
+     * terminal status that blocked the claim.
+     */
     private function claimActiveFamily(
         DatabaseInterface $database,
         string $familyId,
-    ): bool {
+    ): ?RefreshTokenRotationStatus {
         $affected = $database
             ->update($this->config->familyTable)
             ->where($this->config->familyIdColumn, $familyId)
+            ->where($this->config->familyRevokedAtColumn, null)
             ->where($this->config->compromisedAtColumn, null)
             ->values([
                 $this->config->lockNonceColumn => self::lockNonce(),
@@ -311,7 +325,7 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
             ->run();
 
         if ($affected === 1) {
-            return true;
+            return null;
         }
 
         $family = $this->findFamily($database, $familyId);
@@ -326,7 +340,14 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
             $family,
             $this->config->compromisedAtColumn,
         ) !== null) {
-            return false;
+            return RefreshTokenRotationStatus::Reused;
+        }
+
+        if (self::nullableIntValue(
+            $family,
+            $this->config->familyRevokedAtColumn,
+        ) !== null) {
+            return RefreshTokenRotationStatus::Invalid;
         }
 
         throw new \UnexpectedValueException(
