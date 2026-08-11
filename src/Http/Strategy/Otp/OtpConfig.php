@@ -6,9 +6,9 @@ namespace Componenta\Auth\Http\Strategy\Otp;
 
 final readonly class OtpConfig
 {
-    public const int MIN_LENGTH = 4;
+    public const int MIN_LENGTH = 6;
     public const int MAX_LENGTH = 18;
-    private const int MAX_TTL = 86400;
+    private const int MAX_TTL = 600;
     private const int MAX_ATTEMPTS = 100;
 
     public function __construct(
