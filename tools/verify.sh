@@ -40,6 +40,18 @@ tar -xJf "$work/overlay.tar.xz" -C "$work/unpacked"
 cp "$work/unpacked/replacement/tools/verify.sh" "$work/final-verify.sh"
 chmod 0755 "$work/final-verify.sh"
 rm "$work/unpacked/replacement/tools/verify.sh"
+python3 - "$work/final-verify.sh" <<'PY'
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+text = path.read_text()
+old = "if grep -R --line-number -E '\\b(TokenAlreadyUsed|TokenExpired)\\b' src tests; then"
+new = "if grep -R --line-number -E '(^|[^[:alnum:]_])(TokenAlreadyUsed|TokenExpired)([^[:alnum:]_]|$)' src tests; then"
+if old not in text:
+    raise SystemExit('Expected verification pattern was not found.')
+path.write_text(text.replace(old, new))
+PY
 
 while IFS= read -r path; do
     if [[ -n "$path" ]]; then
