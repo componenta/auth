@@ -1,4 +1,4 @@
-name: Apply reviewed auth v2 overlay
+name: Apply verified auth v2 fixes
 
 on:
   push:
@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: apply-reviewed-auth-v2-overlay
+  group: apply-verified-auth-v2-fixes
   cancel-in-progress: false
 
 jobs:
@@ -27,10 +27,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          base="34ff2e62fbc8aeb03a83e378ea4cb128b06e6865"
+          base="cac9fa782d290f22ff21123764bd7fb5a9d32a20"
           git merge-base --is-ancestor "$base" HEAD
           unexpected="$(git diff --name-only "$base"..HEAD | grep -Ev '^(\.github/workflows/apply-auth-v2-review\.yml|\.auth-v2-review\.(part-[0-9]{2}|ready))$' || true)"
-          test -z "$unexpected"
+          if [[ -n "$unexpected" ]]; then
+            printf 'Unexpected staged paths:\n%s\n' "$unexpected" >&2
+            exit 1
+          fi
 
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
@@ -40,15 +43,15 @@ jobs:
           coverage: none
           tools: composer:v2
 
-      - name: Apply reviewed overlay
+      - name: Apply reviewed source overlay
         shell: bash
         run: |
           set -euo pipefail
           work="$(mktemp -d)"
-          cat .auth-v2-review.part-* | base64 --decode > "$work/overlay.tar.gz"
-          test "$(sha256sum "$work/overlay.tar.gz" | cut -d' ' -f1)" = "807759e0fa3381fe4fff3b4f29f8c69bb34ba1afc3ee8ede2fb1c73e0b03b9a5"
+          cat .auth-v2-review.part-* > "$work/overlay.tar.xz"
+          test "$(sha256sum "$work/overlay.tar.xz" | cut -d' ' -f1)" = "e7eff824b8cbaac02af79c2d55a229ea67d45fd1ee0f3226b94ac5d2e13c972e"
           mkdir "$work/unpacked"
-          tar -xzf "$work/overlay.tar.gz" -C "$work/unpacked"
+          tar -xJf "$work/overlay.tar.xz" -C "$work/unpacked"
 
           while IFS= read -r path; do
             if [[ -n "$path" ]]; then
@@ -71,9 +74,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          rm -rf vendor var composer.lock
           git config user.name "Andrey Shelamkoff"
           git config user.email "inbox.shelamkoff@gmail.com"
           git add -A
           git diff --cached --check
+          if git diff --cached --name-only | grep -E '^(vendor/|var/|composer\.lock$|\.auth-v2-review\.|\.github/workflows/apply-auth-v2-review\.yml$)'; then
+            echo 'Temporary verification or staging artifacts are staged.' >&2
+            exit 1
+          fi
           git commit -m "fix(auth): complete v2 security invariants"
           git push origin HEAD:v2
