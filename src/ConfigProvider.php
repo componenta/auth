@@ -26,6 +26,7 @@ use Componenta\Auth\Factory\LoginHandlerFactory;
 use Componenta\Auth\Factory\LogoutHandlerFactory;
 use Componenta\Auth\Factory\MagicLinkRequestHandlerFactory;
 use Componenta\Auth\Factory\MagicLinkVerifyHandlerFactory;
+use Componenta\Auth\Factory\OtpConfigFactory;
 use Componenta\Auth\Factory\OtpRequestHandlerFactory;
 use Componenta\Auth\Factory\OtpVerifyHandlerFactory;
 use Componenta\Auth\Factory\PriorityListenerProviderFactory;
@@ -53,6 +54,7 @@ use Componenta\Auth\Http\Strategy\MagicLink\RequestHandler as MagicLinkRequestHa
 use Componenta\Auth\Http\Strategy\MagicLink\VerifyHandler as MagicLinkVerifyHandler;
 use Componenta\Auth\Http\Strategy\Otp\CodeStoreInterface;
 use Componenta\Auth\Http\Strategy\Otp\DatabaseCodeStoreConfig;
+use Componenta\Auth\Http\Strategy\Otp\OtpConfig;
 use Componenta\Auth\Http\Strategy\Otp\RequestHandler as OtpRequestHandler;
 use Componenta\Auth\Http\Strategy\Otp\VerifyHandler as OtpVerifyHandler;
 use Componenta\Auth\Http\Strategy\Password\LoginHandler;
@@ -84,6 +86,7 @@ class ConfigProvider extends \Componenta\Config\ConfigProvider
             RememberMeTokenManagerInterface::class => DatabaseRememberMeTokenManagerFactory::class,
             DatabaseRefreshTokenStoreConfig::class => DatabaseRefreshTokenStoreConfigFactory::class,
             RefreshTokenStoreInterface::class => DatabaseRefreshTokenStoreFactory::class,
+            OtpConfig::class => OtpConfigFactory::class,
             DatabaseCodeStoreConfig::class => DatabaseCodeStoreConfigFactory::class,
             CodeStoreInterface::class => DatabaseCodeStoreFactory::class,
             DeniedResponseFactoryInterface::class => DeniedResponseFactoryFactory::class,
@@ -128,7 +131,7 @@ class ConfigProvider extends \Componenta\Config\ConfigProvider
                 ConfigKey::EVENTS => true,
                 ConfigKey::SESSION => [
                     'table' => 'sessions',
-                    'dateFormat' => 'Y-m-d H:i:s',
+                    'dateFormat' => DatabaseSessionManagerConfig::DATE_FORMAT,
                     'lazyLoad' => true,
                     'idleTimeout' => 1800,
                     'absoluteTimeout' => 28800,
@@ -147,7 +150,7 @@ class ConfigProvider extends \Componenta\Config\ConfigProvider
                 ConfigKey::REMEMBER_ME => [
                     ConfigKey::ENABLED => false,
                     'table' => 'remember_me_tokens',
-                    'dateFormat' => 'Y-m-d H:i:s',
+                    'dateFormat' => DatabaseRememberMeTokenManagerConfig::DATE_FORMAT,
                     'ttl' => 2592000,
                     'cookieName' => 'rmid',
                     'columns' => [
@@ -156,6 +159,9 @@ class ConfigProvider extends \Componenta\Config\ConfigProvider
                     ],
                 ],
                 ConfigKey::OTP => [
+                    'length' => 6,
+                    'ttl' => 300,
+                    'maxAttempts' => 5,
                     ConfigKey::HMAC_KEY => '',
                     ConfigKey::STORE => [
                         'table' => 'otp_codes',
