@@ -16,11 +16,15 @@ final readonly class TokenManager implements TokenManagerInterface
     private const int MAX_CLEANUP_LIMIT = 10000;
     private const int DELETE_CHUNK_SIZE = 500;
 
+    private DateTimeFactoryInterface $dateTimeFactory;
+
     public function __construct(
         private DatabaseInterface $database,
-        private DateTimeFactoryInterface $dateTimeFactory,
+        DateTimeFactoryInterface $dateTimeFactory,
         private TokenConfig $config,
-    ) {}
+    ) {
+        $this->dateTimeFactory = $dateTimeFactory->withTimezone('UTC');
+    }
 
     #[\Override]
     public function replaceForSubject(UuidInterface $subjectId): string
