@@ -82,7 +82,7 @@ final class DatabaseRefreshTokenStoreIntegrationTest extends TestCase
             ->fetch();
 
         self::assertIsArray($successor);
-        self::assertSame(1001, (int) $successor['revoked_at']);
+        self::assertSame(1001, $successor['revoked_at'] ?? null);
 
         $descendant = $store->rotateAtomically(
             self::SUCCESSOR,
