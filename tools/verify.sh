@@ -139,8 +139,8 @@ git config user.email "inbox.shelamkoff@gmail.com"
 git add -A
 git diff --cached --check
 
-if git diff --cached --name-only | grep -E '^(vendor/|var/|composer\.lock$|\.auth-v2-review\.|\.github/workflows/apply-auth-v2-review\.yml$)'; then
-    echo 'Temporary verification or staging artifacts are staged.' >&2
+if git ls-files | grep -E '^(vendor/|var/|composer\.lock$|\.auth-v2-review\.|\.github/workflows/apply-auth-v2-review\.yml$)'; then
+    echo 'Temporary verification or staging artifacts remain tracked.' >&2
     exit 1
 fi
 
