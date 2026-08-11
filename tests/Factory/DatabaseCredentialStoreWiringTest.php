@@ -7,14 +7,16 @@ namespace Componenta\Auth\Tests\Factory;
 use Componenta\Auth\ConfigProvider;
 use Componenta\Auth\Factory\DatabaseCodeStoreFactory;
 use Componenta\Auth\Factory\DatabaseRefreshTokenStoreFactory;
+use Componenta\Auth\Factory\OtpConfigFactory;
 use Componenta\Auth\Http\Strategy\Jwt\RefreshTokenStoreInterface;
 use Componenta\Auth\Http\Strategy\Otp\CodeStoreInterface;
+use Componenta\Auth\Http\Strategy\Otp\OtpConfig;
 use Componenta\DI\ConfigKey as DiConfigKey;
 use PHPUnit\Framework\TestCase;
 
 final class DatabaseCredentialStoreWiringTest extends TestCase
 {
-    public function testBuiltInAtomicStoresAreTheDefaultBindings(): void
+    public function testBuiltInAtomicStoresAndOtpProfileAreDefaultBindings(): void
     {
         $config = (new ConfigProvider())();
         $dependencies = $config[DiConfigKey::DEPENDENCIES] ?? null;
@@ -31,9 +33,13 @@ final class DatabaseCredentialStoreWiringTest extends TestCase
             DatabaseCodeStoreFactory::class,
             $factories[CodeStoreInterface::class] ?? null,
         );
+        self::assertSame(
+            OtpConfigFactory::class,
+            $factories[OtpConfig::class] ?? null,
+        );
     }
 
-    public function testSecureCodeStoreDefaultRequiresAnApplicationSecret(): void
+    public function testSecureOtpDefaultsRequireSecretAndExposeHardenedProfile(): void
     {
         $config = (new ConfigProvider())();
         $auth = $config['auth'] ?? null;
@@ -43,5 +49,8 @@ final class DatabaseCredentialStoreWiringTest extends TestCase
 
         self::assertIsArray($otp);
         self::assertSame('', $otp['hmacKey'] ?? null);
+        self::assertSame(6, $otp['length'] ?? null);
+        self::assertSame(300, $otp['ttl'] ?? null);
+        self::assertSame(5, $otp['maxAttempts'] ?? null);
     }
 }
