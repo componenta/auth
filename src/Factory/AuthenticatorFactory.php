@@ -11,6 +11,7 @@ use Componenta\Auth\ConfigKey;
 use Componenta\Auth\Event\EventDispatcher;
 use Componenta\Auth\EventingAuthenticator;
 use Componenta\Auth\Exception\AuthenticatorConfigurationException;
+use Componenta\Auth\Http\Strategy\RememberMe\RememberMeStrategy;
 use Componenta\Config\Config;
 use Componenta\Config\ConfigPath;
 use Psr\Container\ContainerInterface;
@@ -33,6 +34,9 @@ final readonly class AuthenticatorFactory
             throw new AuthenticatorConfigurationException('auth.strategies must contain at least one service id.');
         }
 
+        $rememberMeEnabled = $config->bool(new ConfigPath(
+            ConfigKey::AUTH . '.' . ConfigKey::REMEMBER_ME . '.' . ConfigKey::ENABLED,
+        ), false);
         $seen = [];
         $strategies = [];
 
@@ -64,6 +68,12 @@ final readonly class AuthenticatorFactory
                     AuthenticationStrategyInterface::class,
                     get_debug_type($strategy),
                 ));
+            }
+
+            if ($strategy instanceof RememberMeStrategy && !$rememberMeEnabled) {
+                throw new AuthenticatorConfigurationException(
+                    'The built-in RememberMeStrategy requires auth.rememberMe.enabled=true so its critical lifecycle listeners are active.',
+                );
             }
 
             $seen[$id] = true;
