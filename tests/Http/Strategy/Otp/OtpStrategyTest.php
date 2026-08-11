@@ -57,6 +57,28 @@ final class OtpStrategyTest extends TestCase
 
         self::assertInstanceOf(CodeExpired::class, $result->subject);
     }
+
+    public function testProviderCannotSubstituteDifferentIdentity(): void
+    {
+        $subjectId = Uuid::fromString(
+            '018f6d5d-3f7a-7a9b-8c2f-123456789abc',
+        );
+        $other = new class implements IdentityInterface {
+            public UuidInterface $uuid {
+                get => Uuid::fromString(
+                    '018f6d5d-3f7a-7a9b-8c2f-123456789abd',
+                );
+            }
+        };
+        $result = (new OtpStrategy(
+            new OtpUserProviderFixture($other),
+            new CodeStoreFixture(CodeVerificationResult::verified($subjectId)),
+            new OtpConfig(),
+            new OtpClockFixture(),
+        ))->attempt(new OtpPayload('mail@example.com', '123456'), new Context());
+
+        self::assertInstanceOf(InvalidCode::class, $result->subject);
+    }
 }
 
 final class CodeStoreFixture implements CodeStoreInterface
