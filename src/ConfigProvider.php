@@ -173,8 +173,7 @@ class ConfigProvider extends \Componenta\Config\ConfigProvider
                     'defaultStatus' => 401,
                     'statusMap' => [
                         'unauthorized' => 401, 'invalid_credentials' => 401,
-                        'invalid_token' => 401, 'token_expired' => 401,
-                        'token_already_used' => 401, 'user_disabled' => 403,
+                        'invalid_token' => 401, 'user_disabled' => 403,
                         'invalid_code' => 401, 'code_expired' => 401,
                         'too_many_attempts' => 429, 'rate_limited' => 429,
                         'invalid_access_token' => 401, 'access_token_expired' => 401,
