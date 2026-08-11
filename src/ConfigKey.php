@@ -14,5 +14,9 @@ final class ConfigKey extends \Componenta\Config\ConfigKey
     public const string ENABLED = 'enabled';
     public const string DENIED = 'denied';
     public const string JWT = 'jwt';
+    public const string OTP = 'otp';
+    public const string STORE = 'store';
+    public const string REFRESH_STORE = 'refreshStore';
+    public const string HMAC_KEY = 'hmacKey';
     public const string LISTENERS = 'Componenta\\Auth\\Event::listeners';
 }
