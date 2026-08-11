@@ -108,12 +108,15 @@ final readonly class DatabaseCodeStore implements CodeStoreInterface
             $destination,
             $presentedCode,
         );
+        $observedChallengeId = null;
 
         for ($attempt = 0; $attempt < self::MAX_CAS_RETRIES; ++$attempt) {
             $row = $this->find($this->database, $destination);
 
             if ($row === null) {
-                hash_equals($this->dummyVerifier, $presentedVerifier);
+                if (hash_equals($this->dummyVerifier, $presentedVerifier)) {
+                    return CodeVerificationResult::invalid();
+                }
 
                 return CodeVerificationResult::invalid();
             }
@@ -122,6 +125,15 @@ final readonly class DatabaseCodeStore implements CodeStoreInterface
                 $row,
                 $this->config->challengeIdColumn,
             );
+
+            if (
+                $observedChallengeId !== null
+                && $challengeId !== $observedChallengeId
+            ) {
+                return CodeVerificationResult::invalid();
+            }
+
+            $observedChallengeId ??= $challengeId;
             $attempts = self::intValue(
                 $row,
                 $this->config->attemptsColumn,
@@ -243,21 +255,6 @@ final readonly class DatabaseCodeStore implements CodeStoreInterface
         DatabaseInterface $database,
         string $destination,
     ): ?array {
-        $row = $this->writeSelect($database)
-            ->from($this->config->table)
-            ->where($this->config->destinationColumn, $destination)
-            ->run()
-            ->fetch();
-
-        return is_array($row) ? $row : null;
-    }
-
-    /**
-     * OTP state must never be read from a lagging replica because the CAS
-     * mutation is executed on the primary/write connection.
-     */
-    private function writeSelect(DatabaseInterface $database): SelectQuery
-    {
         $query = $database->select()->withDriver(
             $database->getDriver(DatabaseInterface::WRITE),
             $database->getPrefix(),
@@ -269,7 +266,13 @@ final readonly class DatabaseCodeStore implements CodeStoreInterface
             );
         }
 
-        return $query;
+        $row = $query
+            ->from($this->config->table)
+            ->where($this->config->destinationColumn, $destination)
+            ->run()
+            ->fetch();
+
+        return is_array($row) ? $row : null;
     }
 
     private function verifier(
