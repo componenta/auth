@@ -17,11 +17,15 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
     private const int MAX_CLEANUP_LIMIT = 10000;
     private const int MAX_ID_LENGTH = 512;
 
+    private DateTimeFactoryInterface $dateTimeFactory;
+
     public function __construct(
         private DatabaseInterface $database,
-        private DateTimeFactoryInterface $dateTimeFactory,
+        DateTimeFactoryInterface $dateTimeFactory,
         private DatabaseRememberMeTokenManagerConfig $config = new DatabaseRememberMeTokenManagerConfig(),
-    ) {}
+    ) {
+        $this->dateTimeFactory = $dateTimeFactory->withTimezone('UTC');
+    }
 
     #[\Override]
     public function create(
