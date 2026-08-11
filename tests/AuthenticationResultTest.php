@@ -69,11 +69,16 @@ final class AuthenticationResultTest extends TestCase
         );
 
         $json = json_encode($result, JSON_THROW_ON_ERROR);
+        $decoded = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
 
+        self::assertIsArray($decoded);
         self::assertStringNotContainsString('identity-secret', $json);
         self::assertStringNotContainsString('session-secret', $json);
-        self::assertStringContainsString($uuid->toString(), $json);
-        self::assertStringContainsString(SessionPayload::class, $json);
+        self::assertSame($uuid->toString(), $decoded['subjectId'] ?? null);
+        self::assertSame(
+            SessionPayload::class,
+            $decoded['transportPayloadType'] ?? null,
+        );
     }
 
     private static function session(UuidInterface $subjectId): Session
