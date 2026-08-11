@@ -17,7 +17,7 @@ final class ResetPasswordHandlerTest extends TestCase
 {
     public function testDelegatesOneCompletedSecurityTransitionToResetService(): void
     {
-        $request = self::request('new-password');
+        $request = $this->request('new-password');
         $service = $this->createMock(PasswordResetServiceInterface::class);
         $service->expects(self::once())->method('reset')
             ->with('reset-token', 'new-password')
@@ -32,7 +32,7 @@ final class ResetPasswordHandlerTest extends TestCase
 
     public function testApplicationPasswordPolicyCanRejectOtherwiseValidInput(): void
     {
-        $request = self::request('shortpw');
+        $request = $this->request('shortpw');
         $service = $this->createMock(PasswordResetServiceInterface::class);
         $service->expects(self::once())->method('reset')
             ->with('reset-token', 'shortpw')
@@ -45,9 +45,9 @@ final class ResetPasswordHandlerTest extends TestCase
         );
     }
 
-    private static function request(string $password): ServerRequestInterface
+    private function request(string $password): ServerRequestInterface
     {
-        $request = self::createStub(ServerRequestInterface::class);
+        $request = $this->createStub(ServerRequestInterface::class);
         $request->method('getParsedBody')->willReturn([
             'token' => 'reset-token',
             'password' => $password,
