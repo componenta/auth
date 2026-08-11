@@ -91,9 +91,18 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
     public function exists(string $sessionId): bool
     {
         self::assertSessionId($sessionId);
+        $query = $this->database->select('1')->withDriver(
+            $this->database->getDriver(DatabaseInterface::WRITE),
+            $this->database->getPrefix(),
+        );
 
-        return $this->database
-            ->select('1')
+        if (!$query instanceof SelectQuery) {
+            throw new \LogicException(
+                'Cycle must preserve SelectQuery when pinning the write driver.',
+            );
+        }
+
+        return $query
             ->from($this->config->table)
             ->where($this->config->idColumn, $sessionId)
             ->run()
@@ -115,9 +124,18 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
         }
 
         self::assertSessionId($sessionId);
+        $query = $this->database->select()->withDriver(
+            $this->database->getDriver(DatabaseInterface::WRITE),
+            $this->database->getPrefix(),
+        );
 
-        $row = $this->database
-            ->select()
+        if (!$query instanceof SelectQuery) {
+            throw new \LogicException(
+                'Cycle must preserve SelectQuery when pinning the write driver.',
+            );
+        }
+
+        $row = $query
             ->from($this->config->table)
             ->where($this->config->idColumn, $sessionId)
             ->run()
@@ -314,9 +332,18 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
     public function regenerate(string $sessionId): SessionInterface
     {
         self::assertSessionId($sessionId);
+        $query = $this->database->select()->withDriver(
+            $this->database->getDriver(DatabaseInterface::WRITE),
+            $this->database->getPrefix(),
+        );
 
-        $row = $this->database
-            ->select()
+        if (!$query instanceof SelectQuery) {
+            throw new \LogicException(
+                'Cycle must preserve SelectQuery when pinning the write driver.',
+            );
+        }
+
+        $row = $query
             ->from($this->config->table)
             ->where($this->config->idColumn, $sessionId)
             ->run()
@@ -486,9 +513,18 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
     {
         $now = $this->dateTimeFactory->now();
         $formattedNow = $now->format($this->config->dateFormat);
+        $query = $this->database->select()->withDriver(
+            $this->database->getDriver(DatabaseInterface::WRITE),
+            $this->database->getPrefix(),
+        );
 
-        $rows = $this->database
-            ->select()
+        if (!$query instanceof SelectQuery) {
+            throw new \LogicException(
+                'Cycle must preserve SelectQuery when pinning the write driver.',
+            );
+        }
+
+        $rows = $query
             ->from($this->config->table)
             ->where($this->config->subjectIdColumn, $subjectId->toString())
             ->where($this->config->replacedByColumn, null)
