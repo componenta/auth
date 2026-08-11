@@ -46,7 +46,10 @@ final readonly class RefreshHandler implements RequestHandlerInterface
 
         $identity = $this->provider->findByUuid($result->subjectId);
 
-        if ($identity === null) {
+        if (
+            $identity === null
+            || !$result->subjectId->equals($identity->uuid)
+        ) {
             $this->refreshManager->revoke($result->id);
 
             return TokenResponseHeaders::apply(
