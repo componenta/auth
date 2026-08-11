@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace Componenta\Auth\Denied;
 
 use Componenta\Auth\DeniedReasonInterface;
+use Componenta\Identity\UuidInterface;
 
-/** User account is disabled. Internal identifiers and notes are audit-only. */
+/** Disabled account denial; subject identity and notes remain audit-only. */
 final class UserDisabled implements DeniedReasonInterface
 {
     public string $code {
@@ -14,14 +15,15 @@ final class UserDisabled implements DeniedReasonInterface
     }
 
     public function __construct(
-        public readonly ?string $userId = null,
+        public readonly ?UuidInterface $subjectId = null,
         public readonly ?string $reason = null,
     ) {}
 
+    /** @var array<string, mixed> */
     public array $attributes {
         get {
             return array_filter([
-                'user_id' => $this->userId,
+                'subject_id' => $this->subjectId?->toString(),
                 'reason' => $this->reason,
             ], static fn(?string $value): bool => $value !== null);
         }

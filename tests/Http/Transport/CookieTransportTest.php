@@ -17,9 +17,20 @@ final class CookieTransportTest extends TestCase
         new CookieTransport(name: '__Host-sid', domain: 'example.com');
     }
 
+    public function testControlCharacterInCookieCredentialIsRejected(): void
+    {
+        $request = $this->createStub(ServerRequestInterface::class);
+        $request->method('getCookieParams')->willReturn([
+            'sid' => "session\nvalue",
+        ]);
+
+        $this->expectException(InvalidPayloadException::class);
+        (new CookieTransport())->extract($request);
+    }
+
     public function testNonScalarCookieCredentialIsRejected(): void
     {
-        $request = $this->createMock(ServerRequestInterface::class);
+        $request = $this->createStub(ServerRequestInterface::class);
         $request->method('getCookieParams')->willReturn(['sid' => ['unexpected']]);
 
         $this->expectException(InvalidPayloadException::class);

@@ -28,20 +28,27 @@ final readonly class RememberMeStrategy implements AuthenticationStrategyInterfa
     #[\Override]
     public function supports(object $payload, ContextInterface $context): bool
     {
-        return $payload instanceof SessionPayload && $payload->rememberMeToken !== null;
+        return $payload instanceof SessionPayload
+            && $payload->rememberMeToken !== null;
     }
 
     #[\Override]
     public function attempt(object $payload, ContextInterface $context): AuthenticationResult
     {
         /** @var SessionPayload $payload */
-        $consumed = $this->tokenManager->consume($payload->rememberMeToken);
+        $plainToken = $payload->rememberMeToken;
+
+        if ($plainToken === null) {
+            return new AuthenticationResult(new InvalidCredentials());
+        }
+
+        $consumed = $this->tokenManager->consume($plainToken);
 
         if ($consumed === null) {
             return new AuthenticationResult(new InvalidCredentials());
         }
 
-        $identity = $this->provider->findById($consumed->userId);
+        $identity = $this->provider->findByUuid($consumed->subjectId);
 
         if ($identity === null) {
             return new AuthenticationResult(new InvalidCredentials());
@@ -55,8 +62,14 @@ final readonly class RememberMeStrategy implements AuthenticationStrategyInterfa
         $attributes = $request instanceof ServerRequestInterface
             ? $this->attributeExtractor->extract($request)
             : [];
-        $session = $this->sessionManager->create($consumed->userId, $attributes);
-        $newToken = $this->tokenManager->create($consumed->userId, $session->id);
+        $session = $this->sessionManager->create(
+            $consumed->subjectId,
+            $attributes,
+        );
+        $newToken = $this->tokenManager->create(
+            $consumed->subjectId,
+            $session->id,
+        );
 
         return new AuthenticationResult(
             subject: $identity,

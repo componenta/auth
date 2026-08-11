@@ -13,11 +13,30 @@ final readonly class EventDispatcherFactory
 {
     public function __invoke(ContainerInterface $container): EventDispatcher
     {
-        return new EventDispatcher(
-            provider: $container->get(EventListenerProviderInterface::class),
-            logger: $container->has(LoggerInterface::class)
-                ? $container->get(LoggerInterface::class)
-                : null,
-        );
+        $provider = $container->get(EventListenerProviderInterface::class);
+
+        if (!$provider instanceof EventListenerProviderInterface) {
+            throw new \LogicException(sprintf(
+                '%s must resolve to %s.',
+                EventListenerProviderInterface::class,
+                EventListenerProviderInterface::class,
+            ));
+        }
+
+        $logger = null;
+
+        if ($container->has(LoggerInterface::class)) {
+            $logger = $container->get(LoggerInterface::class);
+
+            if (!$logger instanceof LoggerInterface) {
+                throw new \LogicException(sprintf(
+                    '%s must resolve to %s.',
+                    LoggerInterface::class,
+                    LoggerInterface::class,
+                ));
+            }
+        }
+
+        return new EventDispatcher($provider, $logger);
     }
 }

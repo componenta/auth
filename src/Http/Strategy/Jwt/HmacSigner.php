@@ -40,6 +40,7 @@ final readonly class HmacSigner implements SignerInterface
             ));
         }
 
+        /** @var non-falsy-string $secret */
         $this->configuration = Configuration::forSymmetricSigner(
             $signer,
             InMemory::plainText($secret),
@@ -49,11 +50,18 @@ final readonly class HmacSigner implements SignerInterface
     #[\Override]
     public function sign(Claims $claims): string
     {
+        /** @var non-empty-string $subject */
+        $subject = $claims->subject;
+        /** @var non-empty-string $issuer */
+        $issuer = $claims->issuer;
+        /** @var non-empty-string $audience */
+        $audience = $claims->audience;
+
         $builder = $this->configuration->builder()
             ->withHeader('typ', $claims->type)
-            ->relatedTo($claims->subject)
-            ->issuedBy($claims->issuer)
-            ->permittedFor($claims->audience)
+            ->relatedTo($subject)
+            ->issuedBy($issuer)
+            ->permittedFor($audience)
             ->issuedAt(new DateTimeImmutable('@' . $claims->issuedAt))
             ->expiresAt(new DateTimeImmutable('@' . $claims->expiresAt));
 
@@ -64,13 +72,14 @@ final readonly class HmacSigner implements SignerInterface
         }
 
         foreach ($claims->custom as $name => $value) {
-            if (in_array($name, RegisteredClaims::ALL, true)) {
+            if ($name === '' || in_array($name, RegisteredClaims::ALL, true)) {
                 throw new \InvalidArgumentException(sprintf(
                     'Custom claim "%s" cannot replace a registered claim.',
                     $name,
                 ));
             }
 
+            /** @var non-empty-string $name */
             $builder = $builder->withClaim($name, $value);
         }
 
@@ -82,6 +91,11 @@ final readonly class HmacSigner implements SignerInterface
     #[\Override]
     public function parse(string $token): ?Claims
     {
+        if ($token === '') {
+            return null;
+        }
+
+        /** @var non-empty-string $token */
         try {
             $parsed = $this->configuration->parser()->parse($token);
 

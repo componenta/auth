@@ -48,11 +48,11 @@ final readonly class OtpStrategy implements AuthenticationStrategyInterface
             return new AuthenticationResult(new CodeExpired());
         }
 
-        if ($result->status !== CodeVerificationStatus::Verified || $result->userId === null) {
+        if ($result->status !== CodeVerificationStatus::Verified || $result->subjectId === null) {
             return new AuthenticationResult(new InvalidCode());
         }
 
-        $identity = $this->provider->findById($result->userId);
+        $identity = $this->provider->findByUuid($result->subjectId);
 
         return $identity === null
             ? new AuthenticationResult(new InvalidCode())

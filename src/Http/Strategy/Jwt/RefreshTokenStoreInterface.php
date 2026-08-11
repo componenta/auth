@@ -4,24 +4,18 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Http\Strategy\Jwt;
 
+use Componenta\Identity\UuidInterface;
+
 /**
- * Persistent refresh-grant storage.
- *
- * Implementations must keep durable family/grant state. Rotation, replay
- * detection, family compromise and successor creation are one serialized
- * transaction (or one atomic server-side script), not independent calls.
+ * Persistent refresh-grant storage with durable family compromise state.
  */
 interface RefreshTokenStoreInterface
 {
-    /** Persists the first token of a new family. */
     public function storeInitial(RefreshToken $token): void;
 
     /**
-     * Atomically rotates a token.
-     *
-     * On a replay, the operation must mark the family compromised and leave
-     * no active descendant. A concurrent transaction must not be able to
-     * insert a successor after the compromise transition commits.
+     * Rotation, replay detection, family compromise and successor creation are
+     * one serialized transition. Replay must leave no active descendant.
      */
     public function rotateAtomically(
         string $presentedTokenId,
@@ -32,5 +26,8 @@ interface RefreshTokenStoreInterface
 
     public function revoke(string $tokenId, int $revokedAt): void;
 
-    public function revokeAllForUser(string $userId, int $revokedAt): void;
+    public function revokeAllForSubject(
+        UuidInterface $subjectId,
+        int $revokedAt,
+    ): void;
 }

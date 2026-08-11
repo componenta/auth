@@ -17,13 +17,26 @@ final readonly class RefreshHandlerFactory
 {
     public function __invoke(ContainerInterface $container): RefreshHandler
     {
+        /** @var RefreshTokenManager $refreshManager */
+        $refreshManager = $container->get(RefreshTokenManager::class);
+        /** @var JwtUserProviderInterface $provider */
+        $provider = $container->get(JwtUserProviderInterface::class);
+        /** @var SignerInterface $signer */
+        $signer = $container->get(SignerInterface::class);
+        /** @var JwtConfig $config */
+        $config = $container->get(JwtConfig::class);
+        /** @var DeniedResponseFactoryInterface $deniedResponseFactory */
+        $deniedResponseFactory = $container->get(DeniedResponseFactoryInterface::class);
+        /** @var ResponseFactoryInterface $responseFactory */
+        $responseFactory = $container->get(ResponseFactoryInterface::class);
+
         return new RefreshHandler(
-            refreshManager: $container->get(RefreshTokenManager::class),
-            provider: $container->get(JwtUserProviderInterface::class),
-            signer: $container->get(SignerInterface::class),
-            config: $container->get(JwtConfig::class),
-            deniedResponseFactory: $container->get(DeniedResponseFactoryInterface::class),
-            responseFactory: $container->get(ResponseFactoryInterface::class),
+            $refreshManager,
+            $provider,
+            $signer,
+            $config,
+            $deniedResponseFactory,
+            $responseFactory,
         );
     }
 }

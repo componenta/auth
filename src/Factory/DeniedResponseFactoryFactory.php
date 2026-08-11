@@ -15,16 +15,43 @@ final readonly class DeniedResponseFactoryFactory
 {
     public function __invoke(ContainerInterface $container): DeniedResponseFactory
     {
-        /**
-         * @var Config $config
-         */
-        $config = $container->get('config');
-        $config = $config->array(new ConfigPath(ConfigKey::AUTH . '.' . ConfigKey::DENIED), []);
+        $config = $container->get(ConfigKey::CONFIG);
+        $responseFactory = $container->get(ResponseFactoryInterface::class);
+
+        if (!$config instanceof Config) {
+            throw new \LogicException(sprintf(
+                '%s must resolve to %s.',
+                ConfigKey::CONFIG,
+                Config::class,
+            ));
+        }
+
+        if (!$responseFactory instanceof ResponseFactoryInterface) {
+            throw new \LogicException(sprintf(
+                '%s must resolve to %s.',
+                ResponseFactoryInterface::class,
+                ResponseFactoryInterface::class,
+            ));
+        }
+
+        $prefix = ConfigKey::AUTH . '.' . ConfigKey::DENIED;
+        $configuredMap = $config->array(new ConfigPath($prefix . '.statusMap'), []);
+        $statusMap = [];
+
+        foreach ($configuredMap as $code => $status) {
+            if (!is_string($code) || $code === '' || !is_int($status)) {
+                throw new \LogicException(
+                    'auth.denied.statusMap must contain non-empty string keys and integer HTTP statuses.',
+                );
+            }
+
+            $statusMap[$code] = $status;
+        }
 
         return new DeniedResponseFactory(
-            responseFactory: $container->get(ResponseFactoryInterface::class),
-            statusMap: $config['statusMap'] ?? [],
-            defaultStatus: $config['defaultStatus'] ?? 401,
+            responseFactory: $responseFactory,
+            statusMap: $statusMap,
+            defaultStatus: $config->int(new ConfigPath($prefix . '.defaultStatus'), 401),
         );
     }
 }

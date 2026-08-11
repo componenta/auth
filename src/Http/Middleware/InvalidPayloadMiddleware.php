@@ -16,6 +16,7 @@ final readonly class InvalidPayloadMiddleware implements MiddlewareInterface
 {
     public function __construct(private ResponseFactoryInterface $responseFactory) {}
 
+    #[\Override]
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         try {
@@ -26,7 +27,10 @@ final readonly class InvalidPayloadMiddleware implements MiddlewareInterface
                 'error' => 'invalid_payload',
                 'field' => $e->field,
             ], JSON_THROW_ON_ERROR));
-            return $response->withHeader('Content-Type', 'application/json');
+            return $response
+                ->withHeader('Content-Type', 'application/json')
+                ->withHeader('Cache-Control', 'no-store')
+                ->withHeader('Pragma', 'no-cache');
         }
     }
 }

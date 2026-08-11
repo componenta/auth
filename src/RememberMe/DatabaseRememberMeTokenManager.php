@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace Componenta\Auth\RememberMe;
 
 use Componenta\Clock\DateTimeFactoryInterface;
+use Componenta\Identity\Uuid;
+use Componenta\Identity\UuidInterface;
 use Cycle\Database\DatabaseInterface;
+use Cycle\Database\Query\DeleteQuery;
 
 final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenManagerInterface
 {
@@ -20,10 +23,10 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
     ) {}
 
     #[\Override]
-    public function create(int|string $userId, ?string $sessionId = null): string
-    {
-        self::assertSubjectId($userId);
-
+    public function create(
+        UuidInterface $subjectId,
+        ?string $sessionId = null,
+    ): string {
         if ($sessionId !== null) {
             self::assertId($sessionId, 'Session ID');
         }
@@ -31,7 +34,7 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
         $plainToken = bin2hex(random_bytes(32));
         $now = $this->dateTimeFactory->now();
         $this->database->insert($this->config->table)->values([
-            $this->config->userIdColumn => $userId,
+            $this->config->subjectIdColumn => $subjectId->toString(),
             $this->config->sessionIdColumn => $sessionId,
             $this->config->tokenColumn => self::hash($plainToken),
             $this->config->expiresAtColumn => $now
@@ -50,10 +53,14 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
             return null;
         }
 
-        $row = $this->database->select()->from($this->config->table)
-            ->where($this->config->tokenColumn, self::hash($plainToken))->run()->fetch();
+        $row = $this->database
+            ->select()
+            ->from($this->config->table)
+            ->where($this->config->tokenColumn, self::hash($plainToken))
+            ->run()
+            ->fetch();
 
-        if ($row === false) {
+        if (!is_array($row)) {
             return null;
         }
 
@@ -61,15 +68,22 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
         $now = $this->dateTimeFactory->now();
 
         if ($token->expiresAt <= $now) {
-            $this->database->delete($this->config->table)
-                ->where($this->config->idColumn, $token->id)->run();
+            $this->database
+                ->delete($this->config->table)
+                ->where($this->config->idColumn, $token->id)
+                ->run();
 
             return null;
         }
 
-        $affectedRows = $this->database->delete($this->config->table)
+        $affectedRows = $this->database
+            ->delete($this->config->table)
             ->where($this->config->idColumn, $token->id)
-            ->where($this->config->expiresAtColumn, '>', $now->format($this->config->dateFormat))
+            ->where(
+                $this->config->expiresAtColumn,
+                '>',
+                $now->format($this->config->dateFormat),
+            )
             ->run();
 
         return $affectedRows === 0 ? null : $token;
@@ -82,8 +96,10 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
             return;
         }
 
-        $this->database->delete($this->config->table)
-            ->where($this->config->tokenColumn, self::hash($plainToken))->run();
+        $this->database
+            ->delete($this->config->table)
+            ->where($this->config->tokenColumn, self::hash($plainToken))
+            ->run();
     }
 
     #[\Override]
@@ -95,11 +111,14 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
     #[\Override]
     public function revokeForSessions(iterable $sessionIds): void
     {
+        /** @var array<string, true> $ids */
         $ids = [];
 
         foreach ($sessionIds as $sessionId) {
             if (!is_string($sessionId)) {
-                throw new \InvalidArgumentException('Every session ID must be a string.');
+                throw new \InvalidArgumentException(
+                    'Every session ID must be a string.',
+                );
             }
 
             self::assertId($sessionId, 'Session ID');
@@ -107,21 +126,29 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
         }
 
         foreach (array_chunk(array_keys($ids), self::REVOKE_CHUNK_SIZE) as $chunk) {
-            $this->database->delete($this->config->table)
-                ->where($this->config->sessionIdColumn, 'IN', $chunk)->run();
+            $this->database
+                ->delete($this->config->table)
+                ->where($this->config->sessionIdColumn, 'IN', $chunk)
+                ->run();
         }
     }
 
     #[\Override]
-    public function revokeAllForUser(int|string $userId, ?string $exceptSessionId = null): void
-    {
-        self::assertSubjectId($userId);
-        $delete = $this->database->delete($this->config->table)
-            ->where($this->config->userIdColumn, $userId);
+    public function revokeAllForSubject(
+        UuidInterface $subjectId,
+        ?string $exceptSessionId = null,
+    ): void {
+        $delete = $this->database
+            ->delete($this->config->table)
+            ->where($this->config->subjectIdColumn, $subjectId->toString());
 
         if ($exceptSessionId !== null) {
             self::assertId($exceptSessionId, 'Session ID');
-            $delete->where(function ($query) use ($exceptSessionId): void {
+            $delete->where(function (mixed $query) use ($exceptSessionId): void {
+                if (!$query instanceof DeleteQuery) {
+                    throw new \LogicException('Cycle must provide a DeleteQuery to the predicate.');
+                }
+
                 $query
                     ->where($this->config->sessionIdColumn, '!=', $exceptSessionId)
                     ->orWhere($this->config->sessionIdColumn, null);
@@ -132,13 +159,17 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
     }
 
     #[\Override]
-    public function updateSessionId(string $oldSessionId, string $newSessionId): void
-    {
+    public function updateSessionId(
+        string $oldSessionId,
+        string $newSessionId,
+    ): void {
         self::assertId($oldSessionId, 'Old session ID');
         self::assertId($newSessionId, 'New session ID');
-        $this->database->update($this->config->table)
+        $this->database
+            ->update($this->config->table)
             ->where($this->config->sessionIdColumn, $oldSessionId)
-            ->values([$this->config->sessionIdColumn => $newSessionId])->run();
+            ->values([$this->config->sessionIdColumn => $newSessionId])
+            ->run();
     }
 
     #[\Override]
@@ -152,20 +183,26 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
         }
 
         $now = $this->dateTimeFactory->now()->format($this->config->dateFormat);
-        $rows = $this->database->select($this->config->idColumn)
+        $rows = $this->database
+            ->select($this->config->idColumn)
             ->from($this->config->table)
             ->where($this->config->expiresAtColumn, '<=', $now)
             ->limit($limit)
             ->run()
             ->fetchAll();
-        $ids = array_map(
-            fn(array $row): int => (int) $row[$this->config->idColumn],
-            $rows,
-        );
+        $ids = [];
+
+        foreach ($rows as $row) {
+            if (is_array($row)) {
+                $ids[] = self::intValue($row, $this->config->idColumn);
+            }
+        }
+
         $deleted = 0;
 
         foreach (array_chunk($ids, self::REVOKE_CHUNK_SIZE) as $chunk) {
-            $deleted += $this->database->delete($this->config->table)
+            $deleted += $this->database
+                ->delete($this->config->table)
                 ->where($this->config->idColumn, 'IN', $chunk)
                 ->where($this->config->expiresAtColumn, '<=', $now)
                 ->run();
@@ -184,31 +221,69 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
         return hash('sha256', $plainToken);
     }
 
-    private static function assertSubjectId(int|string $userId): void
-    {
-        if (is_string($userId) && ($userId === '' || strlen($userId) > self::MAX_ID_LENGTH)) {
-            throw new \InvalidArgumentException('Remember-me subject ID is invalid.');
-        }
-    }
-
     private static function assertId(string $value, string $label): void
     {
-        if ($value === '' || strlen($value) > self::MAX_ID_LENGTH) {
+        if (
+            $value === ''
+            || strlen($value) > self::MAX_ID_LENGTH
+            || preg_match('/[\x00-\x1F\x7F]/', $value) === 1
+        ) {
             throw new \InvalidArgumentException($label . ' is invalid.');
         }
     }
 
-    /** @param array<string, mixed> $row */
+    /** @param array<array-key, mixed> $row */
     private function hydrate(array $row): RememberMeToken
     {
+        $sessionId = $row[$this->config->sessionIdColumn] ?? null;
+
         return new RememberMeToken(
-            id: (int) $row[$this->config->idColumn],
-            userId: $row[$this->config->userIdColumn],
-            sessionId: isset($row[$this->config->sessionIdColumn])
-                ? (string) $row[$this->config->sessionIdColumn]
-                : null,
-            expiresAt: $this->dateTimeFactory->parse($row[$this->config->expiresAtColumn]),
-            createdAt: $this->dateTimeFactory->parse($row[$this->config->createdAtColumn]),
+            id: self::intValue($row, $this->config->idColumn),
+            subjectId: Uuid::fromString(self::stringValue(
+                $row,
+                $this->config->subjectIdColumn,
+            )),
+            sessionId: $sessionId === null
+                ? null
+                : self::stringValue($row, $this->config->sessionIdColumn),
+            expiresAt: $this->dateTimeFactory->parse(self::stringValue(
+                $row,
+                $this->config->expiresAtColumn,
+            )),
+            createdAt: $this->dateTimeFactory->parse(self::stringValue(
+                $row,
+                $this->config->createdAtColumn,
+            )),
         );
+    }
+
+    /** @param array<array-key, mixed> $row */
+    private static function stringValue(array $row, string $key): string
+    {
+        $value = $row[$key] ?? null;
+
+        if (!is_string($value) && !is_int($value)) {
+            throw new \UnexpectedValueException(sprintf(
+                'Database column "%s" must contain a string-compatible value.',
+                $key,
+            ));
+        }
+
+        return (string) $value;
+    }
+
+    /** @param array<array-key, mixed> $row */
+    private static function intValue(array $row, string $key): int
+    {
+        $value = $row[$key] ?? null;
+
+        if (!is_int($value) && !(is_string($value) && ctype_digit($value))) {
+            throw new \UnexpectedValueException(sprintf(
+                'Database column "%s" must contain an integer.',
+                $key,
+            ));
+        }
+
+        return (int) $value;
     }
 }

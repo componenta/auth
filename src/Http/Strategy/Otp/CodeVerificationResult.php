@@ -4,16 +4,18 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Http\Strategy\Otp;
 
+use Componenta\Identity\UuidInterface;
+
 final readonly class CodeVerificationResult
 {
     private function __construct(
         public CodeVerificationStatus $status,
-        public ?string $userId = null,
+        public ?UuidInterface $subjectId = null,
     ) {}
 
-    public static function verified(string $userId): self
+    public static function verified(UuidInterface $subjectId): self
     {
-        return new self(CodeVerificationStatus::Verified, $userId);
+        return new self(CodeVerificationStatus::Verified, $subjectId);
     }
 
     public static function invalid(): self

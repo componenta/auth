@@ -15,7 +15,7 @@ interface DeniedReasonInterface
      * Implement PublicDeniedReasonInterface to opt specific values into a
      * public response.
      *
-     * @return array<string, mixed>
+     * @var array<string, mixed>
      */
     public array $attributes { get; }
 }

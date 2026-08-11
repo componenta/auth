@@ -13,9 +13,11 @@ final readonly class OtpRequestHandlerFactory
 {
     public function __invoke(ContainerInterface $container): RequestHandler
     {
-        return new RequestHandler(
-            queue: $container->get(OtpRequestQueueInterface::class),
-            responseFactory: $container->get(ResponseFactoryInterface::class),
-        );
+        /** @var OtpRequestQueueInterface $queue */
+        $queue = $container->get(OtpRequestQueueInterface::class);
+        /** @var ResponseFactoryInterface $responseFactory */
+        $responseFactory = $container->get(ResponseFactoryInterface::class);
+
+        return new RequestHandler($queue, $responseFactory);
     }
 }

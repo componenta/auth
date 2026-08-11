@@ -4,31 +4,38 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Http\Strategy\Otp;
 
-/**
- * Configuration for OTP authentication strategy.
- */
 final readonly class OtpConfig
 {
-    /**
-     * @param int $length Code length in digits (minimum 4)
-     * @param int $ttl Code lifetime in seconds
-     * @param int $maxAttempts Maximum verification attempts before invalidation
-     */
+    public const int MIN_LENGTH = 4;
+    public const int MAX_LENGTH = 18;
+    private const int MAX_TTL = 86400;
+    private const int MAX_ATTEMPTS = 100;
+
     public function __construct(
         public int $length = 6,
         public int $ttl = 300,
         public int $maxAttempts = 5,
     ) {
-        if ($this->length < 4) {
-            throw new \InvalidArgumentException('Code length must be at least 4');
+        if ($this->length < self::MIN_LENGTH || $this->length > self::MAX_LENGTH) {
+            throw new \InvalidArgumentException(sprintf(
+                'Code length must be between %d and %d digits.',
+                self::MIN_LENGTH,
+                self::MAX_LENGTH,
+            ));
         }
 
-        if ($this->ttl < 1) {
-            throw new \InvalidArgumentException('TTL must be positive');
+        if ($this->ttl < 1 || $this->ttl > self::MAX_TTL) {
+            throw new \InvalidArgumentException(sprintf(
+                'OTP TTL must be between 1 and %d seconds.',
+                self::MAX_TTL,
+            ));
         }
 
-        if ($this->maxAttempts < 1) {
-            throw new \InvalidArgumentException('Max attempts must be positive');
+        if ($this->maxAttempts < 1 || $this->maxAttempts > self::MAX_ATTEMPTS) {
+            throw new \InvalidArgumentException(sprintf(
+                'Max attempts must be between 1 and %d.',
+                self::MAX_ATTEMPTS,
+            ));
         }
     }
 }

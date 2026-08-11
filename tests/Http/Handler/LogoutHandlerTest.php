@@ -10,6 +10,7 @@ use Componenta\Auth\Http\PayloadStorageInterface;
 use Componenta\Auth\Session\Session;
 use Componenta\Auth\Session\SessionInterface;
 use Componenta\Auth\Session\SessionManagerInterface;
+use Componenta\Identity\Uuid;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseFactoryInterface;
@@ -21,10 +22,19 @@ final class LogoutHandlerTest extends TestCase
     public function testTerminalMiddlewareOwnsTheOnlyCookieRemoval(): void
     {
         $now = new DateTimeImmutable('@1000');
-        $session = new Session('session', 'user', $now, $now, $now, null, $now, $now);
+        $session = new Session(
+            'session',
+            Uuid::fromString('018f6d5d-3f7a-7a9b-8c2f-123456789abc'),
+            $now->modify('+30 minutes'),
+            $now->modify('+8 hours'),
+            $now->modify('+5 minutes'),
+            null,
+            $now,
+            $now,
+        );
         $state = new CredentialTransportState();
         $state->queue(new \stdClass());
-        $request = $this->createMock(ServerRequestInterface::class);
+        $request = $this->createStub(ServerRequestInterface::class);
         $request->method('getAttribute')->willReturnCallback(
             static fn(string $name): mixed => match ($name) {
                 SessionInterface::class => $session,
@@ -36,9 +46,12 @@ final class LogoutHandlerTest extends TestCase
         $manager->expects(self::once())->method('terminate')->with('session');
         $storage = $this->createMock(PayloadStorageInterface::class);
         $storage->expects(self::never())->method('remove');
-        $response = $this->createMock(ResponseInterface::class);
+        $response = $this->createStub(ResponseInterface::class);
         $responses = $this->createMock(ResponseFactoryInterface::class);
-        $responses->method('createResponse')->with(204)->willReturn($response);
+        $responses->expects(self::once())
+            ->method('createResponse')
+            ->with(204)
+            ->willReturn($response);
 
         self::assertSame(
             $response,

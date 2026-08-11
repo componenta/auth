@@ -5,11 +5,14 @@ declare(strict_types=1);
 namespace Componenta\Auth\Token;
 
 use Componenta\Clock\DateTimeFactoryInterface;
+use Componenta\Identity\Uuid;
+use Componenta\Identity\UuidInterface;
 use Cycle\Database\DatabaseInterface;
+use Cycle\Database\Query\OnConflict;
+use Cycle\Database\Query\SelectQuery;
 
 final readonly class TokenManager implements TokenManagerInterface
 {
-    private const int MAX_SUBJECT_ID_LENGTH = 512;
     private const int MAX_CLEANUP_LIMIT = 10000;
     private const int DELETE_CHUNK_SIZE = 500;
 
@@ -20,19 +23,34 @@ final readonly class TokenManager implements TokenManagerInterface
     ) {}
 
     #[\Override]
-    public function generate(string $userId): string
+    public function replaceForSubject(UuidInterface $subjectId): string
     {
-        self::assertSubjectId($userId);
         $plainToken = bin2hex(random_bytes(32));
         $now = $this->dateTimeFactory->now();
-        $this->database->insert($this->config->table)->values([
-            $this->config->userIdColumn => $userId,
+
+        $values = [
+            $this->config->subjectIdColumn => $subjectId->toString(),
             $this->config->tokenColumn => self::hash($plainToken),
             $this->config->expiresAtColumn => $now
                 ->modify("+{$this->config->ttl} seconds")
                 ->format($this->config->dateFormat),
+            $this->config->usedAtColumn => null,
             $this->config->createdAtColumn => $now->format($this->config->dateFormat),
-        ])->run();
+        ];
+
+        // One statement, backed by UNIQUE(subject_id), ensures concurrent
+        // requests cannot leave two active challenges for the same subject.
+        $this->database
+            ->insert($this->config->table)
+            ->values($values)
+            ->onConflict(OnConflict::target($this->config->subjectIdColumn)
+                ->doUpdate([
+                    $this->config->tokenColumn,
+                    $this->config->expiresAtColumn,
+                    $this->config->usedAtColumn,
+                    $this->config->createdAtColumn,
+                ]))
+            ->run();
 
         return $plainToken;
     }
@@ -44,11 +62,14 @@ final readonly class TokenManager implements TokenManagerInterface
             return null;
         }
 
-        $row = $this->database->select()->from($this->config->table)
+        $row = $this->database
+            ->select()
+            ->from($this->config->table)
             ->where($this->config->tokenColumn, self::hash($plainToken))
-            ->run()->fetch();
+            ->run()
+            ->fetch();
 
-        return $row === false ? null : $this->hydrate($row);
+        return is_array($row) ? $this->hydrate($row) : null;
     }
 
     #[\Override]
@@ -59,22 +80,16 @@ final readonly class TokenManager implements TokenManagerInterface
         }
 
         $now = $this->dateTimeFactory->now();
-        $affected = $this->database->update($this->config->table)
-            ->values([$this->config->usedAtColumn => $now->format($this->config->dateFormat)])
+        $formattedNow = $now->format($this->config->dateFormat);
+        $affected = $this->database
+            ->update($this->config->table)
+            ->values([$this->config->usedAtColumn => $formattedNow])
             ->where($this->config->tokenColumn, self::hash($plainToken))
             ->where($this->config->usedAtColumn, null)
-            ->where($this->config->expiresAtColumn, '>', $now->format($this->config->dateFormat))
+            ->where($this->config->expiresAtColumn, '>', $formattedNow)
             ->run();
 
         return $affected > 0;
-    }
-
-    #[\Override]
-    public function revokeForUser(string $userId): void
-    {
-        self::assertSubjectId($userId);
-        $this->database->delete($this->config->table)
-            ->where($this->config->userIdColumn, $userId)->run();
     }
 
     #[\Override]
@@ -88,28 +103,48 @@ final readonly class TokenManager implements TokenManagerInterface
         }
 
         $now = $this->dateTimeFactory->now()->format($this->config->dateFormat);
-        $expiredOrUsed = function ($query) use ($now): void {
+        $expiredOrUsed = function (mixed $query) use ($now): void {
+            if (!$query instanceof SelectQuery) {
+                throw new \LogicException('Cycle must provide a SelectQuery to the predicate.');
+            }
+
             $query
                 ->where($this->config->expiresAtColumn, '<=', $now)
                 ->orWhere($this->config->usedAtColumn, '!=', null);
         };
-        $rows = $this->database->select($this->config->idColumn)
+        $rows = $this->database
+            ->select($this->config->idColumn)
             ->from($this->config->table)
             ->where($expiredOrUsed)
             ->limit($limit)
             ->run()
             ->fetchAll();
-        $ids = array_map(
-            fn(array $row): int => (int) $row[$this->config->idColumn],
-            $rows,
-        );
+        $ids = [];
+
+        foreach ($rows as $row) {
+            if (is_array($row)) {
+                $ids[] = self::intValue($row, $this->config->idColumn);
+            }
+        }
+
         $deleted = 0;
 
         foreach (array_chunk($ids, self::DELETE_CHUNK_SIZE) as $chunk) {
-            $deleted += $this->database->delete($this->config->table)
-                ->where($this->config->idColumn, 'IN', $chunk)
-                ->where($expiredOrUsed)
-                ->run();
+            $delete = $this->database
+                ->delete($this->config->table)
+                ->where($this->config->idColumn, 'IN', $chunk);
+            $delete->where(function (mixed $query) use ($now): void {
+                if (!$query instanceof \Cycle\Database\Query\DeleteQuery) {
+                    throw new \LogicException(
+                        'Cycle must provide a DeleteQuery to the predicate.',
+                    );
+                }
+
+                $query
+                    ->where($this->config->expiresAtColumn, '<=', $now)
+                    ->orWhere($this->config->usedAtColumn, '!=', null);
+            });
+            $deleted += $delete->run();
         }
 
         return $deleted;
@@ -125,24 +160,61 @@ final readonly class TokenManager implements TokenManagerInterface
         return hash('sha256', $plainToken);
     }
 
-    private static function assertSubjectId(string $userId): void
-    {
-        if ($userId === '' || strlen($userId) > self::MAX_SUBJECT_ID_LENGTH) {
-            throw new \InvalidArgumentException('Token subject ID is invalid.');
-        }
-    }
-
-    /** @param array<string, mixed> $row */
+    /** @param array<array-key, mixed> $row */
     private function hydrate(array $row): Token
     {
+        $usedAt = $row[$this->config->usedAtColumn] ?? null;
+
         return new Token(
-            id: (int) $row[$this->config->idColumn],
-            userId: (string) $row[$this->config->userIdColumn],
-            expiresAt: $this->dateTimeFactory->parse($row[$this->config->expiresAtColumn]),
-            usedAt: isset($row[$this->config->usedAtColumn])
-                ? $this->dateTimeFactory->parse($row[$this->config->usedAtColumn])
-                : null,
-            createdAt: $this->dateTimeFactory->parse($row[$this->config->createdAtColumn]),
+            id: self::intValue($row, $this->config->idColumn),
+            subjectId: Uuid::fromString(self::stringValue(
+                $row,
+                $this->config->subjectIdColumn,
+            )),
+            expiresAt: $this->dateTimeFactory->parse(self::stringValue(
+                $row,
+                $this->config->expiresAtColumn,
+            )),
+            usedAt: $usedAt === null
+                ? null
+                : $this->dateTimeFactory->parse(self::stringValue(
+                    $row,
+                    $this->config->usedAtColumn,
+                )),
+            createdAt: $this->dateTimeFactory->parse(self::stringValue(
+                $row,
+                $this->config->createdAtColumn,
+            )),
         );
+    }
+
+    /** @param array<array-key, mixed> $row */
+    private static function stringValue(array $row, string $key): string
+    {
+        $value = $row[$key] ?? null;
+
+        if (!is_string($value) && !is_int($value)) {
+            throw new \UnexpectedValueException(sprintf(
+                'Database column "%s" must contain a string-compatible value.',
+                $key,
+            ));
+        }
+
+        return (string) $value;
+    }
+
+    /** @param array<array-key, mixed> $row */
+    private static function intValue(array $row, string $key): int
+    {
+        $value = $row[$key] ?? null;
+
+        if (!is_int($value) && !(is_string($value) && ctype_digit($value))) {
+            throw new \UnexpectedValueException(sprintf(
+                'Database column "%s" must contain an integer.',
+                $key,
+            ));
+        }
+
+        return (int) $value;
     }
 }

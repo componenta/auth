@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Componenta\Auth\Factory;
 
 use Componenta\Auth\Http\Strategy\MagicLink\RequestHandler;
+use Componenta\Auth\Token\TokenRequestQueueInterface;
 use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 
@@ -12,9 +13,11 @@ final readonly class MagicLinkRequestHandlerFactory
 {
     public function __invoke(ContainerInterface $container): RequestHandler
     {
-        return new RequestHandler(
-            queue: $container->get('auth.magicLink.queue'),
-            responseFactory: $container->get(ResponseFactoryInterface::class),
-        );
+        /** @var TokenRequestQueueInterface $queue */
+        $queue = $container->get('auth.magicLink.queue');
+        /** @var ResponseFactoryInterface $responseFactory */
+        $responseFactory = $container->get(ResponseFactoryInterface::class);
+
+        return new RequestHandler($queue, $responseFactory);
     }
 }

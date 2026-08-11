@@ -14,8 +14,12 @@ use Psr\Container\ContainerInterface;
 
 final readonly class DatabaseRememberMeTokenManagerConfigFactory implements LazyServiceFactoryInterface
 {
-    public function lazy(ContainerInterface $container, ProxyFactoryInterface $proxyFactory, array $context = []): object
-    {
+    #[\Override]
+    public function lazy(
+        ContainerInterface $container,
+        ProxyFactoryInterface $proxyFactory,
+        array $context = [],
+    ): object {
         return $proxyFactory->makeProxy(
             DatabaseRememberMeTokenManagerConfig::class,
             fn(object $proxy): DatabaseRememberMeTokenManagerConfig => $this->__invoke($container),
@@ -24,20 +28,28 @@ final readonly class DatabaseRememberMeTokenManagerConfigFactory implements Lazy
 
     public function __invoke(ContainerInterface $container): DatabaseRememberMeTokenManagerConfig
     {
-        /** @var Config $config */
-        $config = $container->get('config');
-        $config = $config->array(new ConfigPath(ConfigKey::AUTH . '.' . ConfigKey::REMEMBER_ME), []);
+        $config = $container->get(ConfigKey::CONFIG);
+
+        if (!$config instanceof Config) {
+            throw new \LogicException(sprintf(
+                '%s must resolve to %s.',
+                ConfigKey::CONFIG,
+                Config::class,
+            ));
+        }
+
+        $prefix = ConfigKey::AUTH . '.' . ConfigKey::REMEMBER_ME;
 
         return new DatabaseRememberMeTokenManagerConfig(
-            table: $config['table'] ?? 'remember_me_tokens',
-            dateFormat: $config['dateFormat'] ?? 'Y-m-d H:i:s',
-            ttl: $config['ttl'] ?? 2592000,
-            idColumn: $config['columns']['id'] ?? 'id',
-            userIdColumn: $config['columns']['userId'] ?? 'user_id',
-            tokenColumn: $config['columns']['token'] ?? 'token',
-            sessionIdColumn: $config['columns']['sessionId'] ?? 'session_id',
-            expiresAtColumn: $config['columns']['expiresAt'] ?? 'expires_at',
-            createdAtColumn: $config['columns']['createdAt'] ?? 'created_at',
+            table: $config->string(new ConfigPath($prefix . '.table'), 'remember_me_tokens'),
+            dateFormat: $config->string(new ConfigPath($prefix . '.dateFormat'), 'Y-m-d H:i:s'),
+            ttl: $config->int(new ConfigPath($prefix . '.ttl'), 2592000),
+            idColumn: $config->string(new ConfigPath($prefix . '.columns.id'), 'id'),
+            subjectIdColumn: $config->string(new ConfigPath($prefix . '.columns.subjectId'), 'user_id'),
+            tokenColumn: $config->string(new ConfigPath($prefix . '.columns.token'), 'token'),
+            sessionIdColumn: $config->string(new ConfigPath($prefix . '.columns.sessionId'), 'session_id'),
+            expiresAtColumn: $config->string(new ConfigPath($prefix . '.columns.expiresAt'), 'expires_at'),
+            createdAtColumn: $config->string(new ConfigPath($prefix . '.columns.createdAt'), 'created_at'),
         );
     }
 }

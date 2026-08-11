@@ -16,17 +16,32 @@ final readonly class RememberMeTerminationListener implements
     AllSessionsTerminatedListenerInterface,
     CriticalEventListenerInterface
 {
-    public function __construct(private RememberMeTokenManagerInterface $tokenManager) {}
+    public function __construct(
+        private RememberMeTokenManagerInterface $tokenManager,
+    ) {}
 
     #[\Override]
     public function handleEvent(EventInterface $event): void
     {
-        match ($event::class) {
-            SessionsTerminated::class => $this->tokenManager->revokeForSessions($event->sessionIds),
-            AllSessionsTerminated::class => $this->tokenManager->revokeAllForUser(
-                $event->userId,
+        if ($event instanceof SessionsTerminated) {
+            $this->tokenManager->revokeForSessions($event->sessionIds);
+
+            return;
+        }
+
+        if ($event instanceof AllSessionsTerminated) {
+            $this->tokenManager->revokeAllForSubject(
+                $event->subjectId,
                 $event->exceptSessionId,
-            ),
-        };
+            );
+
+            return;
+        }
+
+        throw new \InvalidArgumentException(sprintf(
+            '%s cannot handle %s.',
+            self::class,
+            $event::class,
+        ));
     }
 }

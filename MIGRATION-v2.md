@@ -17,17 +17,20 @@ Use the UUID already provided by `IdentityInterface`:
 $subjectId = $identity->uuid->toString();
 ```
 
-Update application stores so sessions, remember-me tokens, one-time tokens, refresh grants and JWT `sub` use that same value. Internal database IDs belong inside persistence adapters.
+Update application stores so sessions, remember-me tokens, one-time tokens, OTP challenges, refresh grants and JWT `sub` use that same UUID. Public v2 ownership contracts accept `UuidInterface`; internal database IDs belong inside persistence adapters.
 
 ## Request-local session state
 
-Removed:
+`SessionAwareInterface` remains the capability for exposing all sessions owned by an identity:
 
-```text
-Componenta\Auth\Session\SessionAwareInterface
+```php
+interface SessionAwareInterface
+{
+    public SessionCollectionInterface $sessions { get; }
+}
 ```
 
-Do not add a mutable current-session property to the identity entity. `AuthenticationResult` now has:
+Only the mutable request-local `currentSessionId` property has been removed. Do not add it back to the identity entity. `AuthenticationResult` now has:
 
 ```php
 public ?SessionInterface $session;
@@ -35,7 +38,7 @@ public ?SessionInterface $session;
 
 `AuthenticationMiddleware` attaches it to the PSR-7 request under `SessionInterface::class`.
 
-The generic `AuthenticationResult::$attributes` bag has been removed.
+The generic `AuthenticationResult::$attributes` bag has been removed. Client code obtains the current request session from the PSR-7 attribute `SessionInterface::class`; `$identity->sessions` remains the collection of all sessions belonging to that identity.
 
 ## Property API
 
@@ -75,12 +78,16 @@ Update providers that previously implemented `provide(Payload $payload)`.
 
 ## Delivery queues
 
-Removed zero-logic wrappers:
+Removed zero-logic wrappers and unused magic-link denial types:
 
 ```text
 Componenta\Auth\Token\TokenRequester
 Componenta\Auth\Http\Strategy\Otp\OtpRequester
+Componenta\Auth\Http\Strategy\MagicLink\Denied\TokenAlreadyUsed
+Componenta\Auth\Http\Strategy\MagicLink\Denied\TokenExpired
 ```
+
+Magic-link verification has always collapsed negative outcomes to `InvalidToken`; the two removed denial classes had no execution path.
 
 Inject `TokenRequestQueueInterface` or `OtpRequestQueueInterface` directly and enqueue `TokenRequest`/`OtpRequest`.
 
@@ -140,7 +147,7 @@ Implement the atomic store contract:
 
 - `storeInitial()` persists the first family member;
 - `rotateAtomically()` serializes validation, revocation, replay compromise and successor creation;
-- `revokeAllForUser()` supports account recovery.
+- `revokeAllForSubject()` supports account recovery.
 
 A `Rotated` result must return the exact successor ID and expiry supplied to `rotateAtomically()`, an active token, a valid family ID and a non-empty subject ID.
 
@@ -150,17 +157,27 @@ Replace separate lookup/attempt/consume operations with `verifyAndConsume()`. Th
 
 ## Password reset
 
-Register `PasswordResetServiceInterface`. `PasswordResetResult::Success` means one completed security transition: reset token consumed, password changed, and old session, remember-me and refresh credentials invalidated.
+Register `PasswordResetServiceInterface`. The service receives the plaintext reset token and new password, validates/locks the token before expensive hashing, and owns the complete security transition. `PasswordResetResult::Success` means: reset token consumed, password changed, and old session, remember-me and refresh credentials invalidated.
 
 `PasswordUpdaterInterface` has been removed because the HTTP handler no longer orchestrates the security transition itself.
 
 ## Session and transport lifecycle
 
+- Nested authentication/session middleware layers reuse one request-scoped `CredentialTransportState`; only its owner applies the final mutation.
+- A new authentication result removes stale identity, denial and session request attributes before installing the current result.
 - `LogoutHandler` no longer performs a duplicate cookie removal when `AuthenticationMiddleware` owns terminal transport commit.
 - Custom authentication middleware must attach the verified `SessionInterface` if logout should terminate that server-side session.
 - Session touch rechecks idle/absolute expiry.
 - Session cleanup is bounded and rechecks expiry before delete.
 - `SessionCollection::pluck()` rejects unknown keys.
+
+## One-time token storage
+
+`TokenManagerInterface::replaceForSubject()` replaces a subject challenge atomically. The built-in SQL manager uses an UPSERT, so the persistence schema must enforce a `UNIQUE` constraint on the canonical subject UUID column. Do not emulate replacement as independent `DELETE` and `INSERT` statements.
+
+## Remember-me feature flag
+
+Remember-me is disabled by default. Set `auth.rememberMe.enabled=true` only when `RememberMeTokenManagerInterface` is configured. Enabling the feature automatically adds the built-in termination and regeneration listeners; custom listener lists are deduplicated.
 
 ## Housekeeping signatures
 
@@ -192,7 +209,6 @@ The following unused/redundant symbols are removed in v2:
 ```text
 AuthSubjectInterface
 AuthSubject
-SessionAwareInterface
 RememberMeAwareInterface
 PasswordUpdaterInterface
 TokenRequester

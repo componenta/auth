@@ -18,8 +18,30 @@ final readonly class PasswordExtractor implements PayloadExtractorInterface
         public string $passwordField = 'password',
         public string $rememberField = 'remember',
         public bool $normalizeIdentity = true,
-    ) {}
+    ) {
+        $fields = [
+            'identity' => $this->identityField,
+            'password' => $this->passwordField,
+            'remember' => $this->rememberField,
+        ];
 
+        foreach ($fields as $name => $field) {
+            if (preg_match('/\A[A-Za-z_][A-Za-z0-9_.-]*\z/D', $field) !== 1) {
+                throw new \InvalidArgumentException(sprintf(
+                    'Password %s field name is invalid.',
+                    $name,
+                ));
+            }
+        }
+
+        if (count(array_unique($fields)) !== count($fields)) {
+            throw new \InvalidArgumentException(
+                'Password credential field names must be different.',
+            );
+        }
+    }
+
+    #[\Override]
     public function extract(ServerRequestInterface $request): Payload
     {
         $body = $request->getParsedBody();
@@ -37,7 +59,12 @@ final readonly class PasswordExtractor implements PayloadExtractorInterface
         $identity = $body[$this->identityField];
         $password = $body[$this->passwordField];
 
-        if (!is_string($identity) || $identity === '' || strlen($identity) > self::MAX_IDENTITY_LENGTH) {
+        if (
+            !is_string($identity)
+            || $identity === ''
+            || strlen($identity) > self::MAX_IDENTITY_LENGTH
+            || preg_match('/[\x00-\x1F\x7F]/', $identity) === 1
+        ) {
             throw InvalidPayloadException::invalidField($this->identityField);
         }
         if (!is_string($password) || $password === '' || strlen($password) > self::MAX_PASSWORD_LENGTH) {

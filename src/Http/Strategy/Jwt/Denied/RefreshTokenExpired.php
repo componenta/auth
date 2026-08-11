@@ -17,6 +17,7 @@ final class RefreshTokenExpired implements DeniedReasonInterface
         get => 'refresh_token_expired';
     }
 
+    /** @param array<string, mixed> $attributes */
     public function __construct(
         public readonly array $attributes = [],
     ) {}

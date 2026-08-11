@@ -15,11 +15,15 @@ final readonly class TokenPairResponseFactory
 {
     public function __invoke(ContainerInterface $container): TokenPairResponse
     {
-        return new TokenPairResponse(
-            signer: $container->get(SignerInterface::class),
-            refreshManager: $container->get(RefreshTokenManager::class),
-            config: $container->get(JwtConfig::class),
-            responseFactory: $container->get(ResponseFactoryInterface::class),
-        );
+        /** @var SignerInterface $signer */
+        $signer = $container->get(SignerInterface::class);
+        /** @var RefreshTokenManager $refreshManager */
+        $refreshManager = $container->get(RefreshTokenManager::class);
+        /** @var JwtConfig $config */
+        $config = $container->get(JwtConfig::class);
+        /** @var ResponseFactoryInterface $responseFactory */
+        $responseFactory = $container->get(ResponseFactoryInterface::class);
+
+        return new TokenPairResponse($signer, $refreshManager, $config, $responseFactory);
     }
 }

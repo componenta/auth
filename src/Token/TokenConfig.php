@@ -4,39 +4,47 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Token;
 
-/**
- * Configuration for database-backed one-time tokens.
- *
- * Used by TokenManager to define storage table and column mapping.
- * Each token flow (magic link, password reset, etc.) creates
- * its own TokenConfig instance with appropriate defaults.
- */
 final readonly class TokenConfig
 {
-    /**
-     * @param string $table Database table name
-     * @param int $ttl Token lifetime in seconds
-     * @param string $dateFormat Date format for database storage
-     * @param string $idColumn Column name for primary key
-     * @param string $userIdColumn Column name for user ID
-     * @param string $tokenColumn Column name for token hash
-     * @param string $expiresAtColumn Column name for expiration timestamp
-     * @param string $usedAtColumn Column name for used-at timestamp
-     * @param string $createdAtColumn Column name for creation timestamp
-     */
+    private const int MAX_TTL = 31536000;
+
     public function __construct(
         public string $table,
         public int $ttl = 300,
         public string $dateFormat = 'Y-m-d H:i:s',
         public string $idColumn = 'id',
-        public string $userIdColumn = 'user_id',
+        public string $subjectIdColumn = 'user_id',
         public string $tokenColumn = 'token',
         public string $expiresAtColumn = 'expires_at',
         public string $usedAtColumn = 'used_at',
         public string $createdAtColumn = 'created_at',
     ) {
-        if ($this->ttl < 1) {
-            throw new \InvalidArgumentException('TTL must be positive');
+        if ($this->ttl < 1 || $this->ttl > self::MAX_TTL) {
+            throw new \InvalidArgumentException(sprintf(
+                'Token TTL must be between 1 and %d seconds.',
+                self::MAX_TTL,
+            ));
+        }
+
+        if ($this->dateFormat === '') {
+            throw new \InvalidArgumentException('Date format must not be empty.');
+        }
+
+        foreach ([
+            'table' => $this->table,
+            'idColumn' => $this->idColumn,
+            'subjectIdColumn' => $this->subjectIdColumn,
+            'tokenColumn' => $this->tokenColumn,
+            'expiresAtColumn' => $this->expiresAtColumn,
+            'usedAtColumn' => $this->usedAtColumn,
+            'createdAtColumn' => $this->createdAtColumn,
+        ] as $name => $identifier) {
+            if (preg_match('/\A[A-Za-z_][A-Za-z0-9_.]*\z/D', $identifier) !== 1) {
+                throw new \InvalidArgumentException(sprintf(
+                    '%s must be a valid trusted SQL identifier.',
+                    $name,
+                ));
+            }
         }
     }
 }

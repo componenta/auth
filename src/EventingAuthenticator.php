@@ -20,16 +20,20 @@ final readonly class EventingAuthenticator implements AuthenticatorInterface
         private ClockInterface $clock = new Clock(),
     ) {}
 
+    #[\Override]
     public function attempt(object $payload, ContextInterface $context): AuthenticationResult
     {
         $payloadType = $payload::class;
-        $this->dispatcher->dispatch(new AuthenticationAttempted($payloadType, $this->clock->now()));
+        $this->dispatcher->dispatch(new AuthenticationAttempted(
+            $payloadType,
+            $this->clock->now(),
+        ));
 
         $result = $this->authenticator->attempt($payload, $context);
 
         if ($result->subject instanceof IdentityInterface) {
             $this->dispatcher->dispatch(new AuthenticationSucceeded(
-                $result->subject,
+                $result->subject->uuid,
                 $payloadType,
                 $this->clock->now(),
             ));

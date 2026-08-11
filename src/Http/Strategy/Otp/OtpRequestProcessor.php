@@ -31,7 +31,7 @@ final readonly class OtpRequestProcessor
         $code = $this->generator->generate();
         $destination = $request->destination ?? $request->identity;
         $this->store->store(new StoredCode(
-            userId: $identity->uuid->toString(),
+            subjectId: $identity->uuid,
             code: $code,
             destination: $destination,
             expiresAt: $this->clock->now()->getTimestamp() + $this->config->ttl,

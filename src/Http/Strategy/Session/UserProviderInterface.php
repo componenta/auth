@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace Componenta\Auth\Http\Strategy\Session;
 
 use Componenta\Identity\IdentityInterface;
+use Componenta\Identity\UuidInterface;
 
 interface UserProviderInterface
 {
-    /** Resolves the canonical UUID string stored in a session. */
-    public function findById(int|string $userId): ?IdentityInterface;
+    public function findByUuid(UuidInterface $uuid): ?IdentityInterface;
 }

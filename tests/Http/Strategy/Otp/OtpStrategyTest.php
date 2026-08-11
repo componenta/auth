@@ -26,7 +26,7 @@ final class OtpStrategyTest extends TestCase
     public function testDelegatesVerificationToOneAtomicStoreCall(): void
     {
         $identity = new OtpIdentityFixture();
-        $store = new CodeStoreFixture(CodeVerificationResult::verified('user-1'));
+        $store = new CodeStoreFixture(CodeVerificationResult::verified(Uuid::fromString('018f6d5d-3f7a-7a9b-8c2f-123456789abc')));
         $provider = new OtpUserProviderFixture($identity);
         $strategy = new OtpStrategy($provider, $store, new OtpConfig(maxAttempts: 3), new OtpClockFixture());
         $result = $strategy->attempt(new OtpPayload('mail@example.com', '123456'), new Context());
@@ -40,10 +40,10 @@ final class OtpStrategyTest extends TestCase
         $store = new CodeStoreFixture(CodeVerificationResult::invalid());
         $provider = new OtpUserProviderFixture(null);
         $result = (new OtpStrategy($provider, $store, new OtpConfig(), new OtpClockFixture()))
-            ->attempt(new OtpPayload('mail@example.com', 'old-code'), new Context());
+            ->attempt(new OtpPayload('mail@example.com', '654321'), new Context());
 
         self::assertInstanceOf(InvalidCode::class, $result->subject);
-        self::assertSame(0, $provider->findByIdCalls);
+        self::assertSame(0, $provider->findByUuidCalls);
     }
 
     public function testExpiredResultRemainsDistinguishable(): void
@@ -75,12 +75,12 @@ final class CodeStoreFixture implements CodeStoreInterface
 
 final class OtpUserProviderFixture implements UserProviderInterface
 {
-    public int $findByIdCalls = 0;
+    public int $findByUuidCalls = 0;
     public function __construct(private ?IdentityInterface $identity) {}
     public function findByIdentity(string $identity): ?IdentityInterface { return null; }
-    public function findById(string $userId): ?IdentityInterface
+    public function findByUuid(UuidInterface $uuid): ?IdentityInterface
     {
-        ++$this->findByIdCalls;
+        ++$this->findByUuidCalls;
         return $this->identity;
     }
 }

@@ -9,12 +9,11 @@ use Componenta\Auth\Http\Strategy\Jwt\Denied\InvalidRefreshToken;
 use Componenta\Auth\Http\Strategy\Jwt\Denied\RefreshTokenExpired;
 use Componenta\Auth\Http\Strategy\Jwt\Denied\TokenFamilyCompromised;
 use Componenta\Clock\Clock;
+use Componenta\Identity\UuidInterface;
 use Psr\Clock\ClockInterface;
 
 final readonly class RefreshTokenManager
 {
-    private const int MAX_SUBJECT_ID_LENGTH = 512;
-
     public function __construct(
         private RefreshTokenStoreInterface $store,
         private RefreshTokenGenerator $generator,
@@ -22,12 +21,11 @@ final readonly class RefreshTokenManager
         private ClockInterface $clock = new Clock(),
     ) {}
 
-    public function issue(string $userId): RefreshToken
+    public function issue(UuidInterface $subjectId): RefreshToken
     {
-        self::assertSubjectId($userId);
         $token = new RefreshToken(
             id: $this->generator->generate(),
-            userId: $userId,
+            subjectId: $subjectId,
             familyId: $this->generator->generate(),
             expiresAt: $this->now() + $this->config->refreshTtl,
         );
@@ -71,10 +69,9 @@ final readonly class RefreshTokenManager
         }
     }
 
-    public function revokeAllForUser(string $userId): void
+    public function revokeAllForSubject(UuidInterface $subjectId): void
     {
-        self::assertSubjectId($userId);
-        $this->store->revokeAllForUser($userId, $this->now());
+        $this->store->revokeAllForSubject($subjectId, $this->now());
     }
 
     private function validatedSuccessor(
@@ -83,16 +80,19 @@ final readonly class RefreshTokenManager
         int $successorExpiresAt,
     ): RefreshToken {
         $token = $result->token
-            ?? throw new \LogicException('A rotated result must contain the successor token.');
+            ?? throw new \LogicException(
+                'A rotated result must contain the successor token.',
+            );
 
         if (
             $token->id !== $successorId
             || $token->expiresAt !== $successorExpiresAt
             || $token->revoked
             || !self::validTokenId($token->familyId)
-            || $token->userId === ''
         ) {
-            throw new \LogicException('Refresh token store returned an invalid successor.');
+            throw new \LogicException(
+                'Refresh token store returned an invalid successor.',
+            );
         }
 
         return $token;
@@ -102,13 +102,6 @@ final readonly class RefreshTokenManager
     {
         return preg_match('/\A[a-f0-9]{64,128}\z/D', $id) === 1
             && strlen($id) % 2 === 0;
-    }
-
-    private static function assertSubjectId(string $userId): void
-    {
-        if ($userId === '' || strlen($userId) > self::MAX_SUBJECT_ID_LENGTH) {
-            throw new \InvalidArgumentException('Refresh token subject ID is invalid.');
-        }
     }
 
     private function now(): int

@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Session;
 
+use Componenta\Identity\UuidInterface;
+
 interface SessionInterface
 {
     public string $id { get; }
-    public int|string $userId { get; }
+    public UuidInterface $subjectId { get; }
     public \DateTimeImmutable $expiresAt { get; }
     public \DateTimeImmutable $absoluteExpiresAt { get; }
     public \DateTimeImmutable $regenerateAt { get; }

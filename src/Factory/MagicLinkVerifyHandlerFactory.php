@@ -18,14 +18,29 @@ final readonly class MagicLinkVerifyHandlerFactory
 {
     public function __invoke(ContainerInterface $container): VerifyHandler
     {
+        /** @var VerifyExtractor $extractor */
+        $extractor = $container->get(VerifyExtractor::class);
+        /** @var AuthenticatorInterface $authenticator */
+        $authenticator = $container->get(AuthenticatorInterface::class);
+        /** @var SessionManagerInterface $sessionManager */
+        $sessionManager = $container->get(SessionManagerInterface::class);
+        /** @var PayloadStorageInterface $storage */
+        $storage = $container->get(PayloadStorageInterface::class);
+        /** @var DeniedResponseFactoryInterface $deniedResponseFactory */
+        $deniedResponseFactory = $container->get(DeniedResponseFactoryInterface::class);
+        /** @var ResponseFactoryInterface $responseFactory */
+        $responseFactory = $container->get(ResponseFactoryInterface::class);
+        /** @var SessionAttributeExtractorInterface $attributeExtractor */
+        $attributeExtractor = $container->get(SessionAttributeExtractorInterface::class);
+
         return new VerifyHandler(
-            extractor: $container->get(VerifyExtractor::class),
-            authenticator: $container->get(AuthenticatorInterface::class),
-            sessionManager: $container->get(SessionManagerInterface::class),
-            storage: $container->get(PayloadStorageInterface::class),
-            deniedResponseFactory: $container->get(DeniedResponseFactoryInterface::class),
-            responseFactory: $container->get(ResponseFactoryInterface::class),
-            attributeExtractor: $container->get(SessionAttributeExtractorInterface::class),
+            $extractor,
+            $authenticator,
+            $sessionManager,
+            $storage,
+            $deniedResponseFactory,
+            $responseFactory,
+            $attributeExtractor,
         );
     }
 }

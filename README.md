@@ -51,6 +51,9 @@ return [
             JwtStrategy::class,
         ],
         'events' => true,
+        'rememberMe' => [
+            'enabled' => true,
+        ],
     ],
 ];
 ```
@@ -112,9 +115,9 @@ Session metadata is exposed through `$session->attributes`. `getAttribute()` dis
 
 ## Remember-me credentials
 
-Remember-me tokens are 256-bit opaque values stored as SHA-256 representations. Consumption remains single-winner through an affected-row check.
+Remember-me is disabled by default. When `auth.rememberMe.enabled` is true, the package automatically adds the termination and regeneration listeners required by the feature; both are critical lifecycle participants.
 
-Termination and regeneration listeners are enabled by default and are critical lifecycle participants. Bulk termination uses `revokeForSessions()` with bounded chunks. Nullable `session_id` rows are included in revoke-all-except operations.
+Remember-me tokens are 256-bit opaque values stored as SHA-256 representations. Consumption remains single-winner through an affected-row check. Bulk termination uses `revokeForSessions()` with bounded chunks. Nullable `session_id` rows are included in revoke-all-except operations.
 
 Housekeeping uses `cleanup(int $limit): int`; it is bounded and intended for a worker or scheduler.
 
@@ -172,9 +175,11 @@ HTTP request handlers inject `TokenRequestQueueInterface` or `OtpRequestQueueInt
 
 User lookup, token/code generation, persistence and sender I/O execute in `TokenRequestProcessor` or `OtpRequestProcessor` outside the request thread.
 
+The built-in one-time SQL manager replaces a subject challenge with one atomic UPSERT. Its table therefore requires a `UNIQUE` constraint on the canonical subject UUID column. OTP stores remain application adapters and must implement the atomic `verifyAndConsume()` contract over one locked or versioned record.
+
 ## Password reset
 
-`PasswordResetServiceInterface` owns the complete recovery transition. `PasswordResetResult::Success` means that the reset token was consumed, the password changed, and pre-reset session, remember-me and refresh credentials were durably or logically invalidated.
+`PasswordResetServiceInterface` owns the complete recovery transition, including validation of the reset token and expensive password hashing. `PasswordResetResult::Success` means that the reset token was consumed, the password changed, and pre-reset session, remember-me and refresh credentials were durably or logically invalidated.
 
 For separate stores, use a credential version plus transactional outbox and idempotent retry rather than reporting partial success.
 
@@ -198,7 +203,7 @@ Authentication inputs are type-checked and bounded before hashing, provider look
 | `ConfigKey::STRATEGIES` | Ordered strategy service IDs. |
 | `ConfigKey::EVENTS` | Eventing authenticator decorator. |
 | `ConfigKey::SESSION` | Session persistence and touch settings. |
-| `ConfigKey::REMEMBER_ME` | Remember-me persistence settings. |
+| `ConfigKey::REMEMBER_ME` | Remember-me feature flag and persistence settings; disabled by default. |
 | `ConfigKey::JWT` | Explicit JWT and refresh profile. |
 | `ConfigKey::DENIED` | HTTP denial status mapping. |
 | `ConfigKey::LISTENERS` | Authentication event listeners. |

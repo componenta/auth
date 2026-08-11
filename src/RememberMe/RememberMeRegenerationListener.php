@@ -15,9 +15,17 @@ final readonly class RememberMeRegenerationListener implements
 {
     public function __construct(private RememberMeTokenManagerInterface $tokenManager) {}
 
+    #[\Override]
     public function handleEvent(EventInterface $event): void
     {
-        /** @var SessionRegenerated $event */
+        if (!$event instanceof SessionRegenerated) {
+            throw new \InvalidArgumentException(sprintf(
+                '%s cannot handle %s.',
+                self::class,
+                $event::class,
+            ));
+        }
+
         $this->tokenManager->updateSessionId($event->oldSessionId, $event->newSessionId);
     }
 }

@@ -25,9 +25,13 @@ final readonly class SessionAttributeExtractor implements SessionAttributeExtrac
         $clientIp = $request->getAttribute('client_ip')
             ?? $request->getServerParams()['REMOTE_ADDR']
             ?? '';
-        $ip = is_string($clientIp) && strlen($clientIp) <= 45
-            ? $clientIp
-            : '';
+        $validIp = is_string($clientIp)
+            && strlen($clientIp) <= 45
+            && ($clientIp === '' || filter_var(
+                $clientIp,
+                FILTER_VALIDATE_IP,
+            ) !== false);
+        $ip = $validIp ? $clientIp : '';
 
         return [
             DatabaseSessionManager::ATTR_IP => $ip,

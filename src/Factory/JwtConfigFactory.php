@@ -17,54 +17,22 @@ final readonly class JwtConfigFactory
         $config = $container->get(ConfigKey::CONFIG);
 
         if (!$config instanceof Config) {
-            throw new \LogicException('The config service must be Componenta\\Config\\Config.');
+            throw new \LogicException(sprintf(
+                '%s must resolve to %s.',
+                ConfigKey::CONFIG,
+                Config::class,
+            ));
         }
 
-        $jwt = $config->array(new ConfigPath(ConfigKey::AUTH . '.' . ConfigKey::JWT), []);
+        $prefix = ConfigKey::AUTH . '.' . ConfigKey::JWT;
 
         return new JwtConfig(
-            issuer: self::requiredString($jwt, 'issuer'),
-            audience: self::requiredString($jwt, 'audience'),
-            type: self::string($jwt, 'type', 'at+jwt'),
-            accessTtl: self::integer($jwt, 'accessTtl', 900),
-            refreshTtl: self::integer($jwt, 'refreshTtl', 604800),
-            clockSkew: self::integer($jwt, 'clockSkew', 30),
+            issuer: $config->string(new ConfigPath($prefix . '.issuer')),
+            audience: $config->string(new ConfigPath($prefix . '.audience')),
+            type: $config->string(new ConfigPath($prefix . '.type'), 'at+jwt'),
+            accessTtl: $config->int(new ConfigPath($prefix . '.accessTtl'), 900),
+            refreshTtl: $config->int(new ConfigPath($prefix . '.refreshTtl'), 604800),
+            clockSkew: $config->int(new ConfigPath($prefix . '.clockSkew'), 30),
         );
-    }
-
-    /** @param array<string, mixed> $config */
-    private static function requiredString(array $config, string $key): string
-    {
-        $value = $config[$key] ?? null;
-
-        if (!is_string($value) || $value === '') {
-            throw new \LogicException(sprintf('auth.jwt.%s must be a non-empty string.', $key));
-        }
-
-        return $value;
-    }
-
-    /** @param array<string, mixed> $config */
-    private static function string(array $config, string $key, string $default): string
-    {
-        $value = $config[$key] ?? $default;
-
-        if (!is_string($value) || $value === '') {
-            throw new \LogicException(sprintf('auth.jwt.%s must be a non-empty string.', $key));
-        }
-
-        return $value;
-    }
-
-    /** @param array<string, mixed> $config */
-    private static function integer(array $config, string $key, int $default): int
-    {
-        $value = $config[$key] ?? $default;
-
-        if (!is_int($value)) {
-            throw new \LogicException(sprintf('auth.jwt.%s must be an integer.', $key));
-        }
-
-        return $value;
     }
 }

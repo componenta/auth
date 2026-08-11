@@ -15,6 +15,7 @@ final class InvalidToken implements DeniedReasonInterface
         get => 'invalid_token';
     }
 
+    /** @param array<string, mixed> $attributes */
     public function __construct(
         public readonly array $attributes = [],
     ) {}

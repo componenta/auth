@@ -23,27 +23,27 @@ final class AuthenticatorFactoryTest extends TestCase
 {
     public function testPreservesConfiguredStrategyOrder(): void
     {
-        $calls = [];
+        $recorder = new StrategyCallRecorder();
         $identity = new FactoryIdentityFixture();
         $container = new FactoryContainerFixture([
             ConfigKey::CONFIG => new Config(['auth' => ['strategies' => ['first', 'second'], 'events' => false]]),
-            'first' => new OrderedStrategyFixture('first', $calls, new AuthenticationResult(new DeniedReason('denied'))),
-            'second' => new OrderedStrategyFixture('second', $calls, new AuthenticationResult($identity)),
+            'first' => new OrderedStrategyFixture('first', $recorder, new AuthenticationResult(new DeniedReason('denied'))),
+            'second' => new OrderedStrategyFixture('second', $recorder, new AuthenticationResult($identity)),
         ]);
 
         $result = (new AuthenticatorFactory())($container)->attempt(new \stdClass(), new Context());
 
         self::assertSame($identity, $result->subject);
-        self::assertSame(['first', 'second'], $calls);
+        self::assertSame(['first', 'second'], $recorder->calls);
     }
 
     public function testRejectsDuplicateStrategyServices(): void
     {
         $this->expectException(AuthenticatorConfigurationException::class);
-        $calls = [];
+        $recorder = new StrategyCallRecorder();
         (new AuthenticatorFactory())(new FactoryContainerFixture([
             ConfigKey::CONFIG => new Config(['auth' => ['strategies' => ['same', 'same'], 'events' => false]]),
-            'same' => new OrderedStrategyFixture('same', $calls, new AuthenticationResult(new DeniedReason('x'))),
+            'same' => new OrderedStrategyFixture('same', $recorder, new AuthenticationResult(new DeniedReason('x'))),
         ]));
     }
 }
@@ -56,18 +56,24 @@ final class FactoryContainerFixture implements ContainerInterface
     public function has(string $id): bool { return array_key_exists($id, $this->services); }
 }
 
+
+final class StrategyCallRecorder
+{
+    /** @var list<string> */
+    public array $calls = [];
+}
+
 final class OrderedStrategyFixture implements AuthenticationStrategyInterface
 {
-    /** @param list<string> $calls */
     public function __construct(
         private string $name,
-        private array &$calls,
+        private StrategyCallRecorder $recorder,
         private AuthenticationResult $result,
     ) {}
     public function supports(object $payload, ContextInterface $context): bool { return true; }
     public function attempt(object $payload, ContextInterface $context): AuthenticationResult
     {
-        $this->calls[] = $this->name;
+        $this->recorder->calls[] = $this->name;
         return $this->result;
     }
 }

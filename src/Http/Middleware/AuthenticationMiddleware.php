@@ -18,7 +18,7 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 
-/** Authenticates and commits the final credential transport decision once. */
+/** Authenticates and commits one shared request-scoped transport decision. */
 final readonly class AuthenticationMiddleware implements MiddlewareInterface
 {
     public function __construct(
@@ -38,7 +38,16 @@ final readonly class AuthenticationMiddleware implements MiddlewareInterface
             return $handler->handle($request);
         }
 
-        $transportState = new CredentialTransportState();
+        $existingState = $request->getAttribute(CredentialTransportState::class);
+        $ownsTransportState = !$existingState instanceof CredentialTransportState;
+        $transportState = $ownsTransportState
+            ? new CredentialTransportState()
+            : $existingState;
+        $request = $request->withAttribute(
+            CredentialTransportState::class,
+            $transportState,
+        );
+
         $result = $this->authenticator->attempt($payload, new Context([
             ServerRequestInterface::class => $request,
             ContextInterface::EXTRACTOR => $this->extractor,
@@ -49,21 +58,36 @@ final readonly class AuthenticationMiddleware implements MiddlewareInterface
             $transportState->queue($result->transportPayload);
         }
 
-        $subjectKey = $result->subject instanceof IdentityInterface
-            ? IdentityInterface::class
-            : DeniedReasonInterface::class;
-
+        // A new authentication result replaces every request-local result from
+        // an earlier authentication layer. Keeping both identity and denial (or
+        // an unrelated old session) can accidentally authorize the request.
         $request = $request
-            ->withAttribute($subjectKey, $result->subject)
-            ->withAttribute(CredentialTransportState::class, $transportState);
+            ->withoutAttribute(IdentityInterface::class)
+            ->withoutAttribute(DeniedReasonInterface::class)
+            ->withoutAttribute(SessionInterface::class);
+
+        if ($result->subject instanceof IdentityInterface) {
+            $request = $request->withAttribute(
+                IdentityInterface::class,
+                $result->subject,
+            );
+        } else {
+            $request = $request->withAttribute(
+                DeniedReasonInterface::class,
+                $result->subject,
+            );
+        }
 
         if ($result->session !== null) {
-            $request = $request->withAttribute(SessionInterface::class, $result->session);
+            $request = $request->withAttribute(
+                SessionInterface::class,
+                $result->session,
+            );
         }
 
         $response = $handler->handle($request);
 
-        if ($transportState->empty) {
+        if (!$ownsTransportState || $transportState->empty) {
             return $response;
         }
 

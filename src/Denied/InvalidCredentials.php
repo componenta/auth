@@ -15,6 +15,7 @@ final class InvalidCredentials implements DeniedReasonInterface
         get => 'invalid_credentials';
     }
 
+    /** @param array<string, mixed> $attributes */
     public function __construct(
         public readonly array $attributes = []
     ) {

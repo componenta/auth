@@ -12,8 +12,9 @@ final readonly class RememberMeRegenerationListenerFactory
 {
     public function __invoke(ContainerInterface $container): RememberMeRegenerationListener
     {
-        return new RememberMeRegenerationListener(
-            tokenManager: $container->get(RememberMeTokenManagerInterface::class),
-        );
+        /** @var RememberMeTokenManagerInterface $tokenManager */
+        $tokenManager = $container->get(RememberMeTokenManagerInterface::class);
+
+        return new RememberMeRegenerationListener($tokenManager);
     }
 }

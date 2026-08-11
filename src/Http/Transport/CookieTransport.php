@@ -97,6 +97,7 @@ final readonly class CookieTransport implements TransportInterface
     #[\Override]
     public function extract(ServerRequestInterface $request): ?object
     {
+        /** @var array<string, mixed> $cookies */
         $cookies = $request->getCookieParams();
         $sessionId = $this->readCredential(
             $cookies,
@@ -196,7 +197,11 @@ final readonly class CookieTransport implements TransportInterface
 
         $value = $cookies[$name];
 
-        if (!is_string($value) || strlen($value) > $maxLength) {
+        if (
+            !is_string($value)
+            || strlen($value) > $maxLength
+            || preg_match('/[\x00-\x1F\x7F]/', $value) === 1
+        ) {
             throw InvalidPayloadException::invalidField($name);
         }
 
@@ -218,7 +223,11 @@ final readonly class CookieTransport implements TransportInterface
         string $name,
         int $maxLength,
     ): void {
-        if ($value === '' || strlen($value) > $maxLength) {
+        if (
+            $value === ''
+            || strlen($value) > $maxLength
+            || preg_match('/[\x00-\x1F\x7F]/', $value) === 1
+        ) {
             throw new \InvalidArgumentException(sprintf(
                 'Credential for cookie "%s" must contain between 1 and %d bytes.',
                 $name,

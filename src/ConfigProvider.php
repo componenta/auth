@@ -110,10 +110,7 @@ class ConfigProvider extends \Componenta\Config\ConfigProvider
     protected function getConfig(): array
     {
         return [
-            ConfigKey::LISTENERS => [
-                RememberMeTerminationListener::class,
-                RememberMeRegenerationListener::class,
-            ],
+            ConfigKey::LISTENERS => [],
             ConfigKey::AUTH => [
                 ConfigKey::STRATEGIES => [],
                 ConfigKey::EVENTS => true,
@@ -127,7 +124,7 @@ class ConfigProvider extends \Componenta\Config\ConfigProvider
                     'regenerationGracePeriod' => 30,
                     'touchInterval' => 60,
                     'columns' => [
-                        'id' => 'id', 'userId' => 'user_id', 'ip' => 'ip',
+                        'id' => 'id', 'subjectId' => 'user_id', 'ip' => 'ip',
                         'userAgent' => 'user_agent', 'expiresAt' => 'expires_at',
                         'absoluteExpiresAt' => 'absolute_expires_at',
                         'regenerateAt' => 'regenerate_at', 'replacedBy' => 'replaced_by',
@@ -136,12 +133,13 @@ class ConfigProvider extends \Componenta\Config\ConfigProvider
                     ],
                 ],
                 ConfigKey::REMEMBER_ME => [
+                    ConfigKey::ENABLED => false,
                     'table' => 'remember_me_tokens',
                     'dateFormat' => 'Y-m-d H:i:s',
                     'ttl' => 2592000,
                     'cookieName' => 'rmid',
                     'columns' => [
-                        'id' => 'id', 'userId' => 'user_id', 'sessionId' => 'session_id',
+                        'id' => 'id', 'subjectId' => 'user_id', 'sessionId' => 'session_id',
                         'token' => 'token', 'expiresAt' => 'expires_at', 'createdAt' => 'created_at',
                     ],
                 ],

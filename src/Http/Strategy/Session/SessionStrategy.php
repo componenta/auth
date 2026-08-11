@@ -28,21 +28,27 @@ final readonly class SessionStrategy implements AuthenticationStrategyInterface
     public function attempt(object $payload, ContextInterface $context): AuthenticationResult
     {
         /** @var SessionPayload $payload */
-        $session = $this->sessionManager->find($payload->sessionId);
+        $sessionId = $payload->sessionId;
+
+        if ($sessionId === null) {
+            return new AuthenticationResult(new InvalidCredentials());
+        }
+
+        $session = $this->sessionManager->find($sessionId);
 
         if ($session === null) {
             return new AuthenticationResult(new InvalidCredentials());
         }
 
-        $identity = $this->provider->findById($session->userId);
+        $identity = $this->provider->findByUuid($session->subjectId);
 
         if ($identity === null) {
             return new AuthenticationResult(new InvalidCredentials());
         }
 
-        $transportPayload = $session->id !== $payload->sessionId
-            ? new SessionPayload($session->id)
-            : null;
+        $transportPayload = $session->id === $sessionId
+            ? null
+            : new SessionPayload($session->id);
 
         return new AuthenticationResult(
             subject: $identity,

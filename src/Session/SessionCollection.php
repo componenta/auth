@@ -7,7 +7,7 @@ namespace Componenta\Auth\Session;
 final readonly class SessionCollection implements SessionCollectionInterface
 {
     private const array PROPERTIES = [
-        'id', 'userId', 'expiresAt', 'absoluteExpiresAt', 'regenerateAt',
+        'id', 'subjectId', 'expiresAt', 'absoluteExpiresAt', 'regenerateAt',
         'replacedBy', 'createdAt', 'lastActiveAt', 'attributes',
     ];
 
@@ -67,6 +67,7 @@ final readonly class SessionCollection implements SessionCollectionInterface
         );
     }
 
+    /** @return list<SessionInterface> */
     #[\Override]
     public function toArray(): array
     {
@@ -82,6 +83,6 @@ final readonly class SessionCollection implements SessionCollectionInterface
     #[\Override]
     public function getIterator(): \Traversable
     {
-        return new \ArrayIterator($this->toArray());
+        yield from $this->toArray();
     }
 }

@@ -12,6 +12,8 @@ use Componenta\Auth\Http\Strategy\Jwt\RefreshTokenGenerator;
 use Componenta\Auth\Http\Strategy\Jwt\RefreshTokenManager;
 use Componenta\Auth\Http\Strategy\Jwt\RefreshTokenRotationResult;
 use Componenta\Auth\Http\Strategy\Jwt\RefreshTokenStoreInterface;
+use Componenta\Identity\Uuid;
+use Componenta\Identity\UuidInterface;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 use Psr\Clock\ClockInterface;
@@ -40,7 +42,7 @@ final class RefreshTokenManagerTest extends TestCase
             static fn(string $successor, int $expiresAt): RefreshTokenRotationResult =>
                 RefreshTokenRotationResult::rotated(new RefreshToken(
                     $successor,
-                    '018f6d5d-3f7a-7a9b-8c2f-123456789abc',
+                    Uuid::fromString('018f6d5d-3f7a-7a9b-8c2f-123456789abc'),
                     self::FAMILY,
                     $expiresAt,
                 )),
@@ -95,7 +97,7 @@ final class RefreshStoreFixture implements RefreshTokenStoreInterface
     }
 
     public function revoke(string $tokenId, int $revokedAt): void {}
-    public function revokeAllForUser(string $userId, int $revokedAt): void {}
+    public function revokeAllForSubject(UuidInterface $subjectId, int $revokedAt): void {}
 }
 
 final readonly class FixedClockFixture implements ClockInterface

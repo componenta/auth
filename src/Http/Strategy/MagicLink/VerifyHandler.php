@@ -50,7 +50,7 @@ final readonly class VerifyHandler implements RequestHandlerInterface
         }
 
         $session = $this->sessionManager->create(
-            $result->subject->uuid->toString(),
+            $result->subject->uuid,
             $this->attributeExtractor->extract($request),
         );
         $response = $this->storage->store(
@@ -59,7 +59,10 @@ final readonly class VerifyHandler implements RequestHandlerInterface
             new SessionPayload($session->id),
         );
 
-        return $response->withHeader('Content-Type', 'application/json');
+        return $response
+            ->withHeader('Content-Type', 'application/json')
+            ->withHeader('Cache-Control', 'no-store')
+            ->withHeader('Pragma', 'no-cache');
     }
 
     /** @param array<string, mixed> $payload */
@@ -68,6 +71,9 @@ final readonly class VerifyHandler implements RequestHandlerInterface
         $response = $this->responseFactory->createResponse($status);
         $response->getBody()->write(json_encode($payload, JSON_THROW_ON_ERROR));
 
-        return $response->withHeader('Content-Type', 'application/json');
+        return $response
+            ->withHeader('Content-Type', 'application/json')
+            ->withHeader('Cache-Control', 'no-store')
+            ->withHeader('Pragma', 'no-cache');
     }
 }

@@ -32,7 +32,7 @@ final readonly class TokenPairResponse
             audience: $this->config->audience,
             type: $this->config->type,
         ));
-        $refreshToken = $this->refreshManager->issue($subjectId);
+        $refreshToken = $this->refreshManager->issue($identity->uuid);
         $response = $this->responseFactory->createResponse(200);
         $response->getBody()->write(json_encode([
             'access_token' => $accessToken,

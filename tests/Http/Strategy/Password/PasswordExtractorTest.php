@@ -22,6 +22,7 @@ final class PasswordExtractorTest extends TestCase
         self::assertFalse($payload->remember);
     }
 
+    /** @return iterable<array{mixed}> */
     public static function falseValues(): iterable
     {
         yield [false]; yield [0]; yield ['0']; yield ['false']; yield ['off']; yield ['no']; yield [''];
@@ -32,6 +33,16 @@ final class PasswordExtractorTest extends TestCase
         $this->expectException(InvalidPayloadException::class);
         (new PasswordExtractor())->extract($this->request([
             'email' => ['not-a-string'],
+            'password' => 'secret',
+        ]));
+    }
+
+    public function testControlCharacterInIdentityIsRejectedAsInvalidPayload(): void
+    {
+        $this->expectException(InvalidPayloadException::class);
+
+        (new PasswordExtractor())->extract($this->request([
+            'email' => "user\n@example.com",
             'password' => 'secret',
         ]));
     }
@@ -49,7 +60,7 @@ final class PasswordExtractorTest extends TestCase
     /** @param array<string, mixed> $body */
     private function request(array $body): ServerRequestInterface
     {
-        $request = $this->createMock(ServerRequestInterface::class);
+        $request = $this->createStub(ServerRequestInterface::class);
         $request->method('getParsedBody')->willReturn($body);
         return $request;
     }

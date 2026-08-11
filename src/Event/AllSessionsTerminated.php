@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Componenta\Auth\Event;
 
 use Componenta\Clock\Clock;
+use Componenta\Identity\UuidInterface;
 use DateTimeImmutable;
 
 final readonly class AllSessionsTerminated implements EventInterface
@@ -12,7 +13,7 @@ final readonly class AllSessionsTerminated implements EventInterface
     public DateTimeImmutable $timestamp;
 
     public function __construct(
-        public int|string $userId,
+        public UuidInterface $subjectId,
         public ?string $exceptSessionId = null,
         ?DateTimeImmutable $timestamp = null,
     ) {

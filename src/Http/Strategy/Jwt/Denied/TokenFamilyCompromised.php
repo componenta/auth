@@ -18,6 +18,7 @@ final class TokenFamilyCompromised implements DeniedReasonInterface
         get => 'token_family_compromised';
     }
 
+    /** @param array<string, mixed> $attributes */
     public function __construct(
         public readonly array $attributes = [],
     ) {}

@@ -49,11 +49,18 @@ final readonly class RsaSigner implements SignerInterface
             throw new \LogicException('Cannot sign without a private key.');
         }
 
+        /** @var non-empty-string $subject */
+        $subject = $claims->subject;
+        /** @var non-empty-string $issuer */
+        $issuer = $claims->issuer;
+        /** @var non-empty-string $audience */
+        $audience = $claims->audience;
+
         $builder = $this->configuration->builder()
             ->withHeader('typ', $claims->type)
-            ->relatedTo($claims->subject)
-            ->issuedBy($claims->issuer)
-            ->permittedFor($claims->audience)
+            ->relatedTo($subject)
+            ->issuedBy($issuer)
+            ->permittedFor($audience)
             ->issuedAt(new DateTimeImmutable('@' . $claims->issuedAt))
             ->expiresAt(new DateTimeImmutable('@' . $claims->expiresAt));
 
@@ -64,13 +71,14 @@ final readonly class RsaSigner implements SignerInterface
         }
 
         foreach ($claims->custom as $name => $value) {
-            if (in_array($name, RegisteredClaims::ALL, true)) {
+            if ($name === '' || in_array($name, RegisteredClaims::ALL, true)) {
                 throw new \InvalidArgumentException(sprintf(
                     'Custom claim "%s" cannot replace a registered claim.',
                     $name,
                 ));
             }
 
+            /** @var non-empty-string $name */
             $builder = $builder->withClaim($name, $value);
         }
 
@@ -82,6 +90,11 @@ final readonly class RsaSigner implements SignerInterface
     #[\Override]
     public function parse(string $token): ?Claims
     {
+        if ($token === '') {
+            return null;
+        }
+
+        /** @var non-empty-string $token */
         try {
             $parsed = $this->configuration->parser()->parse($token);
 
@@ -149,6 +162,11 @@ final readonly class RsaSigner implements SignerInterface
 
     private static function resolveKey(string $key, string $passphrase = ''): InMemory
     {
+        if ($key === '') {
+            throw new \InvalidArgumentException('RSA key must not be empty.');
+        }
+
+        /** @var non-empty-string $key */
         return str_starts_with($key, 'file://')
             ? InMemory::file($key, $passphrase)
             : InMemory::plainText($key, $passphrase);

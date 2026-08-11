@@ -38,7 +38,7 @@ final class PasswordStrategy implements AuthenticationStrategyInterface
         $identity = $this->provider->findByIdentity($payload->identity);
         $valid = $this->hasher->verify(
             $payload->password,
-            $identity?->hash ?? $this->dummyHash,
+            $identity->hash ?? $this->dummyHash,
         );
 
         return $identity === null || !$valid

@@ -4,11 +4,20 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Token;
 
+use Componenta\Identity\UuidInterface;
+
 interface TokenManagerInterface
 {
-    public function generate(string $userId): string;
+    /**
+     * Atomically replaces the subject's active challenge and returns plaintext.
+     * Persistence must enforce at most one active row per subject and purpose.
+     */
+    public function replaceForSubject(UuidInterface $subjectId): string;
+
     public function find(string $plainToken): ?Token;
+
     public function consume(string $plainToken): bool;
-    public function revokeForUser(string $userId): void;
+
+    /** Removes at most $limit expired or consumed tokens. */
     public function cleanup(int $limit = 1000): int;
 }

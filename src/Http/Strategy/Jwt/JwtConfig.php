@@ -7,6 +7,9 @@ namespace Componenta\Auth\Http\Strategy\Jwt;
 /** Configuration of one explicit access-token validation profile. */
 final readonly class JwtConfig
 {
+    private const int MAX_ACCESS_TTL = 86400;
+    private const int MAX_REFRESH_TTL = 31536000;
+
     public function __construct(
         public string $issuer,
         public string $audience,
@@ -21,12 +24,18 @@ final readonly class JwtConfig
             }
         }
 
-        if ($this->accessTtl < 1) {
-            throw new \InvalidArgumentException('Access TTL must be positive.');
+        if ($this->accessTtl < 1 || $this->accessTtl > self::MAX_ACCESS_TTL) {
+            throw new \InvalidArgumentException(sprintf(
+                'Access TTL must be between 1 and %d seconds.',
+                self::MAX_ACCESS_TTL,
+            ));
         }
 
-        if ($this->refreshTtl < 1) {
-            throw new \InvalidArgumentException('Refresh TTL must be positive.');
+        if ($this->refreshTtl < 1 || $this->refreshTtl > self::MAX_REFRESH_TTL) {
+            throw new \InvalidArgumentException(sprintf(
+                'Refresh TTL must be between 1 and %d seconds.',
+                self::MAX_REFRESH_TTL,
+            ));
         }
 
         if ($this->clockSkew < 0 || $this->clockSkew > 300) {

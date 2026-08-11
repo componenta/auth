@@ -5,15 +5,21 @@ declare(strict_types=1);
 namespace Componenta\Auth\PasswordReset;
 
 /**
- * Owns the account-recovery security transition.
+ * Owns the complete account-recovery security transition.
  *
- * Success means the reset token was consumed, the password was changed, and
- * every pre-reset long-lived credential for the subject (sessions,
- * remember-me tokens and refresh grants) is durably or logically invalid.
- * Implementations using multiple stores must use a credential version and a
- * transactional outbox/idempotent retry instead of reporting partial success.
+ * The service validates and locks the reset token before performing expensive
+ * password hashing. Success means the token is consumed, the password is
+ * changed, and every pre-reset long-lived credential for the subject is
+ * durably or logically invalid. Multi-store implementations must use a
+ * credential version plus transactional outbox/idempotent retry rather than
+ * reporting partial success.
  */
 interface PasswordResetServiceInterface
 {
-    public function reset(string $plainToken, string $passwordHash): PasswordResetResult;
+    public function reset(
+        #[\SensitiveParameter]
+        string $plainToken,
+        #[\SensitiveParameter]
+        string $newPassword,
+    ): PasswordResetResult;
 }

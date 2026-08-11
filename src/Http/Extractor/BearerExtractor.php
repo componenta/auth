@@ -14,7 +14,11 @@ final readonly class BearerExtractor implements PayloadExtractorInterface
 
     public function __construct(
         public string $header = 'Authorization',
-    ) {}
+    ) {
+        if (preg_match('/\A[!#$%&\'*+.^_`|~0-9A-Za-z-]+\z/D', $this->header) !== 1) {
+            throw new \InvalidArgumentException('Bearer header name is invalid.');
+        }
+    }
 
     #[\Override]
     public function extract(ServerRequestInterface $request): ?object
@@ -25,17 +29,27 @@ final readonly class BearerExtractor implements PayloadExtractorInterface
             return null;
         }
 
-        if (strlen($value) < 7 || strcasecmp(substr($value, 0, 7), 'Bearer ') !== 0) {
+        if (strncasecmp($value, 'Bearer', 6) !== 0) {
             return null;
         }
 
-        $token = substr($value, 7);
+        if (strlen($value) < 7 || $value[6] !== ' ') {
+            throw InvalidPayloadException::invalidField($this->header);
+        }
+
+        $offset = 6;
+
+        while (($value[$offset] ?? null) === ' ') {
+            ++$offset;
+        }
+
+        $token = substr($value, $offset);
 
         if (
             $token === ''
             || strlen($token) > self::MAX_TOKEN_LENGTH
             || trim($token) !== $token
-            || preg_match('/\s/', $token) === 1
+            || preg_match('/\A[A-Za-z0-9\-._~+\/]+=*\z/D', $token) !== 1
         ) {
             throw InvalidPayloadException::invalidField($this->header);
         }

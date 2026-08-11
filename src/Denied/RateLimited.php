@@ -19,6 +19,7 @@ final class RateLimited implements DeniedReasonInterface
         public int $retryAfter,
     ) {}
 
+    /** @var array<string, mixed> */
     public array $attributes {
         get { return ['retry_after' => $this->retryAfter]; }
     }

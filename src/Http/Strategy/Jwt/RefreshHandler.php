@@ -44,7 +44,7 @@ final readonly class RefreshHandler implements RequestHandlerInterface
             return TokenResponseHeaders::apply($this->deniedResponseFactory->create($result));
         }
 
-        $identity = $this->provider->findById($result->userId);
+        $identity = $this->provider->findByUuid($result->subjectId);
 
         if ($identity === null) {
             $this->refreshManager->revoke($result->id);

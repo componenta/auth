@@ -14,10 +14,13 @@ final readonly class RefreshTokenManagerFactory
 {
     public function __invoke(ContainerInterface $container): RefreshTokenManager
     {
-        return new RefreshTokenManager(
-            store: $container->get(RefreshTokenStoreInterface::class),
-            generator: $container->get(RefreshTokenGenerator::class),
-            config: $container->get(JwtConfig::class),
-        );
+        /** @var RefreshTokenStoreInterface $store */
+        $store = $container->get(RefreshTokenStoreInterface::class);
+        /** @var RefreshTokenGenerator $generator */
+        $generator = $container->get(RefreshTokenGenerator::class);
+        /** @var JwtConfig $config */
+        $config = $container->get(JwtConfig::class);
+
+        return new RefreshTokenManager($store, $generator, $config);
     }
 }

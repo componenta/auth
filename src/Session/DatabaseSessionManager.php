@@ -9,7 +9,11 @@ use Componenta\Auth\Event\EventDispatcher;
 use Componenta\Auth\Event\SessionRegenerated;
 use Componenta\Auth\Event\SessionsTerminated;
 use Componenta\Clock\DateTimeFactoryInterface;
+use Componenta\Identity\Uuid;
+use Componenta\Identity\UuidInterface;
 use Cycle\Database\DatabaseInterface;
+use Cycle\Database\Query\DeleteQuery;
+use Cycle\Database\Query\SelectQuery;
 
 final readonly class DatabaseSessionManager implements SessionManagerInterface
 {
@@ -18,9 +22,9 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
 
     private const int MAX_CHAIN_DEPTH = 10;
     private const int MAX_SESSION_ID_LENGTH = 512;
-    private const int MAX_USER_ID_LENGTH = 512;
     private const int MAX_IP_LENGTH = 45;
     private const int MAX_USER_AGENT_LENGTH = 1024;
+    private const int MAX_ATTRIBUTES_JSON_LENGTH = 16384;
     private const int DELETE_CHUNK_SIZE = 500;
     private const int MAX_CLEANUP_LIMIT = 10000;
 
@@ -33,7 +37,7 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
     ) {}
 
     #[\Override]
-    public function create(int|string $userId, array $attributes = []): SessionInterface
+    public function create(UuidInterface $subjectId, array $attributes = []): SessionInterface
     {
         $ip = $attributes[self::ATTR_IP]
             ?? throw new \InvalidArgumentException('Missing required attribute: ' . self::ATTR_IP);
@@ -42,7 +46,11 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
                 'Missing required attribute: ' . self::ATTR_USER_AGENT,
             );
 
-        if (!is_string($ip) || strlen($ip) > self::MAX_IP_LENGTH) {
+        if (
+            !is_string($ip)
+            || strlen($ip) > self::MAX_IP_LENGTH
+            || ($ip !== '' && filter_var($ip, FILTER_VALIDATE_IP) === false)
+        ) {
             throw new \InvalidArgumentException(
                 'Session IP attribute must be a bounded string.',
             );
@@ -51,13 +59,12 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
         if (
             !is_string($userAgent)
             || strlen($userAgent) > self::MAX_USER_AGENT_LENGTH
+            || preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', $userAgent) === 1
         ) {
             throw new \InvalidArgumentException(
                 'Session User-Agent attribute must be a bounded string.',
             );
         }
-
-        self::assertUserId($userId);
 
         $sessionId = $this->idGenerator->generate();
         self::assertSessionId($sessionId);
@@ -65,7 +72,7 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
 
         $session = new Session(
             id: $sessionId,
-            userId: $userId,
+            subjectId: $subjectId,
             expiresAt: $now->modify("+{$this->config->idleTimeout} seconds"),
             absoluteExpiresAt: $now->modify("+{$this->config->absoluteTimeout} seconds"),
             regenerateAt: $now->modify("+{$this->config->regenerationInterval} seconds"),
@@ -116,7 +123,7 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
             ->run()
             ->fetch();
 
-        if ($row === false) {
+        if (!is_array($row)) {
             return null;
         }
 
@@ -137,21 +144,19 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
     }
 
     #[\Override]
-    public function all(int|string $userId): SessionCollectionInterface
+    public function all(UuidInterface $subjectId): SessionCollectionInterface
     {
-        self::assertUserId($userId);
-
         if ($this->config->lazyLoad) {
             $reflector = new \ReflectionClass(SessionCollection::class);
 
             return $reflector->newLazyGhost(
-                function (SessionCollection $ghost) use ($userId): void {
-                    $ghost->__construct($this->fetchAll($userId));
+                function (SessionCollection $ghost) use ($subjectId): void {
+                    $ghost->__construct($this->fetchAll($subjectId));
                 },
             );
         }
 
-        return new SessionCollection($this->fetchAll($userId));
+        return new SessionCollection($this->fetchAll($subjectId));
     }
 
     #[\Override]
@@ -213,18 +218,16 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
     }
 
     #[\Override]
-    public function terminateAll(int|string $userId, ?string $exceptSessionId = null): void
+    public function terminateAll(UuidInterface $subjectId, ?string $exceptSessionId = null): void
     {
-        self::assertUserId($userId);
-
         if ($exceptSessionId !== null) {
             self::assertSessionId($exceptSessionId);
         }
 
-        $this->database->transaction(function () use ($userId, $exceptSessionId): void {
+        $this->database->transaction(function () use ($subjectId, $exceptSessionId): void {
             $query = $this->database
                 ->delete($this->config->table)
-                ->where($this->config->userIdColumn, $userId);
+                ->where($this->config->subjectIdColumn, $subjectId->toString());
 
             if ($exceptSessionId !== null) {
                 $query->where($this->config->idColumn, '!=', $exceptSessionId);
@@ -232,7 +235,7 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
 
             $query->run();
             $this->dispatcher->dispatch(
-                new AllSessionsTerminated($userId, $exceptSessionId),
+                new AllSessionsTerminated($subjectId, $exceptSessionId),
             );
         });
     }
@@ -251,7 +254,11 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
         $rows = $this->database
             ->select($this->config->idColumn)
             ->from($this->config->table)
-            ->where(function ($query) use ($now): void {
+            ->where(function (mixed $query) use ($now): void {
+                if (!$query instanceof SelectQuery) {
+                    throw new \LogicException('Cycle must provide a SelectQuery to the predicate.');
+                }
+
                 $query
                     ->where($this->config->expiresAtColumn, '<=', $now)
                     ->orWhere($this->config->absoluteExpiresAtColumn, '<=', $now);
@@ -260,10 +267,13 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
             ->run()
             ->fetchAll();
 
-        $ids = array_map(
-            fn(array $row): string => (string) $row[$this->config->idColumn],
-            $rows,
-        );
+        $ids = [];
+
+        foreach ($rows as $row) {
+            if (is_array($row)) {
+                $ids[] = self::stringValue($row, $this->config->idColumn);
+            }
+        }
 
         if ($ids === []) {
             return 0;
@@ -275,7 +285,11 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
             $deleted += $this->database
                 ->delete($this->config->table)
                 ->where($this->config->idColumn, 'IN', $chunk)
-                ->where(function ($query) use ($now): void {
+                ->where(function (mixed $query) use ($now): void {
+                    if (!$query instanceof DeleteQuery) {
+                        throw new \LogicException('Cycle must provide a DeleteQuery to the predicate.');
+                    }
+
                     $query
                         ->where($this->config->expiresAtColumn, '<=', $now)
                         ->orWhere(
@@ -302,7 +316,7 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
             ->run()
             ->fetch();
 
-        if ($row === false) {
+        if (!is_array($row)) {
             throw new \InvalidArgumentException('Session not found');
         }
 
@@ -323,7 +337,7 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
 
         $new = new Session(
             id: $newSessionId,
-            userId: $old->userId,
+            subjectId: $old->subjectId,
             expiresAt: $now->modify("+{$this->config->idleTimeout} seconds"),
             absoluteExpiresAt: $old->absoluteExpiresAt,
             regenerateAt: $now->modify("+{$this->config->regenerationInterval} seconds"),
@@ -335,11 +349,16 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
 
         try {
             $this->database->transaction(function () use ($sessionId, $new, $now): void {
-                $this->insert(
-                    $new,
-                    (string) $new->getAttribute(self::ATTR_IP, ''),
-                    (string) $new->getAttribute(self::ATTR_USER_AGENT, ''),
-                );
+                $ip = $new->getAttribute(self::ATTR_IP);
+                $userAgent = $new->getAttribute(self::ATTR_USER_AGENT);
+
+                if (!is_string($ip) || !is_string($userAgent)) {
+                    throw new \UnexpectedValueException(
+                        'Regenerated session is missing transport metadata.',
+                    );
+                }
+
+                $this->insert($new, $ip, $userAgent);
 
                 $affectedRows = $this->database
                     ->update($this->config->table)
@@ -369,11 +388,26 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
 
     private function insert(SessionInterface $session, string $ip, string $userAgent): void
     {
+        $attributes = $session->attributes;
+        unset(
+            $attributes[self::ATTR_IP],
+            $attributes[self::ATTR_USER_AGENT],
+        );
+
+        $attributesJson = json_encode($attributes, JSON_THROW_ON_ERROR);
+
+        if (strlen($attributesJson) > self::MAX_ATTRIBUTES_JSON_LENGTH) {
+            throw new \InvalidArgumentException(sprintf(
+                'Session attributes must not exceed %d JSON bytes.',
+                self::MAX_ATTRIBUTES_JSON_LENGTH,
+            ));
+        }
+
         $this->database
             ->insert($this->config->table)
             ->values([
                 $this->config->idColumn => $session->id,
-                $this->config->userIdColumn => $session->userId,
+                $this->config->subjectIdColumn => $session->subjectId->toString(),
                 $this->config->ipColumn => $ip,
                 $this->config->userAgentColumn => $userAgent,
                 $this->config->expiresAtColumn => $session->expiresAt
@@ -387,15 +421,15 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
                     ->format($this->config->dateFormat),
                 $this->config->lastActiveAtColumn => $session->lastActiveAt
                     ->format($this->config->dateFormat),
-                $this->config->attributesColumn => json_encode(
-                    $session->attributes,
-                    JSON_THROW_ON_ERROR,
-                ),
+                $this->config->attributesColumn => $attributesJson,
             ])
             ->run();
     }
 
-    /** @return string[] */
+    /**
+     * @param string|iterable<string>|SessionCollectionInterface $sessionId
+     * @return list<string>
+     */
     private function normalizeIds(
         string|iterable|SessionCollectionInterface $sessionId,
     ): array {
@@ -424,24 +458,12 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
         return array_keys($ids);
     }
 
-    private static function assertUserId(int|string $userId): void
-    {
-        if (is_string($userId) && (
-            $userId === ''
-            || strlen($userId) > self::MAX_USER_ID_LENGTH
-        )) {
-            throw new \InvalidArgumentException(sprintf(
-                'Session user ID must contain between 1 and %d bytes.',
-                self::MAX_USER_ID_LENGTH,
-            ));
-        }
-    }
-
     private static function assertSessionId(string $sessionId): void
     {
         if (
             $sessionId === ''
             || strlen($sessionId) > self::MAX_SESSION_ID_LENGTH
+            || preg_match('/[\x00-\x1F\x7F]/', $sessionId) === 1
         ) {
             throw new \InvalidArgumentException(sprintf(
                 'Session ID must contain between 1 and %d bytes.',
@@ -451,16 +473,15 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
     }
 
     /** @return SessionInterface[] */
-    private function fetchAll(int|string $userId): array
+    private function fetchAll(UuidInterface $subjectId): array
     {
-        self::assertUserId($userId);
         $now = $this->dateTimeFactory->now();
         $formattedNow = $now->format($this->config->dateFormat);
 
         $rows = $this->database
             ->select()
             ->from($this->config->table)
-            ->where($this->config->userIdColumn, $userId)
+            ->where($this->config->subjectIdColumn, $subjectId->toString())
             ->where($this->config->replacedByColumn, null)
             ->where($this->config->absoluteExpiresAtColumn, '>', $formattedNow)
             ->where($this->config->expiresAtColumn, '>', $formattedNow)
@@ -468,39 +489,91 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
             ->run()
             ->fetchAll();
 
-        return array_map($this->hydrate(...), $rows);
+        $sessions = [];
+
+        foreach ($rows as $row) {
+            if (is_array($row)) {
+                $sessions[] = $this->hydrate($row);
+            }
+        }
+
+        return $sessions;
     }
 
-    /** @param array<string, mixed> $row */
+    /** @param array<array-key, mixed> $row */
     private function hydrate(array $row): SessionInterface
     {
+        $replacedBy = $row[$this->config->replacedByColumn] ?? null;
+        $attributesJson = self::stringValue($row, $this->config->attributesColumn);
+        $attributes = json_decode(
+            $attributesJson,
+            true,
+            512,
+            JSON_THROW_ON_ERROR,
+        );
+
+        if (!is_array($attributes)) {
+            throw new \UnexpectedValueException(
+                'Session attributes must decode to an object-like array.',
+            );
+        }
+
+        /** @var array<string, mixed> $attributes */
+        $attributes[self::ATTR_IP] = self::stringValue(
+            $row,
+            $this->config->ipColumn,
+        );
+        $attributes[self::ATTR_USER_AGENT] = self::stringValue(
+            $row,
+            $this->config->userAgentColumn,
+        );
+
         return new Session(
-            id: (string) $row[$this->config->idColumn],
-            userId: $row[$this->config->userIdColumn],
-            expiresAt: $this->dateTimeFactory->parse(
-                $row[$this->config->expiresAtColumn],
-            ),
-            absoluteExpiresAt: $this->dateTimeFactory->parse(
-                $row[$this->config->absoluteExpiresAtColumn],
-            ),
-            regenerateAt: $this->dateTimeFactory->parse(
-                $row[$this->config->regenerateAtColumn],
-            ),
-            replacedBy: isset($row[$this->config->replacedByColumn])
-                ? (string) $row[$this->config->replacedByColumn]
-                : null,
-            createdAt: $this->dateTimeFactory->parse(
-                $row[$this->config->createdAtColumn],
-            ),
-            lastActiveAt: $this->dateTimeFactory->parse(
-                $row[$this->config->lastActiveAtColumn],
-            ),
-            attributes: json_decode(
-                (string) $row[$this->config->attributesColumn],
-                true,
-                512,
-                JSON_THROW_ON_ERROR,
-            ),
+            id: self::stringValue($row, $this->config->idColumn),
+            subjectId: Uuid::fromString(self::stringValue(
+                $row,
+                $this->config->subjectIdColumn,
+            )),
+            expiresAt: $this->dateTimeFactory->parse(self::stringValue(
+                $row,
+                $this->config->expiresAtColumn,
+            )),
+            absoluteExpiresAt: $this->dateTimeFactory->parse(self::stringValue(
+                $row,
+                $this->config->absoluteExpiresAtColumn,
+            )),
+            regenerateAt: $this->dateTimeFactory->parse(self::stringValue(
+                $row,
+                $this->config->regenerateAtColumn,
+            )),
+            replacedBy: $replacedBy === null
+                ? null
+                : self::stringValue($row, $this->config->replacedByColumn),
+            createdAt: $this->dateTimeFactory->parse(self::stringValue(
+                $row,
+                $this->config->createdAtColumn,
+            )),
+            lastActiveAt: $this->dateTimeFactory->parse(self::stringValue(
+                $row,
+                $this->config->lastActiveAtColumn,
+            )),
+            attributes: $attributes,
         );
     }
+
+    /** @param array<array-key, mixed> $row */
+    private static function stringValue(array $row, string $key): string
+    {
+        $value = $row[$key] ?? null;
+
+        if (!is_string($value) && !is_int($value)) {
+            throw new \UnexpectedValueException(sprintf(
+                'Database column "%s" must contain a string-compatible value.',
+                $key,
+            ));
+        }
+
+        return (string) $value;
+    }
+
 }

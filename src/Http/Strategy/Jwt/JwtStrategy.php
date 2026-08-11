@@ -11,6 +11,7 @@ use Componenta\Auth\Http\Extractor\BearerPayload;
 use Componenta\Auth\Http\Strategy\Jwt\Denied\AccessTokenExpired;
 use Componenta\Auth\Http\Strategy\Jwt\Denied\InvalidAccessToken;
 use Componenta\Clock\Clock;
+use Componenta\Identity\Uuid;
 use Psr\Clock\ClockInterface;
 
 final readonly class JwtStrategy implements AuthenticationStrategyInterface
@@ -54,7 +55,13 @@ final readonly class JwtStrategy implements AuthenticationStrategyInterface
             return new AuthenticationResult(new InvalidAccessToken());
         }
 
-        $identity = $this->provider->findById($claims->subject);
+        try {
+            $subjectId = Uuid::fromString($claims->subject);
+        } catch (\InvalidArgumentException) {
+            return new AuthenticationResult(new InvalidAccessToken());
+        }
+
+        $identity = $this->provider->findByUuid($subjectId);
 
         return $identity === null
             ? new AuthenticationResult(new InvalidAccessToken())

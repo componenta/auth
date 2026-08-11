@@ -6,6 +6,7 @@ namespace Componenta\Auth\Tests\Session;
 
 use Componenta\Auth\Session\Session;
 use Componenta\Auth\Session\SessionCollection;
+use Componenta\Identity\Uuid;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 
@@ -16,7 +17,7 @@ final class SessionCollectionTest extends TestCase
         $now = new DateTimeImmutable('@1000');
         $session = new Session(
             id: 'session-1',
-            userId: '018f6d5d-3f7a-7a9b-8c2f-123456789abc',
+            subjectId: Uuid::fromString('018f6d5d-3f7a-7a9b-8c2f-123456789abc'),
             expiresAt: $now->modify('+30 minutes'),
             absoluteExpiresAt: $now->modify('+8 hours'),
             regenerateAt: $now->modify('+5 minutes'),
@@ -38,7 +39,14 @@ final class SessionCollectionTest extends TestCase
         $this->expectException(\OutOfBoundsException::class);
         $now = new DateTimeImmutable('@1000');
         (new SessionCollection([new Session(
-            'session-1', 'user', $now, $now, $now, null, $now, $now,
+            'session-1',
+            Uuid::fromString('018f6d5d-3f7a-7a9b-8c2f-123456789abc'),
+            $now->modify('+30 minutes'),
+            $now->modify('+8 hours'),
+            $now->modify('+5 minutes'),
+            null,
+            $now,
+            $now,
         )]))->pluck('missing');
     }
 }

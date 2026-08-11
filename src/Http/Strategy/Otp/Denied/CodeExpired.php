@@ -15,6 +15,7 @@ final class CodeExpired implements DeniedReasonInterface
         get => 'code_expired';
     }
 
+    /** @param array<string, mixed> $attributes */
     public function __construct(
         public readonly array $attributes = [],
     ) {}

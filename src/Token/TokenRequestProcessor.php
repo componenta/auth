@@ -20,12 +20,10 @@ final readonly class TokenRequestProcessor
             return;
         }
 
-        $subjectId = $identity->uuid->toString();
-        $this->tokenManager->revokeForUser($subjectId);
-        $token = $this->tokenManager->generate($subjectId);
+        $plainToken = $this->tokenManager->replaceForSubject($identity->uuid);
         $this->sender->send(
             $request->destination ?? $request->identity,
-            $token,
+            $plainToken,
             $request->context,
         );
     }

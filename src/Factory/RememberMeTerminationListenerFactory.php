@@ -12,8 +12,9 @@ final readonly class RememberMeTerminationListenerFactory
 {
     public function __invoke(ContainerInterface $container): RememberMeTerminationListener
     {
-        return new RememberMeTerminationListener(
-            tokenManager: $container->get(RememberMeTokenManagerInterface::class),
-        );
+        /** @var RememberMeTokenManagerInterface $tokenManager */
+        $tokenManager = $container->get(RememberMeTokenManagerInterface::class);
+
+        return new RememberMeTerminationListener($tokenManager);
     }
 }

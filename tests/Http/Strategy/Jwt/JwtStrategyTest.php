@@ -76,7 +76,7 @@ final readonly class JwtSignerFixture implements SignerInterface
 final readonly class JwtProviderFixture implements JwtUserProviderInterface
 {
     public function __construct(private ?IdentityInterface $identity) {}
-    public function findById(string $userId): ?IdentityInterface { return $this->identity; }
+    public function findByUuid(UuidInterface $uuid): ?IdentityInterface { return $this->identity; }
 }
 
 final class JwtIdentityFixture implements IdentityInterface

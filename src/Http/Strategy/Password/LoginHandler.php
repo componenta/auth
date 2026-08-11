@@ -46,7 +46,7 @@ readonly class LoginHandler implements RequestHandlerInterface
             return $this->deniedResponseFactory->create($result->subject);
         }
 
-        $subjectId = $result->subject->uuid->toString();
+        $subjectId = $result->subject->uuid;
         $session = $this->sessionManager->create(
             $subjectId,
             $this->attributeExtractor->extract($request),
@@ -58,7 +58,9 @@ readonly class LoginHandler implements RequestHandlerInterface
 
         return $this->storage->store(
             $request,
-            $response,
+            $response
+                ->withHeader('Cache-Control', 'no-store')
+                ->withHeader('Pragma', 'no-cache'),
             new SessionPayload($session->id, $rememberMeToken),
         );
     }

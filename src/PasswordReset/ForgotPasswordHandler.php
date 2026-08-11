@@ -26,7 +26,13 @@ final readonly class ForgotPasswordHandler implements RequestHandlerInterface
         $body = $request->getParsedBody();
         $email = is_array($body) ? ($body['email'] ?? null) : null;
 
-        if (!is_string($email) || $email === '' || strlen($email) > self::MAX_IDENTITY_LENGTH) {
+        if (
+            !is_string($email)
+            || $email === ''
+            || strlen($email) > self::MAX_IDENTITY_LENGTH
+            || trim($email) !== $email
+            || preg_match('/[\x00-\x1F\x7F]/', $email) === 1
+        ) {
             return $this->json(400, ['error' => 'invalid_email']);
         }
 
@@ -43,6 +49,9 @@ final readonly class ForgotPasswordHandler implements RequestHandlerInterface
         $response = $this->responseFactory->createResponse($status);
         $response->getBody()->write(json_encode($data, JSON_THROW_ON_ERROR));
 
-        return $response->withHeader('Content-Type', 'application/json');
+        return $response
+            ->withHeader('Content-Type', 'application/json')
+            ->withHeader('Cache-Control', 'no-store')
+            ->withHeader('Pragma', 'no-cache');
     }
 }

@@ -4,16 +4,34 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Http\Transport;
 
-/**
- * Payload for session-based authentication.
- *
- * Used for both extraction (session cookie -> sessionId)
- * and storage (sessionId + optional remember-me token -> cookies).
- */
+/** Session and optional remember-me credential transport payload. */
 final readonly class SessionPayload
 {
     public function __construct(
         public ?string $sessionId = null,
+        #[\SensitiveParameter]
         public ?string $rememberMeToken = null,
-    ) {}
+    ) {
+        if ($this->sessionId !== null) {
+            self::assertCredential($this->sessionId, 512, 'Session ID');
+        }
+
+        if ($this->rememberMeToken !== null) {
+            self::assertCredential($this->rememberMeToken, 4096, 'Remember-me token');
+        }
+    }
+
+    private static function assertCredential(
+        string $value,
+        int $maxLength,
+        string $label,
+    ): void {
+        if (
+            $value === ''
+            || strlen($value) > $maxLength
+            || preg_match('/[\x00-\x1F\x7F]/', $value) === 1
+        ) {
+            throw new \InvalidArgumentException($label . ' is invalid.');
+        }
+    }
 }

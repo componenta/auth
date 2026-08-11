@@ -15,6 +15,7 @@ final class TooManyAttempts implements DeniedReasonInterface
         get => 'too_many_attempts';
     }
 
+    /** @param array<string, mixed> $attributes */
     public function __construct(
         public readonly array $attributes = [],
     ) {}

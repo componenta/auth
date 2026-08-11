@@ -46,6 +46,9 @@ return [
             JwtStrategy::class,
         ],
         'events' => true,
+        'rememberMe' => [
+            'enabled' => true,
+        ],
     ],
 ];
 ```
@@ -107,9 +110,9 @@ Metadata доступна через `$session->attributes`. `getAttribute()` р
 
 ## Remember-me
 
-Remember-me token — 256-bit opaque credential, хранящийся как SHA-256 representation. Consume остаётся single-winner через affected rows.
+Remember-me выключен по умолчанию. Когда `auth.rememberMe.enabled` равен `true`, пакет автоматически добавляет обязательные termination/regeneration listeners; оба являются critical lifecycle participants.
 
-Termination/regeneration listeners включены по умолчанию и являются critical lifecycle participants. Bulk termination использует `revokeForSessions()` с chunking. Revoke-all-except удаляет и rows с `NULL session_id`.
+Remember-me token — 256-bit opaque credential, хранящийся как SHA-256 representation. Consume остаётся single-winner через affected rows. Bulk termination использует `revokeForSessions()` с chunking. Revoke-all-except удаляет и rows с `NULL session_id`.
 
 Housekeeping выполняется bounded методом `cleanup(int $limit): int` из worker/scheduler.
 
@@ -158,9 +161,11 @@ HTTP handlers внедряют `TokenRequestQueueInterface` или `OtpRequestQu
 
 User lookup, generation, persistence и sender I/O выполняют `TokenRequestProcessor`/`OtpRequestProcessor` вне HTTP request thread.
 
+Встроенный SQL manager one-time tokens заменяет challenge субъекта одним atomic UPSERT. Поэтому таблица обязана иметь `UNIQUE` constraint на колонке canonical subject UUID. OTP stores остаются application adapters и должны атомарно реализовывать `verifyAndConsume()` над одной locked/versioned record.
+
 ## Password reset
 
-`PasswordResetServiceInterface` владеет полной recovery transaction. `PasswordResetResult::Success` означает: reset token consumed, password изменён, прежние session, remember-me и refresh credentials durably либо logically invalidated.
+`PasswordResetServiceInterface` владеет полной recovery transaction, включая проверку reset token и дорогое хэширование нового пароля. `PasswordResetResult::Success` означает: reset token consumed, password изменён, прежние session, remember-me и refresh credentials durably либо logically invalidated.
 
 При разных stores необходимы credential version, transactional outbox и идемпотентный retry.
 
@@ -184,7 +189,7 @@ Authentication inputs проверяются по типу и размеру д�
 | `ConfigKey::STRATEGIES` | Упорядоченные service IDs. |
 | `ConfigKey::EVENTS` | Eventing decorator. |
 | `ConfigKey::SESSION` | Session persistence и touch settings. |
-| `ConfigKey::REMEMBER_ME` | Remember-me settings. |
+| `ConfigKey::REMEMBER_ME` | Feature flag и settings remember-me; по умолчанию выключен. |
 | `ConfigKey::JWT` | Явный JWT/refresh profile. |
 | `ConfigKey::DENIED` | Mapping HTTP status. |
 | `ConfigKey::LISTENERS` | Lifecycle listeners. |

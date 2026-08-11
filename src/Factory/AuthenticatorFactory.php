@@ -75,8 +75,20 @@ final readonly class AuthenticatorFactory
             ConfigKey::AUTH . '.' . ConfigKey::EVENTS,
         ), true);
 
-        return $eventsEnabled
-            ? new EventingAuthenticator($authenticator, $container->get(EventDispatcher::class))
-            : $authenticator;
+        if (!$eventsEnabled) {
+            return $authenticator;
+        }
+
+        $dispatcher = $container->get(EventDispatcher::class);
+
+        if (!$dispatcher instanceof EventDispatcher) {
+            throw new AuthenticatorConfigurationException(sprintf(
+                '%s must resolve to %s.',
+                EventDispatcher::class,
+                EventDispatcher::class,
+            ));
+        }
+
+        return new EventingAuthenticator($authenticator, $dispatcher);
     }
 }

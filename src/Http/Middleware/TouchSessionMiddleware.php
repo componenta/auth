@@ -15,7 +15,7 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 
-/** Reuses the session verified by the authentication strategy. */
+/** Reuses the verified session and commits regeneration through shared state. */
 final readonly class TouchSessionMiddleware implements MiddlewareInterface
 {
     public function __construct(
@@ -37,27 +37,29 @@ final readonly class TouchSessionMiddleware implements MiddlewareInterface
 
         $now = $this->dateTimeFactory->now();
 
-        if ($session->regenerateAt <= $now) {
-            $newSession = $this->manager->regenerate($session->id);
-            $request = $request->withAttribute(SessionInterface::class, $newSession);
-            $payload = new SessionPayload($newSession->id);
-            $transportState = $request->getAttribute(CredentialTransportState::class);
+        if ($session->regenerateAt > $now) {
+            $this->manager->touch($session->id, $session->lastActiveAt);
 
-            if ($transportState instanceof CredentialTransportState) {
-                $transportState->queue($payload);
-
-                return $handler->handle($request);
-            }
-
-            return $this->storage->store(
-                $request,
-                $handler->handle($request),
-                $payload,
-            );
+            return $handler->handle($request);
         }
 
-        $this->manager->touch($session->id, $session->lastActiveAt);
+        $newSession = $this->manager->regenerate($session->id);
+        $existingState = $request->getAttribute(CredentialTransportState::class);
+        $ownsTransportState = !$existingState instanceof CredentialTransportState;
+        $transportState = $ownsTransportState
+            ? new CredentialTransportState()
+            : $existingState;
+        $transportState->queue(new SessionPayload($newSession->id));
 
-        return $handler->handle($request);
+        $request = $request
+            ->withAttribute(SessionInterface::class, $newSession)
+            ->withAttribute(CredentialTransportState::class, $transportState);
+        $response = $handler->handle($request);
+
+        if (!$ownsTransportState || $transportState->empty) {
+            return $response;
+        }
+
+        return $transportState->apply($this->storage, $request, $response);
     }
 }
