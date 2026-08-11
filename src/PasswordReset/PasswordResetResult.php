@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\PasswordReset;
 
-enum PasswordResetResult: string
+enum PasswordResetResult
 {
-    case Success = 'success';
-    case InvalidToken = 'invalid_token';
+    case Success;
+    case InvalidToken;
+    case PasswordRejected;
 }
