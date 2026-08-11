@@ -42,7 +42,9 @@ final readonly class AuthenticationResult implements \JsonSerializable
             'deniedCode' => $this->subject instanceof DeniedReasonInterface
                 ? $this->subject->code
                 : null,
-            'transportPayloadType' => $this->transportPayload?->class ?? null,
+            'transportPayloadType' => $this->transportPayload === null
+                ? null
+                : $this->transportPayload::class,
             'hasSession' => $this->session !== null,
         ];
     }
