@@ -29,6 +29,8 @@ final class MySqlDatabaseFixture
 
         $user = getenv('AUTH_TEST_MYSQL_USER');
         $password = getenv('AUTH_TEST_MYSQL_PASSWORD');
+        $user = is_string($user) && $user !== '' ? $user : null;
+        $password = is_string($password) && $password !== '' ? $password : null;
         $manager = new DatabaseManager(new DatabaseConfig([
             'default' => 'default',
             'databases' => [
@@ -38,8 +40,8 @@ final class MySqlDatabaseFixture
                 'mysql' => new MySQLDriverConfig(
                     connection: new DsnConnectionConfig(
                         dsn: $dsn,
-                        user: is_string($user) && $user !== '' ? $user : null,
-                        password: is_string($password) ? $password : null,
+                        user: $user,
+                        password: $password,
                     ),
                     timezone: 'UTC',
                     queryCache: false,
