@@ -10,6 +10,8 @@ use Componenta\Auth\Event\EventInterface;
 use Componenta\Auth\Event\EventListenerInterface;
 use Componenta\Auth\Event\EventListenerProviderInterface;
 use Componenta\Auth\Event\PriorityListenerProvider;
+use Componenta\Auth\Event\SessionRegenerated;
+use Componenta\Auth\Event\SessionsTerminated;
 use Componenta\Auth\Session\DatabaseSessionManager;
 use Componenta\Auth\Session\DatabaseSessionManagerConfig;
 use Componenta\Auth\Session\SessionIdGenerator;
@@ -219,10 +221,16 @@ final readonly class CriticalSessionListenerProviderFixture implements EventList
     }
 }
 
-final readonly class CriticalSessionListenerFixture implements
-    EventListenerInterface,
-    CriticalEventListenerInterface
+final readonly class CriticalSessionListenerFixture implements CriticalEventListenerInterface
 {
+    /** @var non-empty-list<class-string<EventInterface>> */
+    public array $events;
+
+    public function __construct()
+    {
+        $this->events = [SessionsTerminated::class, SessionRegenerated::class];
+    }
+
     public function handleEvent(EventInterface $event): void
     {
         throw new \RuntimeException('critical session lifecycle failure');

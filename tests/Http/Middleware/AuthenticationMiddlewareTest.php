@@ -6,7 +6,6 @@ namespace Componenta\Auth\Tests\Http\Middleware;
 
 use Componenta\Auth\AuthenticationResult;
 use Componenta\Auth\AuthenticatorInterface;
-use Componenta\Auth\ContextInterface;
 use Componenta\Auth\Denied\DeniedReason;
 use Componenta\Auth\DeniedReasonInterface;
 use Componenta\Auth\Http\CredentialTransportState;
@@ -30,104 +29,118 @@ final class AuthenticationMiddlewareTest extends TestCase
     public function testDownstreamCredentialClearCancelsPendingRotation(): void
     {
         $pendingCredential = new \stdClass();
-        $payload = new \stdClass();
-        $request = new ServerRequestFixture();
+        $identity = new AuthenticationIdentityFixture();
         $extractor = $this->createStub(PayloadExtractorInterface::class);
-        $extractor->method('extract')->willReturn($payload);
+        $extractor->method('extract')->willReturn(new \stdClass());
         $authenticator = $this->createStub(AuthenticatorInterface::class);
-        $authenticator->method('attempt')
-            ->willReturn(new AuthenticationResult(
-                new DeniedReason('fixture'),
-                $pendingCredential,
-            ));
+        $authenticator->method('attempt')->willReturn(
+            new AuthenticationResult($identity, $pendingCredential),
+        );
         $response = $this->createStub(ResponseInterface::class);
         $clearedResponse = $this->createStub(ResponseInterface::class);
+        $storage = $this->createMock(PayloadStorageInterface::class);
         $handler = new CallbackRequestHandler(
-            static function (ServerRequestInterface $handledRequest) use ($response): ResponseInterface {
+            static function (ServerRequestInterface $handledRequest) use ($response, $storage): ResponseInterface {
                 $state = $handledRequest->getAttribute(CredentialTransportState::class);
                 self::assertInstanceOf(CredentialTransportState::class, $state);
-                $state->clear();
+                $state->clear($storage);
 
                 return $response;
             },
         );
-        $storage = $this->createMock(PayloadStorageInterface::class);
         $storage->expects(self::never())->method('store');
         $storage->expects(self::once())->method('remove')
             ->with(self::isInstanceOf(ServerRequestInterface::class), $response)
             ->willReturn($clearedResponse);
 
-        $result = (new AuthenticationMiddleware($extractor, $authenticator, $storage))
-            ->process($request, $handler);
-
-        self::assertSame($clearedResponse, $result);
+        self::assertSame(
+            $clearedResponse,
+            (new AuthenticationMiddleware($extractor, $authenticator, $storage))
+                ->process(new ServerRequestFixture(), $handler),
+        );
     }
 
-    public function testNestedAuthenticationLayersShareOneTerminalTransportDecision(): void
+    public function testNestedAuthenticationLayersPreserveDifferentStorages(): void
     {
-        $outerPayload = new \stdClass();
-        $innerPayload = new \stdClass();
-        $pendingCredential = new \stdClass();
         $identity = new AuthenticationIdentityFixture();
+        $outerCredential = new \stdClass();
+        $innerCredential = new \stdClass();
         $response = $this->createStub(ResponseInterface::class);
-        $clearedResponse = $this->createStub(ResponseInterface::class);
-
+        $afterOuter = $this->createStub(ResponseInterface::class);
+        $afterInner = $this->createStub(ResponseInterface::class);
+        $outerStorage = $this->createMock(PayloadStorageInterface::class);
+        $innerStorage = $this->createMock(PayloadStorageInterface::class);
+        $outerStorage->expects(self::once())->method('store')
+            ->with(self::isInstanceOf(ServerRequestInterface::class), $response, $outerCredential)
+            ->willReturn($afterOuter);
+        $innerStorage->expects(self::once())->method('store')
+            ->with(self::isInstanceOf(ServerRequestInterface::class), $afterOuter, $innerCredential)
+            ->willReturn($afterInner);
         $outerExtractor = $this->createStub(PayloadExtractorInterface::class);
-        $outerExtractor->method('extract')->willReturn($outerPayload);
+        $outerExtractor->method('extract')->willReturn(new \stdClass());
         $innerExtractor = $this->createStub(PayloadExtractorInterface::class);
-        $innerExtractor->method('extract')->willReturn($innerPayload);
-
+        $innerExtractor->method('extract')->willReturn(new \stdClass());
         $outerAuthenticator = $this->createStub(AuthenticatorInterface::class);
         $outerAuthenticator->method('attempt')->willReturn(
-            new AuthenticationResult($identity, $pendingCredential),
+            new AuthenticationResult($identity, $outerCredential),
         );
         $innerAuthenticator = $this->createStub(AuthenticatorInterface::class);
         $innerAuthenticator->method('attempt')->willReturn(
-            new AuthenticationResult($identity),
+            new AuthenticationResult($identity, $innerCredential),
         );
-
-        $storage = $this->createMock(PayloadStorageInterface::class);
-        $storage->expects(self::never())->method('store');
-        $storage->expects(self::once())->method('remove')
-            ->with(self::isInstanceOf(ServerRequestInterface::class), $response)
-            ->willReturn($clearedResponse);
-
         $terminal = new CallbackRequestHandler(
-            static function (ServerRequestInterface $request) use ($response): ResponseInterface {
-                $state = $request->getAttribute(CredentialTransportState::class);
-                self::assertInstanceOf(CredentialTransportState::class, $state);
-                $state->clear();
-
-                return $response;
-            },
+            static fn(ServerRequestInterface $request): ResponseInterface => $response,
         );
         $inner = new AuthenticationMiddleware(
             $innerExtractor,
             $innerAuthenticator,
-            $storage,
+            $innerStorage,
         );
         $innerHandler = new CallbackRequestHandler(
             static fn(ServerRequestInterface $request): ResponseInterface =>
                 $inner->process($request, $terminal),
         );
 
-        $result = (new AuthenticationMiddleware(
-            $outerExtractor,
-            $outerAuthenticator,
-            $storage,
-        ))->process(new ServerRequestFixture(), $innerHandler);
+        self::assertSame(
+            $afterInner,
+            (new AuthenticationMiddleware(
+                $outerExtractor,
+                $outerAuthenticator,
+                $outerStorage,
+            ))->process(new ServerRequestFixture(), $innerHandler),
+        );
+    }
 
-        self::assertSame($clearedResponse, $result);
+    public function testCredentialMutationWithoutStorageFailsBeforeDownstream(): void
+    {
+        $extractor = $this->createStub(PayloadExtractorInterface::class);
+        $extractor->method('extract')->willReturn(new \stdClass());
+        $authenticator = $this->createStub(AuthenticatorInterface::class);
+        $authenticator->method('attempt')->willReturn(
+            new AuthenticationResult(
+                new AuthenticationIdentityFixture(),
+                new \stdClass(),
+            ),
+        );
+        $handler = new CallbackRequestHandler(
+            static function (): ResponseInterface {
+                self::fail('Downstream handler must not run without required credential storage.');
+            },
+        );
+
+        $this->expectException(\LogicException::class);
+        (new AuthenticationMiddleware($extractor, $authenticator))
+            ->process(new ServerRequestFixture(), $handler);
     }
 
     public function testDeniedResultRemovesStaleIdentityAndSession(): void
     {
         $oldIdentity = new AuthenticationIdentityFixture();
         $oldSession = self::sessionFor($oldIdentity->uuid);
-        $request = (new ServerRequestFixture(attributes: [
+        $request = new ServerRequestFixture(attributes: [
             IdentityInterface::class => $oldIdentity,
             SessionInterface::class => $oldSession,
-        ]));
+        ]);
         $extractor = $this->createStub(PayloadExtractorInterface::class);
         $extractor->method('extract')->willReturn(new \stdClass());
         $denial = new DeniedReason('invalid_credentials');
