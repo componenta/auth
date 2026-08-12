@@ -151,7 +151,8 @@ class ConfigProvider extends \Componenta\Config\ConfigProvider
                     'table' => 'remember_me_tokens',
                     'ttl' => 2592000,
                     'columns' => [
-                        'id' => 'id', 'subjectId' => 'user_id', 'sessionId' => 'session_id',
+                        'id' => 'id', 'subjectId' => 'user_id',
+                        'sessionId' => 'session_id', 'previousSessionId' => 'previous_session_id',
                         'token' => 'token', 'expiresAt' => 'expires_at', 'createdAt' => 'created_at',
                     ],
                 ],
