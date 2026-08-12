@@ -79,7 +79,7 @@ final class DatabaseUtcTimestampTest extends TestCase
         $manager = new TokenManager(
             $database,
             new FrozenClock(1000, 'Europe/Copenhagen'),
-            new TokenConfig('one_time_tokens'),
+            new TokenConfig('one_time_tokens', 'test'),
         );
 
         $plainToken = $manager->replaceForSubject(self::subjectId());

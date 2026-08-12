@@ -48,7 +48,7 @@ final class DatabaseMySql84IntegrationTest extends TestCase
         $manager = new TokenManager(
             $database,
             new FrozenClock(1000, 'Europe/Copenhagen'),
-            new TokenConfig('one_time_tokens'),
+            new TokenConfig('one_time_tokens', 'magic_link'),
         );
         $subjectId = self::subjectId();
 

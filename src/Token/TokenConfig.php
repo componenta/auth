@@ -12,6 +12,7 @@ final readonly class TokenConfig
 
     public function __construct(
         public string $table,
+        public string $purpose,
         public int $ttl = 300,
         public string $dateFormat = self::DATE_FORMAT,
         public string $idColumn = 'id',
@@ -21,6 +22,14 @@ final readonly class TokenConfig
         public string $usedAtColumn = 'used_at',
         public string $createdAtColumn = 'created_at',
     ) {
+        if (
+            preg_match('/\A[a-z][a-z0-9._-]{0,63}\z/D', $this->purpose) !== 1
+        ) {
+            throw new \InvalidArgumentException(
+                'One-time token purpose must be a bounded machine-readable identifier.',
+            );
+        }
+
         if ($this->ttl < 1 || $this->ttl > self::MAX_TTL) {
             throw new \InvalidArgumentException(sprintf(
                 'Token TTL must be between 1 and %d seconds.',

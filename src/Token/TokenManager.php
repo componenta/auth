@@ -34,7 +34,7 @@ final readonly class TokenManager implements TokenManagerInterface
 
         $values = [
             $this->config->subjectIdColumn => $subjectId->toString(),
-            $this->config->tokenColumn => self::hash($plainToken),
+            $this->config->tokenColumn => $this->hash($plainToken),
             $this->config->expiresAtColumn => $now
                 ->modify("+{$this->config->ttl} seconds")
                 ->format($this->config->dateFormat),
@@ -42,8 +42,6 @@ final readonly class TokenManager implements TokenManagerInterface
             $this->config->createdAtColumn => $now->format($this->config->dateFormat),
         ];
 
-        // One statement, backed by UNIQUE(subject_id), ensures concurrent
-        // requests cannot leave two active challenges for the same subject.
         $this->database
             ->insert($this->config->table)
             ->values($values)
@@ -79,7 +77,7 @@ final readonly class TokenManager implements TokenManagerInterface
 
         $row = $query
             ->from($this->config->table)
-            ->where($this->config->tokenColumn, self::hash($plainToken))
+            ->where($this->config->tokenColumn, $this->hash($plainToken))
             ->run()
             ->fetch();
 
@@ -98,7 +96,7 @@ final readonly class TokenManager implements TokenManagerInterface
         $affected = $this->database
             ->update($this->config->table)
             ->values([$this->config->usedAtColumn => $formattedNow])
-            ->where($this->config->tokenColumn, self::hash($plainToken))
+            ->where($this->config->tokenColumn, $this->hash($plainToken))
             ->where($this->config->usedAtColumn, null)
             ->where($this->config->expiresAtColumn, '>', $formattedNow)
             ->run();
@@ -169,9 +167,9 @@ final readonly class TokenManager implements TokenManagerInterface
         return preg_match('/\A[a-f0-9]{64}\z/D', $token) === 1;
     }
 
-    private static function hash(string $plainToken): string
+    private function hash(string $plainToken): string
     {
-        return hash('sha256', $plainToken);
+        return hash('sha256', $this->config->purpose . "\0" . $plainToken);
     }
 
     /** @param array<array-key, mixed> $row */
@@ -222,7 +220,10 @@ final readonly class TokenManager implements TokenManagerInterface
     {
         $value = $row[$key] ?? null;
 
-        if (!is_int($value) && !(is_string($value) && ctype_digit($value))) {
+        if (
+            !is_int($value)
+            && !(is_string($value) && preg_match('/\A[0-9]+\z/D', $value) === 1)
+        ) {
             throw new \UnexpectedValueException(sprintf(
                 'Database column "%s" must contain an integer.',
                 $key,
