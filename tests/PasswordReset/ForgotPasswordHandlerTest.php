@@ -57,10 +57,11 @@ final class ForgotPasswordHandlerTest extends TestCase
             ->willReturn($response);
 
         self::assertSame($response, (new ForgotPasswordHandler($queue, $factory))->handle($request));
-        self::assertSame('user@example.com', $queue->request?->identity);
+        self::assertInstanceOf(TokenRequest::class, $queue->request);
+        self::assertSame('user@example.com', $queue->request->identity);
         self::assertSame(
             TokenRequest::PURPOSE_PASSWORD_RESET,
-            $queue->request?->purpose,
+            $queue->request->purpose,
         );
     }
 }
