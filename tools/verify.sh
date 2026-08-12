@@ -20,8 +20,7 @@ for removed in \
     LoggedOutListenerInterface \
     SessionRegeneratedListenerInterface \
     SessionsTerminatedListenerInterface \
-    AllSessionsTerminatedListenerInterface \
-    ListenerFactory
+    AllSessionsTerminatedListenerInterface
 do
     if grep -R --line-number --fixed-strings "$removed" src tests; then
         echo "Removed symbol still referenced: $removed" >&2
@@ -31,6 +30,7 @@ done
 
 for removed_file in \
     src/RememberMe/RememberMeToken.php \
+    src/Factory/ListenerFactory.php \
     src/Http/Strategy/MagicLink/Denied/TokenAlreadyUsed.php \
     src/Http/Strategy/MagicLink/Denied/TokenExpired.php
 do
@@ -40,7 +40,7 @@ do
     fi
 done
 
-if grep -R --line-number -E '(^|[^[:alnum:]_])(RememberMeToken|TokenAlreadyUsed|TokenExpired)([^[:alnum:]_]|$)' src tests; then
+if grep -R --line-number -E '(^|[^[:alnum:]_])(RememberMeToken|ListenerFactory|TokenAlreadyUsed|TokenExpired)([^[:alnum:]_]|$)' src tests; then
     echo 'Removed security-domain symbol is still referenced.' >&2
     exit 1
 fi
