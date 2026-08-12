@@ -9,7 +9,6 @@ for removed in \
     AuthSubject \
     AuthSubjectInterface \
     RememberMeAwareInterface \
-    RememberMeToken \
     SessionAwareInterface \
     PublicDeniedReasonInterface \
     PasswordUpdaterInterface \
@@ -31,17 +30,18 @@ do
 done
 
 for removed_file in \
+    src/RememberMe/RememberMeToken.php \
     src/Http/Strategy/MagicLink/Denied/TokenAlreadyUsed.php \
     src/Http/Strategy/MagicLink/Denied/TokenExpired.php
 do
     if [[ -e "$removed_file" ]]; then
-        echo "Removed magic-link denial still exists: $removed_file" >&2
+        echo "Removed source file still exists: $removed_file" >&2
         exit 1
     fi
 done
 
-if grep -R --line-number -E '(^|[^[:alnum:]_])(TokenAlreadyUsed|TokenExpired)([^[:alnum:]_]|$)' src tests; then
-    echo 'Removed magic-link denial symbol is still referenced.' >&2
+if grep -R --line-number -E '(^|[^[:alnum:]_])(RememberMeToken|TokenAlreadyUsed|TokenExpired)([^[:alnum:]_]|$)' src tests; then
+    echo 'Removed security-domain symbol is still referenced.' >&2
     exit 1
 fi
 
