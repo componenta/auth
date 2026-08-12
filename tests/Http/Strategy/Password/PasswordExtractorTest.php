@@ -15,17 +15,37 @@ final class PasswordExtractorTest extends TestCase
     #[DataProvider('falseValues')]
     public function testStrictFalseValuesDoNotEnableRememberMe(mixed $value): void
     {
-        $request = $this->request(['email' => ' User@Example.com ', 'password' => 'secret', 'remember' => $value]);
+        $request = $this->request([
+            'email' => 'User@Example.com',
+            'password' => 'secret',
+            'remember' => $value,
+        ]);
         $payload = (new PasswordExtractor())->extract($request);
 
-        self::assertSame('user@example.com', $payload->identity);
+        self::assertSame('User@Example.com', $payload->identity);
         self::assertFalse($payload->remember);
     }
 
     /** @return iterable<array{mixed}> */
     public static function falseValues(): iterable
     {
-        yield [false]; yield [0]; yield ['0']; yield ['false']; yield ['off']; yield ['no']; yield [''];
+        yield [false];
+        yield [0];
+        yield ['0'];
+        yield ['false'];
+        yield ['off'];
+        yield ['no'];
+        yield [''];
+    }
+
+    public function testWhitespacePaddedIdentityIsRejectedInsteadOfSilentlyNormalized(): void
+    {
+        $this->expectException(InvalidPayloadException::class);
+
+        (new PasswordExtractor())->extract($this->request([
+            'email' => ' User@Example.com ',
+            'password' => 'secret',
+        ]));
     }
 
     public function testArrayCredentialIsRejectedBeforeStringOperations(): void
@@ -62,6 +82,7 @@ final class PasswordExtractorTest extends TestCase
     {
         $request = $this->createStub(ServerRequestInterface::class);
         $request->method('getParsedBody')->willReturn($body);
+
         return $request;
     }
 }
