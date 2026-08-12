@@ -251,7 +251,7 @@ Generic authentication events содержат тип payload, но не raw pas
 
 Critical session lifecycle listeners выполняются до best-effort observers. Для DB-backed session transitions critical listeners входят в transaction, а observers видят event только после commit.
 
-`DeniedReasonInterface::$attributes` является trusted audit context. Default response публикует только stable error code. Явно разрешённые scalar details предоставляются через `PublicDeniedReasonInterface::$publicDetails`.
+`DeniedReasonInterface::$attributes` является trusted audit context. Встроенный `DeniedResponseFactory` всегда публикует только stable error code. Если приложению нужны дополнительные client-facing поля ошибки, оно должно предоставить собственную реализацию `DeniedResponseFactoryInterface`; базовый пакет никогда не сериализует audit attributes.
 
 ## Input и cookie validation
 
