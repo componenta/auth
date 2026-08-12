@@ -13,6 +13,7 @@ final readonly class OtpExtractor implements PayloadExtractorInterface
     private const int MAX_DESTINATION_LENGTH = 320;
 
     public function __construct(
+        private OtpConfig $config,
         public string $destinationField = 'destination',
         public string $codeField = 'code',
     ) {
@@ -77,9 +78,8 @@ final readonly class OtpExtractor implements PayloadExtractorInterface
         if (
             !is_string($code)
             || preg_match(sprintf(
-                '/\A[0-9]{%d,%d}\z/D',
-                OtpConfig::MIN_LENGTH,
-                OtpConfig::MAX_LENGTH,
+                '/\A[0-9]{%d}\z/D',
+                $this->config->length,
             ), $code) !== 1
         ) {
             throw InvalidPayloadException::invalidField($this->codeField);
