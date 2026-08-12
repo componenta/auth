@@ -32,7 +32,9 @@ for removed_file in \
     src/RememberMe/RememberMeToken.php \
     src/Factory/ListenerFactory.php \
     src/Http/Strategy/MagicLink/Denied/TokenAlreadyUsed.php \
-    src/Http/Strategy/MagicLink/Denied/TokenExpired.php
+    src/Http/Strategy/MagicLink/Denied/TokenExpired.php \
+    src/Http/Strategy/Otp/Denied/CodeExpired.php \
+    src/Http/Strategy/Otp/Denied/TooManyAttempts.php
 do
     if [[ -e "$removed_file" ]]; then
         echo "Removed source file still exists: $removed_file" >&2
@@ -40,7 +42,7 @@ do
     fi
 done
 
-if grep -R --line-number -E '(^|[^[:alnum:]_])(RememberMeToken|ListenerFactory|TokenAlreadyUsed|TokenExpired)([^[:alnum:]_]|$)' src tests; then
+if grep -R --line-number -E '(^|[^[:alnum:]_])(RememberMeToken|ListenerFactory|TokenAlreadyUsed|TokenExpired|CodeExpired|TooManyAttempts)([^[:alnum:]_]|$)' src tests; then
     echo 'Removed security-domain symbol is still referenced.' >&2
     exit 1
 fi
