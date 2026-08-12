@@ -4,19 +4,15 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Token;
 
+/** Queue message for the built-in identity-as-destination one-time-token flow. */
 final readonly class TokenRequest
 {
     /** @param array<string, string> $context */
     public function __construct(
         public string $identity,
-        public ?string $destination = null,
         public array $context = [],
     ) {
         self::assertAddress($this->identity, 'Token request identity');
-
-        if ($this->destination !== null) {
-            self::assertAddress($this->destination, 'Token request destination');
-        }
 
         foreach ($this->context as $key => $value) {
             if (

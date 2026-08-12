@@ -4,17 +4,13 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Http\Strategy\Otp;
 
+/** Queue message for the built-in identity-as-destination OTP flow. */
 final readonly class OtpRequest
 {
     public function __construct(
         public string $identity,
-        public ?string $destination = null,
     ) {
         self::assertAddress($this->identity, 'OTP identity');
-
-        if ($this->destination !== null) {
-            self::assertAddress($this->destination, 'OTP destination');
-        }
     }
 
     private static function assertAddress(string $value, string $label): void

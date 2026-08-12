@@ -131,7 +131,6 @@ class ConfigProvider extends \Componenta\Config\ConfigProvider
                 ConfigKey::EVENTS => true,
                 ConfigKey::SESSION => [
                     'table' => 'sessions',
-                    'dateFormat' => DatabaseSessionManagerConfig::DATE_FORMAT,
                     'lazyLoad' => true,
                     'idleTimeout' => 1800,
                     'absoluteTimeout' => 28800,
@@ -150,9 +149,7 @@ class ConfigProvider extends \Componenta\Config\ConfigProvider
                 ConfigKey::REMEMBER_ME => [
                     ConfigKey::ENABLED => false,
                     'table' => 'remember_me_tokens',
-                    'dateFormat' => DatabaseRememberMeTokenManagerConfig::DATE_FORMAT,
                     'ttl' => 2592000,
-                    'cookieName' => 'rmid',
                     'columns' => [
                         'id' => 'id', 'subjectId' => 'user_id', 'sessionId' => 'session_id',
                         'token' => 'token', 'expiresAt' => 'expires_at', 'createdAt' => 'created_at',
@@ -180,8 +177,7 @@ class ConfigProvider extends \Componenta\Config\ConfigProvider
                     'statusMap' => [
                         'unauthorized' => 401, 'invalid_credentials' => 401,
                         'invalid_token' => 401, 'user_disabled' => 403,
-                        'invalid_code' => 401, 'code_expired' => 401,
-                        'too_many_attempts' => 429, 'rate_limited' => 429,
+                        'invalid_code' => 401, 'rate_limited' => 429,
                         'invalid_access_token' => 401, 'access_token_expired' => 401,
                         'invalid_refresh_token' => 401, 'refresh_token_expired' => 401,
                         'token_family_compromised' => 401,

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Componenta\Auth\Tests\Token;
 
 use Componenta\Auth\Token\SenderInterface;
-use Componenta\Auth\Token\Token;
 use Componenta\Auth\Token\TokenManagerInterface;
 use Componenta\Auth\Token\TokenRequest;
 use Componenta\Auth\Token\TokenRequestProcessor;
@@ -17,7 +16,7 @@ use PHPUnit\Framework\TestCase;
 
 final class TokenRequestProcessorTest extends TestCase
 {
-    public function testProcessorForwardsDestinationAndContextAfterAtomicReplacement(): void
+    public function testProcessorDeliversOnlyToTheIdentityRequested(): void
     {
         $identity = new TokenProcessorIdentityFixture();
         $provider = $this->createMock(UserProviderInterface::class);
@@ -35,16 +34,15 @@ final class TokenRequestProcessorTest extends TestCase
         $sender->expects(self::once())
             ->method('send')
             ->with(
-                'delivery@example.net',
+                'login@example.com',
                 str_repeat('a', 64),
-                ['redirect' => '/account'],
+                ['template' => 'account'],
             );
 
         (new TokenRequestProcessor($provider, $tokens, $sender))->process(
             new TokenRequest(
                 identity: 'login@example.com',
-                destination: 'delivery@example.net',
-                context: ['redirect' => '/account'],
+                context: ['template' => 'account'],
             ),
         );
     }

@@ -7,7 +7,6 @@ namespace Componenta\Auth\Tests\Http\Strategy\Otp;
 use Componenta\Auth\Context;
 use Componenta\Auth\Http\Strategy\Otp\CodeStoreInterface;
 use Componenta\Auth\Http\Strategy\Otp\CodeVerificationResult;
-use Componenta\Auth\Http\Strategy\Otp\Denied\CodeExpired;
 use Componenta\Auth\Http\Strategy\Otp\Denied\InvalidCode;
 use Componenta\Auth\Http\Strategy\Otp\OtpConfig;
 use Componenta\Auth\Http\Strategy\Otp\OtpPayload;
@@ -35,27 +34,24 @@ final class OtpStrategyTest extends TestCase
         self::assertSame(['mail@example.com', '123456', 1000, 3], $store->arguments);
     }
 
-    public function testInvalidAtomicResultDoesNotLoadUser(): void
+    public function testEveryNegativeStoreStateCollapsesToInvalidCode(): void
     {
-        $store = new CodeStoreFixture(CodeVerificationResult::invalid());
-        $provider = new OtpUserProviderFixture(null);
-        $result = (new OtpStrategy($provider, $store, new OtpConfig(), new OtpClockFixture()))
-            ->attempt(new OtpPayload('mail@example.com', '654321'), new Context());
+        foreach ([
+            CodeVerificationResult::invalid(),
+            CodeVerificationResult::expired(),
+            CodeVerificationResult::tooManyAttempts(),
+        ] as $storeResult) {
+            $provider = new OtpUserProviderFixture(null);
+            $result = (new OtpStrategy(
+                $provider,
+                new CodeStoreFixture($storeResult),
+                new OtpConfig(),
+                new OtpClockFixture(),
+            ))->attempt(new OtpPayload('mail@example.com', '654321'), new Context());
 
-        self::assertInstanceOf(InvalidCode::class, $result->subject);
-        self::assertSame(0, $provider->findByUuidCalls);
-    }
-
-    public function testExpiredResultRemainsDistinguishable(): void
-    {
-        $result = (new OtpStrategy(
-            new OtpUserProviderFixture(null),
-            new CodeStoreFixture(CodeVerificationResult::expired()),
-            new OtpConfig(),
-            new OtpClockFixture(),
-        ))->attempt(new OtpPayload('mail@example.com', '123456'), new Context());
-
-        self::assertInstanceOf(CodeExpired::class, $result->subject);
+            self::assertInstanceOf(InvalidCode::class, $result->subject);
+            self::assertSame(0, $provider->findByUuidCalls);
+        }
     }
 
     public function testProviderCannotSubstituteDifferentIdentity(): void

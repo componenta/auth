@@ -7,9 +7,7 @@ namespace Componenta\Auth\Http\Strategy\Otp;
 use Componenta\Auth\AuthenticationResult;
 use Componenta\Auth\AuthenticationStrategyInterface;
 use Componenta\Auth\ContextInterface;
-use Componenta\Auth\Http\Strategy\Otp\Denied\CodeExpired;
 use Componenta\Auth\Http\Strategy\Otp\Denied\InvalidCode;
-use Componenta\Auth\Http\Strategy\Otp\Denied\TooManyAttempts;
 use Componenta\Auth\Token\UserProviderInterface;
 use Componenta\Clock\Clock;
 use Psr\Clock\ClockInterface;
@@ -40,15 +38,14 @@ final readonly class OtpStrategy implements AuthenticationStrategyInterface
             maxAttempts: $this->config->maxAttempts,
         );
 
-        if ($result->status === CodeVerificationStatus::TooManyAttempts) {
-            return new AuthenticationResult(new TooManyAttempts());
-        }
-
-        if ($result->status === CodeVerificationStatus::Expired) {
-            return new AuthenticationResult(new CodeExpired());
-        }
-
-        if ($result->status !== CodeVerificationStatus::Verified || $result->subjectId === null) {
+        // Public verification deliberately collapses every negative store state.
+        // Exposing Expired/TooManyAttempts would let an attacker distinguish a
+        // destination for which a worker created a challenge from one for which
+        // no account exists. Operational detail remains inside the store/rate limiter.
+        if (
+            $result->status !== CodeVerificationStatus::Verified
+            || $result->subjectId === null
+        ) {
             return new AuthenticationResult(new InvalidCode());
         }
 

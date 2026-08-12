@@ -22,7 +22,7 @@ final readonly class TokenRequestProcessor
 
         $plainToken = $this->tokenManager->replaceForSubject($identity->uuid);
         $this->sender->send(
-            $request->destination ?? $request->identity,
+            $request->identity,
             $plainToken,
             $request->context,
         );
