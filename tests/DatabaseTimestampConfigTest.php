@@ -28,6 +28,7 @@ final class DatabaseTimestampConfigTest extends TestCase
         yield 'one-time token' => [
             static fn(): object => new TokenConfig(
                 table: 'tokens',
+                purpose: 'test',
                 dateFormat: 'd/m/Y H:i:s',
             ),
         ];

@@ -25,13 +25,16 @@ use Psr\Container\ContainerInterface;
 
 final class AuthenticatorFactoryTest extends TestCase
 {
-    public function testPreservesConfiguredStrategyOrder(): void
+    public function testPreservesConfiguredStrategyOrderForExplicitSoftFailure(): void
     {
         $recorder = new StrategyCallRecorder();
         $identity = new FactoryIdentityFixture();
         $container = new FactoryContainerFixture([
             ConfigKey::CONFIG => new Config(['auth' => ['strategies' => ['first', 'second'], 'events' => false]]),
-            'first' => new OrderedStrategyFixture('first', $recorder, new AuthenticationResult(new DeniedReason('denied'))),
+            'first' => new OrderedStrategyFixture('first', $recorder, new AuthenticationResult(
+                subject: new DeniedReason('denied'),
+                continueOnFailure: true,
+            )),
             'second' => new OrderedStrategyFixture('second', $recorder, new AuthenticationResult($identity)),
         ]);
 

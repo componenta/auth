@@ -32,8 +32,9 @@ final class LogoutHandlerTest extends TestCase
             $now,
             $now,
         );
+        $storage = $this->createMock(PayloadStorageInterface::class);
         $state = new CredentialTransportState();
-        $state->queue(new \stdClass());
+        $state->queue($storage, new \stdClass());
         $request = $this->createStub(ServerRequestInterface::class);
         $request->method('getAttribute')->willReturnCallback(
             static fn(string $name): mixed => match ($name) {
@@ -44,7 +45,6 @@ final class LogoutHandlerTest extends TestCase
         );
         $manager = $this->createMock(SessionManagerInterface::class);
         $manager->expects(self::once())->method('terminate')->with('session');
-        $storage = $this->createMock(PayloadStorageInterface::class);
         $storage->expects(self::never())->method('remove');
         $response = $this->createStub(ResponseInterface::class);
         $responses = $this->createMock(ResponseFactoryInterface::class);

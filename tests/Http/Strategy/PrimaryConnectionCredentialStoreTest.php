@@ -84,7 +84,7 @@ final class PrimaryConnectionCredentialStoreTest extends TestCase
         $manager = new TokenManager(
             $database,
             new FrozenClock(1000, 'UTC'),
-            new TokenConfig('one_time_tokens'),
+            new TokenConfig('one_time_tokens', 'primary_read_test'),
         );
         $plainToken = $manager->replaceForSubject(self::subjectId());
 
