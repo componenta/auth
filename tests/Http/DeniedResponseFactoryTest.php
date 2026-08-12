@@ -142,6 +142,10 @@ final class DeniedResponseFactoryTest extends TestCase
         }
 
         self::assertSame(
+            '{"code":"rate_limited"}',
+            json_encode(new RateLimited(30), JSON_THROW_ON_ERROR),
+        );
+        self::assertSame(
             'audit-secret',
             $reason->attributes['diagnostic'] ?? null,
         );
