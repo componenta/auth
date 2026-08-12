@@ -14,7 +14,7 @@ final class StoredCodeTest extends TestCase
     {
         $code = new StoredCode(
             subjectId: Uuid::fromString(
-                '018f6d5d-3f7a-7a9b-8c2f-123456789abc',
+                '018f6d5d-3f7a-7a9b-8c2f-abcdefabcdef',
             ),
             code: '123456',
             destination: 'mail@example.com',
