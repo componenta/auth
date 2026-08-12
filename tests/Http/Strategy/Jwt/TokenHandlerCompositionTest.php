@@ -13,6 +13,7 @@ use Componenta\Auth\Http\Strategy\Jwt\Otp\TokenHandler as OtpTokenHandler;
 use Componenta\Auth\Http\Strategy\Jwt\Password\TokenHandler as PasswordTokenHandler;
 use Componenta\Auth\Http\Strategy\Jwt\TokenPairResponse;
 use Componenta\Auth\Http\Strategy\MagicLink\VerifyExtractor;
+use Componenta\Auth\Http\Strategy\Otp\OtpConfig;
 use Componenta\Auth\Http\Strategy\Otp\OtpExtractor;
 use Componenta\Auth\Http\Strategy\Password\PasswordExtractor;
 use Componenta\Auth\Tests\Support\ServerRequestFixture;
@@ -48,7 +49,7 @@ final class TokenHandlerCompositionTest extends TestCase
     {
         $response = $this->createStub(ResponseInterface::class);
         $handler = new OtpTokenHandler(
-            new OtpExtractor(),
+            new OtpExtractor(new OtpConfig()),
             $this->denyingAuthenticator(),
             self::uninitializedTokenPair(),
             $this->deniedFactory($response),
