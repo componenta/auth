@@ -34,13 +34,13 @@ final readonly class SessionStrategy implements AuthenticationStrategyInterface
         $sessionId = $payload->sessionId;
 
         if ($sessionId === null) {
-            return new AuthenticationResult(new InvalidCredentials());
+            return $this->denied($payload);
         }
 
         $session = $this->sessionManager->find($sessionId);
 
         if ($session === null || $session->id !== $sessionId) {
-            return new AuthenticationResult(new InvalidCredentials());
+            return $this->denied($payload);
         }
 
         $identity = $this->provider->findByUuid($session->subjectId);
@@ -49,7 +49,7 @@ final readonly class SessionStrategy implements AuthenticationStrategyInterface
             $identity === null
             || !$session->subjectId->equals($identity->uuid)
         ) {
-            return new AuthenticationResult(new InvalidCredentials());
+            return $this->denied($payload);
         }
 
         $transportPayload = null;
@@ -58,7 +58,7 @@ final readonly class SessionStrategy implements AuthenticationStrategyInterface
             try {
                 $regenerated = $this->sessionManager->regenerate($sessionId);
             } catch (ConcurrentRegenerationException|\InvalidArgumentException) {
-                return new AuthenticationResult(new InvalidCredentials());
+                return $this->denied($payload);
             }
 
             if (!$regenerated->subjectId->equals($identity->uuid)) {
@@ -75,6 +75,14 @@ final readonly class SessionStrategy implements AuthenticationStrategyInterface
             subject: $identity,
             transportPayload: $transportPayload,
             session: $session,
+        );
+    }
+
+    private function denied(SessionPayload $payload): AuthenticationResult
+    {
+        return new AuthenticationResult(
+            subject: new InvalidCredentials(),
+            continueOnFailure: $payload->rememberMeToken !== null,
         );
     }
 }

@@ -8,12 +8,7 @@ use Componenta\Auth\Exception\AuthenticationExceptionInterface;
 use Componenta\Auth\Exception\NoStrategyFoundException;
 use Componenta\Identity\IdentityInterface;
 
-/**
- * Default authenticator implementation.
- *
- * Iterates through registered strategies. On success, returns immediately.
- * On failure, tries the next supporting strategy (chain on failure).
- */
+/** Default authenticator with explicit soft-failure continuation. */
 final readonly class Authenticator implements AuthenticatorInterface
 {
     /** @var AuthenticationStrategyInterface[] */
@@ -33,14 +28,20 @@ final readonly class Authenticator implements AuthenticatorInterface
         $lastResult = null;
 
         foreach ($this->strategies as $strategy) {
-            if ($strategy->supports($payload, $context)) {
-                $result = $strategy->attempt($payload, $context);
+            if (!$strategy->supports($payload, $context)) {
+                continue;
+            }
 
-                if ($result->subject instanceof IdentityInterface) {
-                    return $result;
-                }
+            $result = $strategy->attempt($payload, $context);
 
-                $lastResult = $result;
+            if ($result->subject instanceof IdentityInterface) {
+                return $result;
+            }
+
+            $lastResult = $result;
+
+            if (!$result->continueOnFailure) {
+                return $result;
             }
         }
 

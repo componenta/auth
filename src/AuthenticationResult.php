@@ -13,18 +13,28 @@ final readonly class AuthenticationResult implements \JsonSerializable
         public IdentityInterface|DeniedReasonInterface $subject,
         public ?object $transportPayload = null,
         public ?SessionInterface $session = null,
+        public bool $continueOnFailure = false,
     ) {
-        if ($this->session === null) {
+        if ($this->subject instanceof DeniedReasonInterface) {
+            if ($this->transportPayload !== null || $this->session !== null) {
+                throw new \InvalidArgumentException(
+                    'A denied authentication result cannot contain credential mutations or a session.',
+                );
+            }
+
             return;
         }
 
-        if (!$this->subject instanceof IdentityInterface) {
+        if ($this->continueOnFailure) {
             throw new \InvalidArgumentException(
-                'A denied authentication result cannot contain a session.',
+                'A successful authentication result cannot continue the strategy chain.',
             );
         }
 
-        if (!$this->session->subjectId->equals($this->subject->uuid)) {
+        if (
+            $this->session !== null
+            && !$this->session->subjectId->equals($this->subject->uuid)
+        ) {
             throw new \InvalidArgumentException(
                 'The authenticated session must belong to the returned identity.',
             );
@@ -46,6 +56,7 @@ final readonly class AuthenticationResult implements \JsonSerializable
                 ? null
                 : $this->transportPayload::class,
             'hasSession' => $this->session !== null,
+            'continueOnFailure' => $this->continueOnFailure,
         ];
     }
 

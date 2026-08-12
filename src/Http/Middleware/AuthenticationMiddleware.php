@@ -43,6 +43,11 @@ final readonly class AuthenticationMiddleware implements MiddlewareInterface
         $transportState = $ownsTransportState
             ? new CredentialTransportState()
             : $existingState;
+
+        if ($this->storage !== null) {
+            $transportState->register($this->storage);
+        }
+
         $request = $request->withAttribute(
             CredentialTransportState::class,
             $transportState,
@@ -54,13 +59,19 @@ final readonly class AuthenticationMiddleware implements MiddlewareInterface
             CredentialTransportState::class => $transportState,
         ]));
 
-        if ($result->transportPayload !== null) {
-            $transportState->queue($result->transportPayload);
+        if (
+            $result->subject instanceof IdentityInterface
+            && $result->transportPayload !== null
+        ) {
+            if ($this->storage === null) {
+                throw new \LogicException(
+                    'Authentication credential mutation requires a PayloadStorageInterface before downstream execution.',
+                );
+            }
+
+            $transportState->queue($this->storage, $result->transportPayload);
         }
 
-        // A new authentication result replaces every request-local result from
-        // an earlier authentication layer. Keeping both identity and denial (or
-        // an unrelated old session) can accidentally authorize the request.
         $request = $request
             ->withoutAttribute(IdentityInterface::class)
             ->withoutAttribute(DeniedReasonInterface::class)
@@ -91,12 +102,6 @@ final readonly class AuthenticationMiddleware implements MiddlewareInterface
             return $response;
         }
 
-        if ($this->storage === null) {
-            throw new \LogicException(
-                'Authentication transport mutation is pending, but no PayloadStorageInterface is configured.',
-            );
-        }
-
-        return $transportState->apply($this->storage, $request, $response);
+        return $transportState->apply($request, $response);
     }
 }

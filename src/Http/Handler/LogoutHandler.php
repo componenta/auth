@@ -42,7 +42,7 @@ readonly class LogoutHandler implements RequestHandlerInterface
         $transportState = $request->getAttribute(CredentialTransportState::class);
 
         if ($transportState instanceof CredentialTransportState) {
-            $transportState->clear();
+            $transportState->clear($this->storage);
         } else {
             $response = $this->storage->remove($request, $response);
         }

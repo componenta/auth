@@ -10,13 +10,16 @@ use Psr\Http\Message\ServerRequestInterface;
 /** Request-scoped accumulator with terminal clear-over-store precedence. */
 final class CredentialTransportState
 {
-    /** @var list<object> */
-    private array $queuedPayloads = [];
+    /** @var array<int, PayloadStorageInterface> */
+    private array $storages = [];
+
+    /** @var list<array{storage: PayloadStorageInterface, payload: object}> */
+    private array $queued = [];
 
     private bool $clear = false;
 
     public bool $empty {
-        get => !$this->clear && $this->queuedPayloads === [];
+        get => !$this->clear && $this->queued === [];
     }
 
     public bool $cleared {
@@ -25,33 +28,51 @@ final class CredentialTransportState
 
     /** @var list<object> */
     public array $payloads {
-        get => $this->queuedPayloads;
+        get => array_map(
+            static fn(array $entry): object => $entry['payload'],
+            $this->queued,
+        );
     }
 
-    public function queue(object $payload): void
+    public function register(PayloadStorageInterface $storage): void
     {
+        $this->storages[spl_object_id($storage)] = $storage;
+    }
+
+    public function queue(PayloadStorageInterface $storage, object $payload): void
+    {
+        $this->register($storage);
+
         if (!$this->clear) {
-            $this->queuedPayloads[] = $payload;
+            $this->queued[] = ['storage' => $storage, 'payload' => $payload];
         }
     }
 
-    public function clear(): void
+    public function clear(PayloadStorageInterface $storage): void
     {
+        $this->register($storage);
         $this->clear = true;
-        $this->queuedPayloads = [];
+        $this->queued = [];
     }
 
     public function apply(
-        PayloadStorageInterface $storage,
         ServerRequestInterface $request,
         ResponseInterface $response,
     ): ResponseInterface {
         if ($this->clear) {
-            return $storage->remove($request, $response);
+            foreach ($this->storages as $storage) {
+                $response = $storage->remove($request, $response);
+            }
+
+            return $response;
         }
 
-        foreach ($this->queuedPayloads as $payload) {
-            $response = $storage->store($request, $response, $payload);
+        foreach ($this->queued as $entry) {
+            $response = $entry['storage']->store(
+                $request,
+                $response,
+                $entry['payload'],
+            );
         }
 
         return $response;
