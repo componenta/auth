@@ -11,9 +11,9 @@ interface DeniedReasonInterface
     public string $code { get; }
 
     /**
-     * Trusted audit context. The default HTTP responder never serializes it.
-     * Implement PublicDeniedReasonInterface to opt specific values into a
-     * public response.
+     * Trusted audit context. The default HTTP responder never serializes it;
+     * custom client-facing denial payloads belong in a custom
+     * DeniedResponseFactoryInterface implementation.
      *
      * @var array<string, mixed>
      */
