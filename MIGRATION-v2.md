@@ -17,6 +17,12 @@ Use `IdentityInterface::$uuid` as the only subject identifier. Obtain the curren
 
 Do not store `currentSessionId` or request-local authentication state on reusable identity objects.
 
+## Identity normalization
+
+`PasswordExtractor` no longer trims or lowercases identity input and no longer exposes `normalizeIdentity`. It now follows the same transport contract as recovery, magic-link and OTP request handlers: accept one bounded, control-character-free identity string and reject leading/trailing whitespace.
+
+Case folding, Unicode/email canonicalization and aliases belong to the application/provider because the auth package cannot know whether an identity is an email address, a case-sensitive username or another identifier. Providers that previously relied on `PasswordExtractor` normalization must normalize consistently inside `findByIdentity()` (or before invoking the auth component) for every authentication and recovery flow.
+
 ## AuthenticationResult and strategy chaining
 
 A denial is terminal unless the strategy explicitly marks it as a soft failure:
@@ -172,7 +178,7 @@ ListenerFactory
 
 ## Production rollout
 
-1. Upgrade identity ownership to canonical UUID contracts.
+1. Upgrade identity ownership to canonical UUID contracts and move identity normalization into providers/application policy.
 2. Apply remember-me `previous_session_id` migration and make `session_id` non-null.
 3. Configure OTP HMAC secret/profile and update extractors to receive `OtpConfig`.
 4. Assign a distinct one-time-token `purpose` to every flow.
