@@ -248,15 +248,35 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
 
         $this->database->transaction(
             function (DatabaseInterface $database) use (
-                $tokenHash,
                 $familyId,
                 $revokedAt,
             ): void {
-                $this->claimFamily($database, $familyId);
+                $affected = $database
+                    ->update($this->config->familyTable)
+                    ->where($this->config->familyIdColumn, $familyId)
+                    ->where($this->config->familyRevokedAtColumn, null)
+                    ->where($this->config->compromisedAtColumn, null)
+                    ->values([
+                        $this->config->familyRevokedAtColumn => $revokedAt,
+                        $this->config->lockNonceColumn => self::lockNonce(),
+                    ])
+                    ->run();
+
+                if ($affected !== 1) {
+                    $family = $this->findFamily($database, $familyId);
+
+                    if ($family === null) {
+                        throw new \UnexpectedValueException(
+                            'Refresh token references a missing family.',
+                        );
+                    }
+
+                    return;
+                }
 
                 $database
                     ->update($this->config->tokenTable)
-                    ->where($this->config->tokenHashColumn, $tokenHash)
+                    ->where($this->config->familyIdColumn, $familyId)
                     ->where($this->config->revokedAtColumn, null)
                     ->values([
                         $this->config->revokedAtColumn => $revokedAt,
@@ -353,25 +373,6 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
         throw new \UnexpectedValueException(
             'Refresh token family could not be serialized.',
         );
-    }
-
-    private function claimFamily(
-        DatabaseInterface $database,
-        string $familyId,
-    ): void {
-        $affected = $database
-            ->update($this->config->familyTable)
-            ->where($this->config->familyIdColumn, $familyId)
-            ->values([
-                $this->config->lockNonceColumn => self::lockNonce(),
-            ])
-            ->run();
-
-        if ($affected !== 1) {
-            throw new \UnexpectedValueException(
-                'Refresh token references a missing family.',
-            );
-        }
     }
 
     private function compromiseFamily(
