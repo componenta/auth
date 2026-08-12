@@ -41,7 +41,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: mbstring, pdo_sqlite, pdo_mysql
+          extensions: mbstring, pdo_sqlite, pdo_mysql, pcntl
           coverage: none
           tools: composer:v2
 
@@ -58,3 +58,6 @@ jobs:
 
       - name: Verify package
         run: bash tools/verify.sh
+
+      - name: Verify MySQL concurrency invariants
+        run: php tools/verify-mysql-concurrency.php
