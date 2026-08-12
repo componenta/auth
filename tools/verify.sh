@@ -9,11 +9,20 @@ for removed in \
     AuthSubject \
     AuthSubjectInterface \
     RememberMeAwareInterface \
+    RememberMeToken \
     SessionAwareInterface \
     PublicDeniedReasonInterface \
     PasswordUpdaterInterface \
     TokenRequester \
-    OtpRequester
+    OtpRequester \
+    AuthenticationAttemptedListenerInterface \
+    AuthenticationSucceededListenerInterface \
+    AuthenticationDeniedListenerInterface \
+    LoggedOutListenerInterface \
+    SessionRegeneratedListenerInterface \
+    SessionsTerminatedListenerInterface \
+    AllSessionsTerminatedListenerInterface \
+    ListenerFactory
 do
     if grep -R --line-number --fixed-strings "$removed" src tests; then
         echo "Removed symbol still referenced: $removed" >&2
@@ -43,6 +52,16 @@ fi
 
 if grep -R --line-number -E 'getAuthSubjectId\(|isEmpty\(|shouldClear\(|payloads\(|publicDetails|isRevoked\(' src tests; then
     echo 'Legacy getter/capability state API is still referenced.' >&2
+    exit 1
+fi
+
+if grep -R --line-number --fixed-strings 'new Clock()' src/Event; then
+    echo 'Event DTOs must receive timestamps from owning clock services.' >&2
+    exit 1
+fi
+
+if grep -R --line-number -E 'RememberMeTokenManagerInterface.*consume|->consume\(' src/Http/Strategy/RememberMe src/RememberMe; then
+    echo 'Delete-on-consume remember-me rotation must not return.' >&2
     exit 1
 fi
 

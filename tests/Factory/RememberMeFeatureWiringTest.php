@@ -21,6 +21,7 @@ use Componenta\Auth\Session\SessionAttributeExtractorInterface;
 use Componenta\Auth\Session\SessionManagerInterface;
 use Componenta\Config\Config;
 use Componenta\Identity\Uuid;
+use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
@@ -53,7 +54,11 @@ final class RememberMeFeatureWiringTest extends TestCase
         $provider = (new PriorityListenerProviderFactory())($container);
 
         self::assertSame([], iterator_to_array($provider->provideFor(
-            new SessionRegenerated('old-session', 'new-session'),
+            new SessionRegenerated(
+                'old-session',
+                'new-session',
+                new DateTimeImmutable('@1'),
+            ),
         )));
         self::assertNotContains(
             RememberMeTerminationListener::class,
@@ -80,21 +85,25 @@ final class RememberMeFeatureWiringTest extends TestCase
             RememberMeTerminationListener::class => $termination,
             RememberMeRegenerationListener::class => $regeneration,
         ]);
-
+        $timestamp = new DateTimeImmutable('@1');
         $provider = (new PriorityListenerProviderFactory())($container);
 
         self::assertSame(
             [$regeneration],
             iterator_to_array($provider->provideFor(
-                new SessionRegenerated('old-session', 'new-session'),
+                new SessionRegenerated('old-session', 'new-session', $timestamp),
             )),
         );
         self::assertSame(
             [$termination],
             iterator_to_array($provider->provideFor(
-                new AllSessionsTerminated(Uuid::fromString(
-                    '018f6d5d-3f7a-7a9b-8c2f-123456789abc',
-                )),
+                new AllSessionsTerminated(
+                    Uuid::fromString(
+                        '018f6d5d-3f7a-7a9b-8c2f-123456789abc',
+                    ),
+                    null,
+                    $timestamp,
+                ),
             )),
         );
     }
