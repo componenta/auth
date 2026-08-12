@@ -87,6 +87,8 @@ All negative authentication results are public `invalid_code`; store-level `Expi
 
 `OtpRequest` no longer accepts a separate destination. The built-in flow uses the same identity for provider lookup, challenge key and delivery destination. Custom delivery routing belongs in an application adapter that verifies ownership.
 
+`DatabaseCodeStore` now treats successful consume and failed-attempt accounting as one challenge-version transition. Custom `CodeStoreInterface` implementations must ensure a correct code racing the final failed attempt cannot authenticate after `maxAttempts` has already been reached.
+
 ## One-time token purpose
 
 `TokenConfig` now requires `purpose`:
@@ -97,7 +99,16 @@ new TokenConfig('magic_link_tokens', 'magic_link');
 
 The stored token hash is domain-separated by purpose. Managers for different flows therefore cannot consume each other's bearer tokens, even when a table is accidentally shared.
 
-`TokenRequest` also no longer accepts a separate destination.
+`TokenRequest` no longer accepts a separate destination and now requires an explicit purpose:
+
+```php
+new TokenRequest(
+    identity: $identity,
+    purpose: TokenRequest::PURPOSE_MAGIC_LINK,
+);
+```
+
+Magic-link requests enqueue `magic_link`; forgot-password requests enqueue `password_reset`. Queue adapters serving multiple one-time-token flows must preserve and route on `TokenRequest::$purpose`. Construct each `TokenRequestProcessor` with its expected purpose; it rejects misrouted work before provider lookup, token generation or delivery.
 
 ## Events
 
@@ -140,7 +151,7 @@ Remove obsolete `auth.session.dateFormat` and `auth.rememberMe.dateFormat` appli
 
 The built-in `DatabaseRefreshTokenStore` remains the default secure implementation of atomic rotation/replay handling.
 
-Use `DatabaseRefreshTokenHousekeeper::cleanup($now, $limit)` for bounded retention cleanup. It deletes only families whose complete token history has expired; do not delete consumed members of still-relevant families because they are replay-detection history.
+Use `DatabaseRefreshTokenHousekeeper::cleanup($now, $limit)` for bounded retention cleanup. Final cleanup now serializes through the same family row as rotation/revocation and rechecks expiry while that serialization point is held, so it cannot delete a concurrently created active successor. Do not delete consumed members of still-relevant families because they are replay-detection history.
 
 Custom `RefreshTokenStoreInterface` implementations must provide equivalent family serialization, successor rollback and replay-compromise semantics.
 
@@ -181,7 +192,7 @@ ListenerFactory
 1. Upgrade identity ownership to canonical UUID contracts and move identity normalization into providers/application policy.
 2. Apply remember-me `previous_session_id` migration and make `session_id` non-null.
 3. Configure OTP HMAC secret/profile and update extractors to receive `OtpConfig`.
-4. Assign a distinct one-time-token `purpose` to every flow.
+4. Assign a distinct one-time-token `purpose` to every flow and preserve `TokenRequest::$purpose` through queue routing/workers.
 5. Deploy primary-pinned credential stores and lifecycle listeners together.
 6. Update custom event listeners to `$events` property subscriptions and pass timestamps explicitly when creating events.
 7. Keep strict handlers behind `InvalidPayloadMiddleware` or an equivalent 400 mapper.

@@ -71,7 +71,7 @@ remember_me_tokens
 
 `OtpConfig` задаёт реальный protocol profile: 6-18 цифр, TTL не более 600 секунд и ограничение attempts. `OtpExtractor` принимает **ровно configured length** до обращения к store.
 
-`DatabaseCodeStore` хранит HMAC-SHA-256 verifier с отдельным ключом >=32 bytes и использует `challenge_id` как optimistic version. Verify/attempt accounting/consume являются single-winner операциями.
+`DatabaseCodeStore` хранит HMAC-SHA-256 verifier с отдельным ключом >=32 bytes и использует `challenge_id` как optimistic version. Verify/attempt accounting/consume являются одной challenge-version transition: правильный код, конкурирующий с последней неудачной попыткой, не может аутентифицироваться после достижения `maxAttempts`.
 
 Все отрицательные публичные **responses** OTP verification схлопываются в `invalid_code`. `expired`/`too_many_attempts` остаются внутренними состояниями store и не сериализуются наружу, иначе endpoint становился бы прямым oracle существования account/challenge.
 
@@ -98,7 +98,7 @@ SHA-256(purpose || NUL || bearer)
 
 Поэтому token одного flow не принимается другим manager даже при ошибочно общей таблице.
 
-`TokenRequest` больше не содержит отдельный untrusted destination: built-in processor доставляет credential тому же identity, по которому выполнялся lookup. `TokenRequestQueueInterface` — durable queue boundary; production adapter не должен выполнять provider lookup/delivery inline, если важна uniform account-existence request latency.
+`TokenRequest` содержит lookup/delivery identity, обязательный machine-readable `purpose` и optional non-sensitive context; отдельного untrusted destination нет. `TokenRequestQueueInterface` — durable multi-purpose queue boundary: adapter обязан сохранить и маршрутизировать `purpose`, а purpose-bound `TokenRequestProcessor` отклоняет ошибочно маршрутизированное сообщение до provider lookup, token generation и delivery. Production adapter не должен выполнять provider lookup/delivery inline, если важна uniform account-existence request latency.
 
 Magic-link verification responses получают `Referrer-Policy: no-referrer` и на success, и на denial path, поэтому bearer из URL не передаётся дальше как referrer. При этом query-string credential всё ещё может попасть в browser history и upstream reverse-proxy/access logs **до** применения response headers; deployment должен редактировать query credentials в логах и не подключать third-party resources на verify endpoint. Сам bearer остаётся one-time независимо от transport.
 
@@ -108,7 +108,7 @@ JWT profile явно задаёт issuer/audience/type; проверяются s
 
 `DatabaseRefreshTokenStore` хранит только SHA-256 bearer representations, сериализует transitions через family-row и выполняет consume presented token + insert successor одной transaction. Ordinary revoke теперь terminal для всей family и сериализуется с rotation; он остаётся отдельным от replay compromise. Replay помечает family compromised и отзывает всех active descendants.
 
-`DatabaseRefreshTokenHousekeeper::cleanup($now, $limit)` bounded-удаляет только families, у которых истекла вся token history; кандидаты повторно проверяются на primary, поэтому полезная replay history не удаляется.
+`DatabaseRefreshTokenHousekeeper::cleanup($now, $limit)` bounded-удаляет только полностью истёкшие families. Финальный delete сериализуется через ту же family row, что rotation/revocation, и повторно проверяет expiry на primary под этой сериализацией, поэтому cleanup не может удалить concurrently созданный active successor.
 
 Credential responses получают `Cache-Control: no-store` и `Pragma: no-cache`.
 
@@ -152,7 +152,9 @@ Release gate использует SQLite и реальный MySQL 8.4/InnoDB. �
 
 - два concurrent refresh rotate: один `rotated`, второй `reused`, после compromise active descendants = 0;
 - concurrent refresh rotate и ordinary revoke: family revoked, `compromised_at` остаётся `NULL`, active successors = 0;
+- concurrent refresh rotate и housekeeping: либо новый successor сохраняется, либо cleanup выигрывает сериализацию и поздний rotate fail-closed;
 - два concurrent verify одного OTP: только один `verified`;
+- correct OTP против final wrong attempt: после достижения `maxAttempts` успешная authentication невозможна;
 - concurrent remember rotate и logout: descendant remember grant отсутствует;
 - concurrent session regenerate и logout: active replacement session отсутствует.
 

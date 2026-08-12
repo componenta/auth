@@ -127,7 +127,7 @@ Plain remember-me bearer values are never persisted.
 
 The extractor requires **exactly** the configured code length before the request reaches attempt accounting.
 
-`DatabaseCodeStore` persists an HMAC-SHA-256 verifier instead of the numeric OTP and uses a random `challenge_id` as an optimistic version. Verification, failed-attempt accounting and consume are single-winner operations over that challenge version.
+`DatabaseCodeStore` persists an HMAC-SHA-256 verifier instead of the numeric OTP and uses a random `challenge_id` as an optimistic version. Verification, failed-attempt accounting and consume are one challenge-version transition: a correct code racing the final failed attempt cannot authenticate after `maxAttempts` has already been reached.
 
 Every negative public OTP verification **response** is deliberately collapsed to `invalid_code`. Internal store states such as expiry or attempt exhaustion are not serialized through the authentication response because doing so would create a direct account/challenge-existence oracle.
 
@@ -154,7 +154,7 @@ SHA-256(purpose || NUL || bearer)
 
 Therefore a magic-link token cannot be consumed by a password-reset manager even if an application accidentally points both managers at the same table.
 
-`TokenRequest` also contains only the lookup/delivery identity plus non-sensitive context; the built-in processor does not accept a separate untrusted destination. `TokenRequestQueueInterface` is a durable queue boundary; production adapters should not perform provider lookup or delivery inline when uniform account-existence request timing matters.
+`TokenRequest` contains the lookup/delivery identity, an explicit machine-readable `purpose`, and optional non-sensitive context; it does not accept a separate untrusted destination. `TokenRequestQueueInterface` is a durable multi-purpose queue boundary: adapters must preserve and route on `purpose`, while a purpose-bound `TokenRequestProcessor` rejects misrouted work before provider lookup, token generation or delivery. Production adapters should not perform provider lookup or delivery inline when uniform account-existence request timing matters.
 
 Magic-link verification responses set `Referrer-Policy: no-referrer`, including success and denial paths, so a URL-borne bearer is not propagated as a downstream referrer. Query-string credentials can still reach browser history and upstream reverse-proxy/access logs **before** application response headers are applied; deployments should redact query credentials from logs and avoid third-party resources on verification endpoints. The bearer remains one-time regardless of transport.
 
@@ -173,7 +173,7 @@ Refresh grants use opaque 32-64 byte bearer IDs. The default `DatabaseRefreshTok
 - on replay marks the family compromised and revokes all active descendants;
 - reads security state from the primary/write connection.
 
-`DatabaseRefreshTokenHousekeeper::cleanup($now, $limit)` provides bounded housekeeping. It deletes only families for which the complete token history has expired, rechecks the candidate families on the primary and preserves any history that can still participate in replay detection.
+`DatabaseRefreshTokenHousekeeper::cleanup($now, $limit)` provides bounded housekeeping. Final deletion serializes through the same family row used by rotation/revocation and rechecks expiry on the primary while that serialization point is held, so cleanup cannot delete a concurrently created active successor.
 
 Token responses use `Cache-Control: no-store` and `Pragma: no-cache`.
 
@@ -221,7 +221,9 @@ The repository release gate runs SQLite tests and real MySQL 8.4/InnoDB integrat
 
 - concurrent refresh rotation results in one rotation plus replay compromise and leaves zero active descendants;
 - concurrent refresh rotation versus ordinary revocation leaves the family revoked, uncompromised, and with zero active successors;
+- concurrent refresh rotation versus housekeeping either preserves the newly rotated family or makes the later rotation fail closed after cleanup wins;
 - concurrent verification of one OTP is single-winner;
+- a correct OTP racing the final wrong attempt cannot authenticate after the challenge has reached `maxAttempts`;
 - concurrent remember-me rotation and logout cannot leave a descendant grant;
 - concurrent session regeneration and logout cannot leave an active replacement session.
 
