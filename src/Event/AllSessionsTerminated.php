@@ -4,22 +4,17 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Event;
 
-use Componenta\Clock\Clock;
 use Componenta\Identity\UuidInterface;
 use DateTimeImmutable;
 
 final readonly class AllSessionsTerminated implements EventInterface, \JsonSerializable
 {
-    public DateTimeImmutable $timestamp;
-
     public function __construct(
         public UuidInterface $subjectId,
         #[\SensitiveParameter]
-        public ?string $exceptSessionId = null,
-        ?DateTimeImmutable $timestamp = null,
-    ) {
-        $this->timestamp = $timestamp ?? new Clock()->now();
-    }
+        public ?string $exceptSessionId,
+        public DateTimeImmutable $timestamp,
+    ) {}
 
     /** @return array{subjectId: string, exceptSessionId: string|null, timestamp: string} */
     public function __debugInfo(): array

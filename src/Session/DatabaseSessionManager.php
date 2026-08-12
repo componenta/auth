@@ -197,7 +197,7 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
             return;
         }
 
-        $event = new SessionsTerminated($ids);
+        $event = new SessionsTerminated($ids, $this->dateTimeFactory->now());
 
         $this->database->transaction(function () use ($ids, $event): void {
             foreach (array_chunk($ids, self::DELETE_CHUNK_SIZE) as $chunk) {
@@ -220,7 +220,11 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
             self::assertSessionId($exceptSessionId);
         }
 
-        $event = new AllSessionsTerminated($subjectId, $exceptSessionId);
+        $event = new AllSessionsTerminated(
+            $subjectId,
+            $exceptSessionId,
+            $this->dateTimeFactory->now(),
+        );
 
         $this->database->transaction(function () use ($subjectId, $exceptSessionId, $event): void {
             $query = $this->database
@@ -355,7 +359,7 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
             lastActiveAt: $now,
             attributes: $old->attributes,
         );
-        $event = new SessionRegenerated($sessionId, $new->id);
+        $event = new SessionRegenerated($sessionId, $new->id, $now);
         $formattedNow = $now->format($this->config->dateFormat);
 
         $this->database->transaction(function () use (
