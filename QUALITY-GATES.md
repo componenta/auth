@@ -40,7 +40,7 @@ The package test suite must prove that:
 7. OTP verification, attempt accounting and consumption use one versioned challenge and a stale verifier cannot mutate its replacement;
 8. OTP configuration cannot weaken the built-in OOB profile below six decimal digits or extend a challenge beyond ten minutes;
 9. successful password reset represents password change plus invalidation of prior long-lived credentials, while password-policy rejection is explicit;
-10. public denial responses and direct debug/JSON serialization do not expose trusted audit context or bearer credentials;
+10. the built-in denial responder emits only a validated error code and never serializes trusted audit attributes; additional client-facing denial fields require an application-owned `DeniedResponseFactoryInterface`;
 11. credential-bearing responses are non-cacheable;
 12. malformed credentials are rejected before provider, hashing or storage work;
 13. enabled remember-me issuance includes its critical termination and regeneration listeners;
