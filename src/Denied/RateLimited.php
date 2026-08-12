@@ -9,7 +9,7 @@ use Componenta\Auth\DeniedReasonInterface;
 /**
  * Too many authentication attempts.
  */
-final class RateLimited implements DeniedReasonInterface
+final class RateLimited implements DeniedReasonInterface, \JsonSerializable
 {
     public string $code {
         get => 'rate_limited';
@@ -22,5 +22,18 @@ final class RateLimited implements DeniedReasonInterface
     /** @var array<string, mixed> */
     public array $attributes {
         get { return ['retry_after' => $this->retryAfter]; }
+    }
+
+    /** @return array{code: string} */
+    public function __debugInfo(): array
+    {
+        return ['code' => $this->code];
+    }
+
+    /** @return array{code: string} */
+    #[\Override]
+    public function jsonSerialize(): array
+    {
+        return $this->__debugInfo();
     }
 }
