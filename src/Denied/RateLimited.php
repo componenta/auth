@@ -6,9 +6,7 @@ namespace Componenta\Auth\Denied;
 
 use Componenta\Auth\DeniedReasonInterface;
 
-/**
- * Too many authentication attempts.
- */
+/** Too many authentication attempts. */
 final class RateLimited implements DeniedReasonInterface, \JsonSerializable
 {
     public string $code {
@@ -17,7 +15,13 @@ final class RateLimited implements DeniedReasonInterface, \JsonSerializable
 
     public function __construct(
         public int $retryAfter,
-    ) {}
+    ) {
+        if ($this->retryAfter < 0) {
+            throw new \InvalidArgumentException(
+                'Rate-limit retryAfter must be greater than or equal to zero.',
+            );
+        }
+    }
 
     /** @var array<string, mixed> */
     public array $attributes {

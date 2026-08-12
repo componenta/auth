@@ -70,6 +70,7 @@ The suite must prove:
 33. event DTO timestamps come from owning clock services, not hidden global time;
 34. Componenta factory wiring honors the shared PSR-20 clock when the container provides it;
 35. third-party GitHub Actions use immutable 40-character commit SHAs.
+36. built-in `RateLimited` denials validate non-negative retry delay and publish it only as the standard `Retry-After` header, not in the JSON body.
 
 ## Real MySQL concurrency gate
 

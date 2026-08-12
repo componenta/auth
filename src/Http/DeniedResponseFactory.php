@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Http;
 
+use Componenta\Auth\Denied\RateLimited;
 use Componenta\Auth\DeniedReasonInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -44,11 +45,19 @@ final readonly class DeniedResponseFactory implements DeniedResponseFactoryInter
         $json = json_encode(['error' => $code], JSON_THROW_ON_ERROR);
         $response = $this->responseFactory->createResponse($status);
         $response->getBody()->write($json);
-
-        return $response
+        $response = $response
             ->withHeader('Content-Type', 'application/json')
             ->withHeader('Cache-Control', 'no-store')
             ->withHeader('Pragma', 'no-cache');
+
+        if ($reason instanceof RateLimited) {
+            $response = $response->withHeader(
+                'Retry-After',
+                (string) $reason->retryAfter,
+            );
+        }
+
+        return $response;
     }
 
     private static function validCode(string $code): bool

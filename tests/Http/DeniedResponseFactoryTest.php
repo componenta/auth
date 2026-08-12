@@ -46,22 +46,40 @@ final class DeniedResponseFactoryTest extends TestCase
         );
     }
 
-    public function testRateLimitMetadataRemainsAuditOnly(): void
+    public function testRateLimitMetadataUsesRetryAfterHeaderWithoutEnteringBody(): void
     {
         $stream = $this->createMock(StreamInterface::class);
         $stream->expects(self::once())
             ->method('write')
             ->with('{"error":"rate_limited"}')
             ->willReturn(1);
+        $headers = [];
         $response = $this->createStub(ResponseInterface::class);
         $response->method('getBody')->willReturn($stream);
-        $response->method('withHeader')->willReturnSelf();
+        $response->method('withHeader')->willReturnCallback(
+            static function (string $name, string|array $value) use (&$headers, $response): ResponseInterface {
+                $headers[$name] = $value;
+
+                return $response;
+            },
+        );
         $responseFactory = $this->createStub(ResponseFactoryInterface::class);
         $responseFactory->method('createResponse')->willReturn($response);
 
-        (new DeniedResponseFactory($responseFactory))->create(
-            new RateLimited(30),
+        self::assertSame(
+            $response,
+            (new DeniedResponseFactory($responseFactory))->create(
+                new RateLimited(30),
+            ),
         );
+        self::assertSame('30', $headers['Retry-After'] ?? null);
+    }
+
+    public function testRateLimitRetryAfterRejectsNegativeDelta(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        new RateLimited(-1);
     }
 
     public function testInvalidReasonCodeFallsBackToStablePublicCode(): void
