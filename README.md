@@ -60,6 +60,8 @@ A denial is **terminal by default**. A strategy may return `AuthenticationResult
 
 The current authenticated session is attached to the PSR-7 request under `SessionInterface::class`; it is not stored on the identity.
 
+`LogoutHandler` is designed to run **after `AuthenticationMiddleware`**. Server-side termination uses the authenticated `SessionInterface::class` request attribute. Invoking the logout handler standalone can remove the client-side credential, but it cannot safely infer which unauthenticated server-side session row should be terminated.
+
 ## Sessions
 
 The built-in `DatabaseSessionManager`:
@@ -69,10 +71,13 @@ The built-in `DatabaseSessionManager`:
 - performs regeneration transactionally with an optimistic claim;
 - invalidates the presented old session ID immediately after successful regeneration;
 - never resolves an old ID to its successor;
+- serializes termination with regeneration and terminates any already-created replacement lineage;
 - executes critical lifecycle participants inside the owning transaction and observers after commit;
 - performs bounded cleanup with an expiry recheck before delete.
 
 Session timestamps are normalized to UTC using the fixed internal format `Y-m-d H:i:s`; the representation is not a public configuration option.
+
+The built-in session table is credential-bearing storage: live session IDs are recoverable because the public session-management API can enumerate sessions and the persistence model must track replacement lineage. Session DTO debug/JSON output redacts IDs, but applications must still restrict database/log access to the session table. Hashing the existing `id` column in place would not be compatible with the current enumeration/lineage contract and therefore is not presented as a drop-in hardening change.
 
 ## Remember-me
 
@@ -124,7 +129,9 @@ The extractor requires **exactly** the configured code length before the request
 
 `DatabaseCodeStore` persists an HMAC-SHA-256 verifier instead of the numeric OTP and uses a random `challenge_id` as an optimistic version. Verification, failed-attempt accounting and consume are single-winner operations over that challenge version.
 
-Every negative public OTP verification outcome is deliberately collapsed to `invalid_code`. Internal store states such as expiry or attempt exhaustion are not exposed through the authentication response because doing so would let a caller distinguish destinations for which a worker created a challenge from destinations for which no account exists.
+Every negative public OTP verification **response** is deliberately collapsed to `invalid_code`. Internal store states such as expiry or attempt exhaustion are not serialized through the authentication response because doing so would create a direct account/challenge-existence oracle.
+
+This is a public response-semantics guarantee, not a claim that different SQL states have identical end-to-end latency. A missing row and a failed-attempt CAS can require different database work. The package therefore does not add blocking sleeps or expensive dummy hashing, which would create a request-amplification/DoS primitive. Production `OtpRequestQueueInterface` adapters should be durable and non-inline when account-existence request timing matters, and verification/request endpoints still require application-level rate limiting.
 
 `OtpRequest` contains one identity/destination value. The built-in processor cannot look up one identity and deliver the code to a different arbitrary destination. Applications needing alternative delivery routing must validate ownership in an application-specific adapter before enqueueing.
 
@@ -147,7 +154,9 @@ SHA-256(purpose || NUL || bearer)
 
 Therefore a magic-link token cannot be consumed by a password-reset manager even if an application accidentally points both managers at the same table.
 
-`TokenRequest` also contains only the lookup/delivery identity plus non-sensitive context; the built-in processor does not accept a separate untrusted destination.
+`TokenRequest` also contains only the lookup/delivery identity plus non-sensitive context; the built-in processor does not accept a separate untrusted destination. `TokenRequestQueueInterface` is a durable queue boundary; production adapters should not perform provider lookup or delivery inline when uniform account-existence request timing matters.
+
+Magic-link verification responses set `Referrer-Policy: no-referrer`, including success and denial paths, so a URL-borne bearer is not propagated as a downstream referrer. Query-string credentials can still reach browser history and upstream reverse-proxy/access logs **before** application response headers are applied; deployments should redact query credentials from logs and avoid third-party resources on verification endpoints. The bearer remains one-time regardless of transport.
 
 ## JWT access and refresh tokens
 
@@ -159,7 +168,8 @@ Refresh grants use opaque 32-64 byte bearer IDs. The default `DatabaseRefreshTok
 - serializes transitions through a durable family row;
 - consumes the presented token and inserts its successor in one transaction;
 - rolls back the presented-token claim if successor persistence fails;
-- distinguishes ordinary family revocation from replay compromise;
+- makes ordinary revocation terminal for the complete family and serializes it with rotation;
+- keeps ordinary revocation distinct from replay compromise;
 - on replay marks the family compromised and revokes all active descendants;
 - reads security state from the primary/write connection.
 
@@ -173,7 +183,7 @@ Token responses use `Cache-Control: no-store` and `Pragma: no-cache`.
 
 The package cannot manufacture a transaction across an application-owned password repository and unrelated external stores. Implementations spanning resources must use an equivalent credential-version/outbox/idempotent model and must never return `Success` after a partial transition.
 
-## Events
+## Events and clocks
 
 Listeners use one extensible property-oriented contract:
 
@@ -191,6 +201,8 @@ The old per-event marker interfaces and `ListenerFactory` are removed. `Critical
 
 Event DTOs do not create clocks. Their timestamp is mandatory and is supplied by the service that owns the transition. Generic authentication/logout events are best-effort observers; security-critical session lifecycle listeners participate in the owning transition where applicable.
 
+Componenta factories also honor the shared PSR-20 `ClockInterface` for event timestamps, JWT access/refresh issuance/validation and logout observer time. Constructor defaults remain only as a direct-construction fallback for non-Componenta containers.
+
 Credential-bearing DTOs and audit containers use redacted debug/JSON representations. Generic authentication events contain payload type/subject UUID metadata, never raw credentials.
 
 ## Denial responses and malformed input
@@ -199,6 +211,8 @@ Credential-bearing DTOs and audit containers use redacted debug/JSON representat
 
 Strict extractors throw `InvalidPayloadException`. Built-in handlers should run behind `InvalidPayloadMiddleware` (or an equivalent application mapper) to produce a stable 400 response.
 
+Cookie-authenticated state-changing endpoints, including logout where appropriate to the application, remain subject to the application's CSRF policy. The auth package cannot infer trusted origins or deployment topology.
+
 ## Database consistency
 
 Authentication-state reads in the built-in session, remember-me, one-time, refresh and OTP stores are pinned to the Cycle `WRITE` driver. A lagging read replica must never resurrect revoked credentials.
@@ -206,8 +220,10 @@ Authentication-state reads in the built-in session, remember-me, one-time, refre
 The repository release gate runs SQLite tests and real MySQL 8.4/InnoDB integration. A separate `pcntl` concurrency gate starts independent processes/connections and proves:
 
 - concurrent refresh rotation results in one rotation plus replay compromise and leaves zero active descendants;
+- concurrent refresh rotation versus ordinary revocation leaves the family revoked, uncompromised, and with zero active successors;
 - concurrent verification of one OTP is single-winner;
-- concurrent remember-me rotation and logout cannot leave a descendant grant.
+- concurrent remember-me rotation and logout cannot leave a descendant grant;
+- concurrent session regeneration and logout cannot leave an active replacement session.
 
 ## Verification
 
@@ -221,5 +237,7 @@ PHP 8.5 / DI 3.x
 ```
 
 and executes syntax checks, PHPUnit, PHPStan level max, Composer audit, MySQL 8.4 integration, the real concurrency gate and repository invariants from `tools/verify.sh`.
+
+Third-party GitHub Actions are pinned to immutable 40-character commit SHAs. `tools/verify.sh` rejects floating action refs so a future tag move cannot silently change the release gate.
 
 See [MIGRATION-v2.md](MIGRATION-v2.md) for breaking changes and [QUALITY-GATES.md](QUALITY-GATES.md) for release invariants.

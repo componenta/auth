@@ -84,6 +84,40 @@ if grep -R --line-number -E 'function (create|all|terminateAll|revokeAllForSubje
     exit 1
 fi
 
+for handler in \
+    src/Http/Strategy/MagicLink/VerifyHandler.php \
+    src/Http/Strategy/Jwt/MagicLink/TokenHandler.php
+do
+    if ! grep -q --fixed-strings 'MagicLinkResponseHeaders::apply' "$handler"; then
+        echo "Magic-link verification response is missing referrer hardening: $handler" >&2
+        exit 1
+    fi
+done
+
+if ! grep -q --fixed-strings "withHeader('Referrer-Policy', 'no-referrer')" src/Http/Strategy/MagicLink/MagicLinkResponseHeaders.php; then
+    echo 'Magic-link response hardening must enforce Referrer-Policy: no-referrer.' >&2
+    exit 1
+fi
+
+while IFS= read -r action; do
+    [[ -z "$action" ]] && continue
+
+    case "$action" in
+        ./*|docker://*)
+            continue
+            ;;
+    esac
+
+    ref="${action##*@}"
+    if [[ "$action" == "$ref" || ! "$ref" =~ ^[0-9a-f]{40}$ ]]; then
+        echo "GitHub Actions dependency must be pinned to a full commit SHA: $action" >&2
+        exit 1
+    fi
+done < <(
+    { grep -R -h -E '^[[:space:]]*-?[[:space:]]*uses:[[:space:]]+' .github/workflows || true; } \
+        | sed -E 's/^[[:space:]]*-?[[:space:]]*uses:[[:space:]]+([^[:space:]#]+).*/\1/'
+)
+
 composer test
 composer phpstan
 composer audit --no-interaction

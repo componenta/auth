@@ -10,6 +10,7 @@ use Componenta\Auth\ContextInterface;
 use Componenta\Auth\DeniedReasonInterface;
 use Componenta\Auth\Http\DeniedResponseFactoryInterface;
 use Componenta\Auth\Http\Strategy\Jwt\TokenPairResponse;
+use Componenta\Auth\Http\Strategy\MagicLink\MagicLinkResponseHeaders;
 use Componenta\Auth\Http\Strategy\MagicLink\VerifyExtractor;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -39,10 +40,12 @@ final readonly class TokenHandler implements RequestHandlerInterface
                 JSON_THROW_ON_ERROR,
             ));
 
-            return $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withHeader('Cache-Control', 'no-store')
-                ->withHeader('Pragma', 'no-cache');
+            return MagicLinkResponseHeaders::apply(
+                $response
+                    ->withHeader('Content-Type', 'application/json')
+                    ->withHeader('Cache-Control', 'no-store')
+                    ->withHeader('Pragma', 'no-cache'),
+            );
         }
 
         $result = $this->authenticator->attempt($payload, new Context([
@@ -51,9 +54,13 @@ final readonly class TokenHandler implements RequestHandlerInterface
         ]));
 
         if ($result->subject instanceof DeniedReasonInterface) {
-            return $this->deniedResponseFactory->create($result->subject);
+            return MagicLinkResponseHeaders::apply(
+                $this->deniedResponseFactory->create($result->subject),
+            );
         }
 
-        return $this->tokenPair->create($result->subject);
+        return MagicLinkResponseHeaders::apply(
+            $this->tokenPair->create($result->subject),
+        );
     }
 }

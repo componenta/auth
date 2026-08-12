@@ -46,7 +46,9 @@ final readonly class VerifyHandler implements RequestHandlerInterface
         ]));
 
         if ($result->subject instanceof DeniedReasonInterface) {
-            return $this->deniedResponseFactory->create($result->subject);
+            return MagicLinkResponseHeaders::apply(
+                $this->deniedResponseFactory->create($result->subject),
+            );
         }
 
         $session = $this->sessionManager->create(
@@ -59,10 +61,12 @@ final readonly class VerifyHandler implements RequestHandlerInterface
             new SessionPayload($session->id),
         );
 
-        return $response
-            ->withHeader('Content-Type', 'application/json')
-            ->withHeader('Cache-Control', 'no-store')
-            ->withHeader('Pragma', 'no-cache');
+        return MagicLinkResponseHeaders::apply(
+            $response
+                ->withHeader('Content-Type', 'application/json')
+                ->withHeader('Cache-Control', 'no-store')
+                ->withHeader('Pragma', 'no-cache'),
+        );
     }
 
     /** @param array<string, mixed> $payload */
@@ -71,9 +75,11 @@ final readonly class VerifyHandler implements RequestHandlerInterface
         $response = $this->responseFactory->createResponse($status);
         $response->getBody()->write(json_encode($payload, JSON_THROW_ON_ERROR));
 
-        return $response
-            ->withHeader('Content-Type', 'application/json')
-            ->withHeader('Cache-Control', 'no-store')
-            ->withHeader('Pragma', 'no-cache');
+        return MagicLinkResponseHeaders::apply(
+            $response
+                ->withHeader('Content-Type', 'application/json')
+                ->withHeader('Cache-Control', 'no-store')
+                ->withHeader('Pragma', 'no-cache'),
+        );
     }
 }

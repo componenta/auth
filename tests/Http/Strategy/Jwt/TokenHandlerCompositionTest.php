@@ -66,7 +66,11 @@ final class TokenHandlerCompositionTest extends TestCase
 
     public function testMagicLinkTokenHandlerUsesConfiguredAuthenticator(): void
     {
-        $response = $this->createStub(ResponseInterface::class);
+        $response = $this->createMock(ResponseInterface::class);
+        $response->expects(self::once())
+            ->method('withHeader')
+            ->with('Referrer-Policy', 'no-referrer')
+            ->willReturnSelf();
         $handler = new MagicLinkTokenHandler(
             new VerifyExtractor(),
             $this->denyingAuthenticator(),

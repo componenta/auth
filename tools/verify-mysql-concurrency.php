@@ -170,10 +170,8 @@ function sessionManager(DatabaseInterface $database): DatabaseSessionManager
     );
 }
 
-function verifyRefreshRace(): void
+function createRefreshSchema(DatabaseInterface $database): void
 {
-    $database = db();
-    resetSchema($database);
     $database->execute(<<<'SQL'
         CREATE TABLE refresh_token_families (
             family_id CHAR(64) NOT NULL PRIMARY KEY,
@@ -198,6 +196,13 @@ function verifyRefreshRace(): void
                 REFERENCES refresh_token_families(family_id)
         ) ENGINE=InnoDB
         SQL);
+}
+
+function verifyRefreshRace(): void
+{
+    $database = db();
+    resetSchema($database);
+    createRefreshSchema($database);
 
     $token = str_repeat('a', 64);
     $family = str_repeat('d', 64);
@@ -226,6 +231,59 @@ function verifyRefreshRace(): void
     $familyRow = $verify->select('compromised_at')->from('refresh_token_families')
         ->where('family_id', $family)->run()->fetch();
     invariant(is_array($familyRow) && ($familyRow['compromised_at'] ?? null) !== null, 'Refresh family was not compromised');
+}
+
+function verifyRefreshRevokeRace(): void
+{
+    $database = db();
+    resetSchema($database);
+    createRefreshSchema($database);
+
+    $token = str_repeat('a', 64);
+    $successor = str_repeat('b', 64);
+    $family = str_repeat('e', 64);
+    (new DatabaseRefreshTokenStore($database))->storeInitial(
+        new RefreshToken($token, subjectId(), $family, 5000),
+    );
+
+    $results = race([
+        static fn(): string => (new DatabaseRefreshTokenStore(db()))
+            ->rotateAtomically($token, $successor, 6000, 1000)
+            ->status->value,
+        static function () use ($token): string {
+            (new DatabaseRefreshTokenStore(db()))->revoke($token, 1001);
+            return 'revoked';
+        },
+    ]);
+    sort($results);
+    invariant(
+        $results === ['invalid', 'revoked'] || $results === ['revoked', 'rotated'],
+        'Concurrent refresh rotate/revoke outcomes are invalid',
+        $results,
+    );
+
+    $verify = db();
+    $active = $verify->select()->from('refresh_tokens')
+        ->where('family_id', $family)
+        ->where('revoked_at', null)
+        ->count();
+    invariant($active === 0, 'Refresh revoke left an active successor', $active);
+
+    $familyRow = $verify
+        ->select(['revoked_at', 'compromised_at'])
+        ->from('refresh_token_families')
+        ->where('family_id', $family)
+        ->run()
+        ->fetch();
+    invariant(
+        is_array($familyRow) && ($familyRow['revoked_at'] ?? null) !== null,
+        'Refresh family was not ordinarily revoked',
+    );
+    invariant(
+        is_array($familyRow) && ($familyRow['compromised_at'] ?? null) === null,
+        'Ordinary refresh revocation was incorrectly marked compromised',
+        $familyRow,
+    );
 }
 
 function verifyOtpRace(): void
@@ -353,6 +411,7 @@ function verifySessionLogoutRace(): void
 
 try {
     verifyRefreshRace();
+    verifyRefreshRevokeRace();
     verifyOtpRace();
     verifyRememberLogoutRace();
     verifySessionLogoutRace();

@@ -30,11 +30,15 @@
 
 Текущая session живёт в request attribute `SessionInterface::class`, а не в identity.
 
+`LogoutHandler` рассчитан на выполнение **после `AuthenticationMiddleware`**. Server-side termination использует уже аутентифицированный request attribute `SessionInterface::class`. Если вызвать logout handler отдельно, он может удалить client-side credential, но не может безопасно угадать, какую неаутентифицированную server-side session row следует завершить.
+
 ## Sessions
 
-`DatabaseSessionManager` читает security state только с primary/write connection, проверяет idle/absolute expiry, throttles touch, регенерирует session транзакционно и сразу инвалидирует старый ID. Старый ID никогда не разрешается в successor. Critical lifecycle listeners выполняются внутри owning transition, observers — после commit.
+`DatabaseSessionManager` читает security state только с primary/write connection, проверяет idle/absolute expiry, throttles touch, регенерирует session транзакционно и сразу инвалидирует старый ID. Старый ID никогда не разрешается в successor. Termination сериализуется с regeneration и удаляет уже созданную replacement lineage, поэтому конкурентный logout не оставляет активный successor. Critical lifecycle listeners выполняются внутри owning transition, observers — после commit.
 
 Session timestamps всегда UTC и используют внутренний фиксированный формат `Y-m-d H:i:s`; это больше не пользовательская настройка.
+
+Встроенная session table является credential-bearing storage: live session IDs должны оставаться восстанавливаемыми, потому что публичный session-management API умеет перечислять sessions, а persistence model отслеживает replacement lineage. Session DTO скрывают ID в debug/JSON, но доступ к таблице и логам БД всё равно должен быть ограничен. Хэширование существующего `id` column «на месте» несовместимо с текущим enumeration/lineage contract и поэтому не позиционируется как безопасный drop-in change.
 
 ## Remember-me
 
@@ -69,7 +73,9 @@ remember_me_tokens
 
 `DatabaseCodeStore` хранит HMAC-SHA-256 verifier с отдельным ключом >=32 bytes и использует `challenge_id` как optimistic version. Verify/attempt accounting/consume являются single-winner операциями.
 
-Все отрицательные публичные результаты OTP verification схлопываются в `invalid_code`. `expired`/`too_many_attempts` остаются внутренними состояниями store, иначе verify endpoint становился бы oracle существования аккаунта после uniform request-response.
+Все отрицательные публичные **responses** OTP verification схлопываются в `invalid_code`. `expired`/`too_many_attempts` остаются внутренними состояниями store и не сериализуются наружу, иначе endpoint становился бы прямым oracle существования account/challenge.
+
+Это гарантия одинаковой публичной response-семантики, а не утверждение, что разные SQL states имеют абсолютно одинаковую end-to-end latency. DB miss и failed-attempt CAS объективно могут выполнять разный объём работы. Пакет поэтому не добавляет blocking `sleep()` или дорогой dummy hashing: такая «защита» сама создала бы request-amplification/DoS primitive. Production adapters `OtpRequestQueueInterface` должны быть durable/non-inline, если важна uniform account-existence request latency; request/verify endpoints всё равно требуют application-level rate limiting.
 
 `OtpRequest` содержит одно значение identity/destination. Built-in processor не может найти одну identity и отправить code на произвольный другой destination. Альтернативный routing должен проверяться application adapter до enqueue.
 
@@ -92,13 +98,15 @@ SHA-256(purpose || NUL || bearer)
 
 Поэтому token одного flow не принимается другим manager даже при ошибочно общей таблице.
 
-`TokenRequest` больше не содержит отдельный untrusted destination: built-in processor доставляет credential тому же identity, по которому выполнялся lookup.
+`TokenRequest` больше не содержит отдельный untrusted destination: built-in processor доставляет credential тому же identity, по которому выполнялся lookup. `TokenRequestQueueInterface` — durable queue boundary; production adapter не должен выполнять provider lookup/delivery inline, если важна uniform account-existence request latency.
+
+Magic-link verification responses получают `Referrer-Policy: no-referrer` и на success, и на denial path, поэтому bearer из URL не передаётся дальше как referrer. При этом query-string credential всё ещё может попасть в browser history и upstream reverse-proxy/access logs **до** применения response headers; deployment должен редактировать query credentials в логах и не подключать third-party resources на verify endpoint. Сам bearer остаётся one-time независимо от transport.
 
 ## JWT и refresh
 
 JWT profile явно задаёт issuer/audience/type; проверяются signature, `iat`, optional `nbf`, `exp`, skew и максимальная lifetime. Registered claims нельзя заменить custom claims. HMAC minimum: 32/48/64 bytes для HS256/384/512.
 
-`DatabaseRefreshTokenStore` хранит только SHA-256 bearer representations, сериализует transition через family-row и выполняет consume presented token + insert successor одной transaction. Replay помечает family compromised и отзывает всех active descendants; обычный revoke хранится отдельно.
+`DatabaseRefreshTokenStore` хранит только SHA-256 bearer representations, сериализует transitions через family-row и выполняет consume presented token + insert successor одной transaction. Ordinary revoke теперь terminal для всей family и сериализуется с rotation; он остаётся отдельным от replay compromise. Replay помечает family compromised и отзывает всех active descendants.
 
 `DatabaseRefreshTokenHousekeeper::cleanup($now, $limit)` bounded-удаляет только families, у которых истекла вся token history; кандидаты повторно проверяются на primary, поэтому полезная replay history не удаляется.
 
@@ -110,7 +118,7 @@ Credential responses получают `Cache-Control: no-store` и `Pragma: no-c
 
 Если password repository и credential stores находятся в разных ресурсах, application implementation должна использовать эквивалент credential version/outbox/idempotent модель и не возвращать success после частичного перехода.
 
-## Events
+## Events и clocks
 
 Остался один расширяемый listener contract:
 
@@ -126,11 +134,15 @@ interface EventListenerInterface
 
 Event DTO не создают `Clock` самостоятельно: timestamp обязателен и передаётся owning service с внедрённым clock. Generic auth/logout events — best-effort observers; critical session events выполняются в owning transition.
 
+Componenta factories также используют общий PSR-20 `ClockInterface` для event timestamps, JWT access/refresh issuance/validation и logout observer time. Constructor defaults остаются только fallback для прямого создания объектов вне стандартного Componenta container.
+
 ## Denials и malformed input
 
 `DeniedReasonInterface::$attributes` — только audit context. Built-in `DeniedResponseFactory` публикует только стабильный `error` code. `PublicDeniedReasonInterface` удалён; richer public body требует custom `DeniedResponseFactoryInterface`.
 
 Strict extractors бросают `InvalidPayloadException`. Production handlers должны находиться за `InvalidPayloadMiddleware` либо эквивалентным mapper в 400.
+
+Cookie-authenticated state-changing endpoints, включая logout там, где это соответствует модели приложения, остаются под application CSRF policy: auth package не может сам определить trusted origin и deployment topology.
 
 ## Primary reads и concurrency proof
 
@@ -139,9 +151,13 @@ Credential-state reads session/remember/one-time/refresh/OTP pinned к Cycle WRI
 Release gate использует SQLite и реальный MySQL 8.4/InnoDB. Дополнительный `pcntl` gate запускает независимые процессы/connections и проверяет реальные race:
 
 - два concurrent refresh rotate: один `rotated`, второй `reused`, после compromise active descendants = 0;
+- concurrent refresh rotate и ordinary revoke: family revoked, `compromised_at` остаётся `NULL`, active successors = 0;
 - два concurrent verify одного OTP: только один `verified`;
-- concurrent remember rotate и logout: descendant remember grant отсутствует.
+- concurrent remember rotate и logout: descendant remember grant отсутствует;
+- concurrent session regenerate и logout: active replacement session отсутствует.
 
 Матрица: PHP 8.4/8.5 × DI 2/3, PHPStan max, Composer audit, PHPUnit, MySQL 8.4 и `git diff --check`.
+
+Third-party GitHub Actions pinned на immutable 40-character commit SHA. `tools/verify.sh` запрещает floating action refs, поэтому перемещение upstream tag не может незаметно изменить release gate.
 
 Breaking changes описаны в [MIGRATION-v2.md](MIGRATION-v2.md), release invariants — в [QUALITY-GATES.md](QUALITY-GATES.md).
