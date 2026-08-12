@@ -5,6 +5,8 @@
     "license": "MIT",
     "require": {
         "php": "^8.4",
+        "ext-ctype": "*",
+        "ext-filter": "*",
         "ext-mbstring": "*",
         "componenta/arrayable": "^1.0",
         "componenta/clock": "^1.0",
