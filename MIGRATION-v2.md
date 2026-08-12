@@ -1,6 +1,6 @@
 # Migrating to componenta/auth v2
 
-Version 2 intentionally changes storage, identity, composition and property contracts. The former APIs could not enforce credential-lifecycle invariants under concurrency, partial failure, replica lag and long-running workers.
+Version 2 intentionally changes identity, credential storage, session lifecycle, recovery and composition contracts. These changes remove races and ambiguous ownership that could not be fixed while preserving the v1 API.
 
 ## Canonical identity UUID
 
@@ -14,35 +14,37 @@ Componenta\Auth\AuthSubject
 Use the UUID already provided by `IdentityInterface`:
 
 ```php
-$subjectId = $identity->uuid->toString();
+$subjectId = $identity->uuid;
+$subject = $identity->uuid->toString();
 ```
 
-Update application stores so sessions, remember-me tokens, one-time tokens, OTP challenges, refresh grants and JWT `sub` use that same UUID. Public v2 ownership contracts accept `UuidInterface`; internal database IDs belong inside persistence adapters.
+Sessions, remember-me credentials, one-time tokens, OTP challenges, refresh grants and JWT `sub` all use that same identity UUID. Public ownership contracts accept `UuidInterface`; internal numeric database keys belong inside persistence adapters.
+
+Every UUID-based user provider is now a security boundary: an implementation of `findByUuid($uuid)` must return either `null` or an identity whose `$identity->uuid` equals the requested UUID. Built-in authentication flows reject provider substitution instead of authenticating a different subject.
 
 ## Request-local session state
 
-`SessionAwareInterface` remains the capability for exposing all sessions owned by an identity:
+`SessionAwareInterface` has been removed. An identity is no longer required to expose persistence-backed session state.
+
+Use `SessionManagerInterface` explicitly when an application needs all sessions for an identity:
 
 ```php
-interface SessionAwareInterface
-{
-    public SessionCollectionInterface $sessions { get; }
-}
+$sessions = $sessionManager->all($identity->uuid);
 ```
 
-Only the mutable request-local `currentSessionId` property has been removed. Do not add it back to the identity entity. `AuthenticationResult` now has:
+The session that authenticated the current request is request-scoped. `AuthenticationResult` exposes:
 
 ```php
 public ?SessionInterface $session;
 ```
 
-`AuthenticationMiddleware` attaches it to the PSR-7 request under `SessionInterface::class`.
+`AuthenticationMiddleware` attaches that session to the PSR-7 request under `SessionInterface::class`. Do not store a mutable `currentSessionId`, a session collection, or other request-local authentication state on reusable ORM/singleton identity objects.
 
-The generic `AuthenticationResult::$attributes` bag has been removed. Client code obtains the current request session from the PSR-7 attribute `SessionInterface::class`; `$identity->sessions` remains the collection of all sessions belonging to that identity.
+The former generic `AuthenticationResult::$attributes` bag is removed.
 
-## Property API
+## PHP 8.4 property API
 
-Replace these calls:
+State contracts use properties where no input/action is involved. Replace these calls:
 
 ```text
 ContextInterface::getAttributes()       -> $context->attributes
@@ -55,7 +57,7 @@ RefreshToken::isRevoked()               -> $token->revoked
 PublicDeniedReasonInterface::publicDetails() -> $reason->publicDetails
 ```
 
-Methods that accept input or perform actions are unchanged in style.
+Methods remain methods when they accept input or perform an action, for example `getAttribute($name)`, `find($id)`, `consume($token)`, `queue()` and `clear()`.
 
 ## Password providers
 
@@ -70,15 +72,17 @@ interface UserProviderInterface
 }
 ```
 
-Update providers that previously implemented `provide(Payload $payload)`.
+The submitted password remains inside the authentication verifier and is not passed to the application provider.
 
 ## Shared authenticator for verification handlers
 
-`LoginHandler`, OTP `VerifyHandler` and magic-link `VerifyHandler` now depend on `AuthenticatorInterface`, not an individual strategy. Ensure every strategy used by those handlers appears in ordered `auth.strategies`.
+Password login, OTP verification and magic-link verification depend on the configured `AuthenticatorInterface`, not an individual strategy. Every active strategy therefore has to appear in the ordered `auth.strategies` list.
+
+Empty, duplicate, missing and non-strategy entries fail fast. `RememberMeStrategy` additionally requires `auth.rememberMe.enabled=true`.
 
 ## Delivery queues
 
-Removed zero-logic wrappers and unused magic-link denial types:
+Removed zero-logic wrappers and unreachable magic-link denial types:
 
 ```text
 Componenta\Auth\Token\TokenRequester
@@ -87,45 +91,15 @@ Componenta\Auth\Http\Strategy\MagicLink\Denied\TokenAlreadyUsed
 Componenta\Auth\Http\Strategy\MagicLink\Denied\TokenExpired
 ```
 
-Magic-link verification collapses negative outcomes to `InvalidToken`; the removed denial classes had no execution path.
+Inject `TokenRequestQueueInterface` or `OtpRequestQueueInterface` directly. User lookup, challenge generation, persistence and sender I/O belong in `TokenRequestProcessor`/`OtpRequestProcessor`, outside the HTTP request thread.
 
-Inject `TokenRequestQueueInterface` or `OtpRequestQueueInterface` directly and enqueue `TokenRequest`/`OtpRequest`.
+Magic-link verification now collapses all negative token states to `InvalidToken` on the public path.
 
-Default factory service IDs for application queues:
-
-```text
-auth.magicLink.queue
-auth.passwordReset.queue
-```
-
-OTP request handling resolves `OtpRequestQueueInterface::class`.
-
-## Ordered authenticator composition
-
-Define every active strategy explicitly:
-
-```php
-'auth' => [
-    'strategies' => [
-        SessionStrategy::class,
-        RememberMeStrategy::class,
-        PasswordStrategy::class,
-        OtpStrategy::class,
-        MagicLinkStrategy::class,
-        JwtStrategy::class,
-    ],
-    'events' => true,
-    'rememberMe' => [
-        'enabled' => true,
-    ],
-],
-```
-
-Empty, duplicate, missing and non-strategy services fail fast. The built-in `RememberMeStrategy` also requires `auth.rememberMe.enabled=true`; this prevents enabling credential issuance/consumption without the critical termination and regeneration listeners required by the feature.
+The generic magic-link request handler no longer accepts a user-controlled `redirect`. Redirect targets are an application routing/security decision and must be added only after an application-specific allowlist or route policy.
 
 ## JWT profile
 
-`JwtConfig` now requires explicit issuer and audience:
+`JwtConfig` requires an explicit non-empty issuer and audience:
 
 ```php
 new JwtConfig(
@@ -138,48 +112,24 @@ new JwtConfig(
 );
 ```
 
-The DI config must define non-empty `auth.jwt.issuer` and `auth.jwt.audience` before resolving JWT services. Tokens without the exact issuer, audience and type are rejected.
+Access-token validation checks the signature, exact issuer/audience/type, `iat`, optional `nbf`, `exp`, clock skew and maximum configured access lifetime. Signers emit `typ` and reject custom claims that replace registered claims.
 
-HMAC secrets must meet the digest-size minimum for the selected algorithm.
-
-`RefreshTokenGenerator` accepts 32–64 bytes only. Test fixtures that used short generators must be updated.
+HMAC secrets must meet the digest-size minimum for the selected algorithm. `RefreshTokenGenerator` accepts 32–64 bytes only.
 
 ## Built-in refresh store
 
-`RefreshTokenStoreInterface` now has a secure default binding: `DatabaseRefreshTokenStore`.
+`RefreshTokenStoreInterface` has a secure default binding: `DatabaseRefreshTokenStore`.
 
 The store owns these atomic transitions:
 
-- `storeInitial()` persists the first family member;
-- `rotateAtomically()` serializes validation, presented-token consumption, replay compromise and successor creation;
+- `storeInitial()` creates the first token and family state;
+- `rotateAtomically()` serializes validation, presented-token consumption, replay compromise and successor insertion;
 - `revoke()` serializes with concurrent family transitions;
-- `revokeAllForSubject()` marks existing subject families revoked and revokes their active tokens without falsely labelling them compromised.
+- `revokeAllForSubject()` performs ordinary family revocation without falsely marking replay compromise.
 
-The implementation persists only SHA-256 representations of bearer token IDs. A separate family row is mutated on every family transition and acts as the serialization point. If successor insertion fails, the database transaction rolls the presented-token claim back. Actual replay marks the family `compromised_at` and revokes active descendants before returning `Reused`; ordinary revoke-all marks `revoked_at`, so a later presentation is `Invalid`, not `TokenFamilyCompromised`.
+Only SHA-256 representations of bearer token IDs are persisted. A separate family row is mutated on every family transition and acts as the serialization point. If successor insertion fails, the database transaction rolls the presented-token claim back.
 
-Default configuration:
-
-```php
-'auth' => [
-    'jwt' => [
-        'refreshStore' => [
-            'tokenTable' => 'refresh_tokens',
-            'familyTable' => 'refresh_token_families',
-            'columns' => [
-                'tokenHash' => 'token_hash',
-                'familyId' => 'family_id',
-                'subjectId' => 'user_id',
-                'expiresAt' => 'expires_at',
-                'consumedAt' => 'consumed_at',
-                'revokedAt' => 'revoked_at',
-                'familyRevokedAt' => 'revoked_at',
-                'compromisedAt' => 'compromised_at',
-                'lockNonce' => 'lock_nonce',
-            ],
-        ],
-    ],
-],
-```
+Actual reuse marks the family compromised and revokes active descendants. Ordinary revoke-all sets family revocation state instead; a later presentation is invalid, not reported as replay.
 
 Minimum schema contract:
 
@@ -200,25 +150,22 @@ refresh_tokens
   revoked_at      nullable
 ```
 
-`token_hash` must be able to hold a 64-character SHA-256 hex value. Do not persist the bearer token ID itself. The family `familyRevokedAt` and `compromisedAt` states are distinct even if token and family tables both use a column named `revoked_at` in their own tables.
+`token_hash` must hold a 64-character SHA-256 hex value. Do not persist the bearer token itself.
 
-If the application overrides `RefreshTokenStoreInterface`, the replacement must provide equivalent atomic rotation, rollback, family replay compromise, ordinary-revocation semantics and primary-read guarantees. Do not rebuild the old `find -> revoke -> store` sequence around the interface.
+Consumed members of a still-relevant refresh family are security history used for replay detection. Do not delete them merely to reduce row count. Cleanup of terminal/expired families must preserve the application's replay-detection requirements.
 
-## Built-in OTP store
+Custom refresh stores must provide equivalent atomic rotation, rollback, family serialization, replay compromise, ordinary revocation and primary-read guarantees. Rebuilding the former `find -> revoke -> store` sequence reintroduces the race.
 
-`CodeStoreInterface` now defaults to `DatabaseCodeStore`.
+## OTP profile and built-in store
 
-The store persists a keyed verifier rather than the low-entropy numeric OTP:
-
-```text
-HMAC-SHA-256(destination || NUL || code, auth.otp.hmacKey)
-```
-
-Configure a dedicated secret of at least 32 bytes:
+`OtpConfig` is now a real DI/config service. The built-in OOB profile accepts:
 
 ```php
 'auth' => [
     'otp' => [
+        'length' => 6,       // 6..18 decimal digits
+        'ttl' => 300,        // 1..600 seconds
+        'maxAttempts' => 5,
         'hmacKey' => $_ENV['AUTH_OTP_HMAC_KEY'],
         'store' => [
             'table' => 'otp_codes',
@@ -227,7 +174,15 @@ Configure a dedicated secret of at least 32 bytes:
 ],
 ```
 
-The default key is empty intentionally. `DatabaseCodeStoreFactory` fails fast until a valid application secret is supplied. Do not reuse a JWT signing key.
+`length < 6` and `ttl > 600` are rejected. `maxAttempts` limits a single challenge; applications must also apply an account/destination-level rate limiter that survives challenge replacement/reissue.
+
+`CodeStoreInterface` defaults to `DatabaseCodeStore`. It persists a keyed verifier rather than the low-entropy numeric OTP:
+
+```text
+HMAC-SHA-256(destination || NUL || code, auth.otp.hmacKey)
+```
+
+Use a dedicated secret of at least 32 bytes. The default empty key is intentionally unusable and the SQL store factory fails fast until it is configured.
 
 Minimum schema contract:
 
@@ -241,62 +196,80 @@ otp_codes
   attempts      NOT NULL
 ```
 
-`challenge_id` is regenerated on every replacement and is the optimistic version for attempt updates and consume/expiry deletes. A verification that started on an older challenge cannot consume or increment attempts on a replacement challenge. A correct code is single-winner because successful verification conditionally deletes exactly that challenge version.
-
-Custom `CodeStoreInterface` implementations must preserve the same versioned challenge, single-winner, bounded-attempt and primary-read semantics.
+`challenge_id` changes on replacement and is the optimistic version used by attempt updates and consume/expiry deletes. A verifier that started against an older challenge cannot mutate its replacement. Correct verification is single-winner because successful consumption conditionally deletes exactly that challenge version.
 
 ## Primary/write reads for credential state
 
-This is an important migration requirement when Cycle Database is configured with a separate READ driver.
+Cycle Database may be configured with separate READ and WRITE drivers. Authentication state cannot safely depend on replica lag.
 
-Cycle `Database::select()` normally uses the READ driver, while credential mutation uses the WRITE driver. Reading authentication state from a lagging replica can resurrect a terminated session, observe an obsolete one-time challenge or make a security transition reason about stale rows.
+Built-in authoritative reads are pinned to `DatabaseInterface::WRITE` for:
 
-V2 therefore pins authoritative credential-state reads to `DatabaseInterface::WRITE` in the built-in:
+- sessions;
+- remember-me consumption;
+- one-time token lookup/consumption;
+- refresh token/family transitions;
+- OTP verification state.
 
-- `DatabaseSessionManager` (`exists`, `find`, regeneration source and active-session collection);
-- `DatabaseRememberMeTokenManager::consume()`;
-- `TokenManager::find()`;
-- `DatabaseRefreshTokenStore`;
-- `DatabaseCodeStore`.
+Deploy readers and corresponding credential writers together. Housekeeping may use a non-authoritative candidate read only when the final write rechecks the security predicate on the primary.
 
-Deploy these readers and the corresponding writers together. Do not route them through an eventually consistent replica. Bounded housekeeping may still select candidates on a read replica when the actual delete rechecks the expiry/used predicate on the primary.
+## Database timestamps
+
+Built-in DATETIME credential stores use the sortable format `Y-m-d H:i:s` and serialize/parse timestamps in UTC. Supplying another `dateFormat` fails fast. Do not store local/DST-dependent credential expiry strings.
 
 ## Password reset
 
-Register `PasswordResetServiceInterface`. The service receives the plaintext reset token and new password, validates/locks the token before expensive hashing, and owns the complete security transition. `PasswordResetResult::Success` means: reset token consumed, password changed, and old session, remember-me and refresh credentials invalidated.
+Register `PasswordResetServiceInterface`. The service, not the HTTP handler, owns password policy and the complete recovery transition.
 
-`PasswordUpdaterInterface` has been removed because the HTTP handler no longer orchestrates the security transition itself.
+`PasswordResetResult` includes a distinct `PasswordRejected` outcome. `Success` means the reset token was consumed, the password was changed, and pre-reset session, remember-me and refresh credentials were durably or logically invalidated.
 
-A generic library cannot create one physical transaction across an application-owned password repository and every credential store. If they are separate resources, use credential versioning plus a transactional outbox and idempotent retry; never return `Success` after a partial transition.
+The package cannot create one physical transaction around an application-owned password repository and every external credential store. When those resources differ, use credential versioning plus a transactional outbox/idempotent retry. Never return `Success` after a partial transition.
 
-## Session and transport lifecycle
+`PasswordUpdaterInterface` is removed.
 
-- Nested authentication/session middleware layers reuse one request-scoped `CredentialTransportState`; only its owner applies the final mutation.
-- A new authentication result removes stale identity, denial and session request attributes before installing the current result.
-- `LogoutHandler` no longer performs a duplicate cookie removal when `AuthenticationMiddleware` owns terminal transport commit.
-- Custom authentication middleware must attach the verified `SessionInterface` if logout should terminate that server-side session.
-- Session touch rechecks idle/absolute expiry.
-- Session cleanup is bounded and rechecks expiry before delete.
-- Session termination/regeneration executes critical lifecycle listeners inside the database transaction; best-effort observers run only after commit.
-- `SessionCollection::pluck()` rejects unknown keys.
+## Session regeneration and transport lifecycle
+
+Session rotation is now single-winner.
+
+Once the old row is successfully claimed for regeneration, the presented old session ID becomes invalid immediately. `find($oldId)` does **not** resolve or disclose the successor ID. A concurrent request that loses regeneration is denied and must authenticate again.
+
+`regenerationGracePeriod` is not an authentication grace period. It only permits operational retention of the replaced row/tombstone; it never makes the old bearer credential valid again.
+
+Additional lifecycle changes:
+
+- nested authentication layers share one request-scoped `CredentialTransportState`;
+- only the owner of that state applies the final response mutation;
+- `clear()` is terminal and wins over queued credential stores;
+- `LogoutHandler` does not remove the same cookie twice when terminal middleware owns transport commit;
+- touch rechecks active-session predicates and uses a conditional update;
+- cleanup is bounded and rechecks expiry before delete;
+- `SessionCollection::pluck()` rejects unknown keys;
+- `SessionManagerInterface::exists()` means the presented session credential is currently active, not merely that a historical row exists.
+
+Because a successfully rotated old ID is intentionally invalid immediately, applications should place an exception-to-response middleware outside the auth pipeline so an unrelated downstream exception does not leave the client retrying an already-rotated cookie. Do not restore old-ID-to-successor bridging as an error-recovery mechanism.
+
+## Event semantics
+
+Security-critical session lifecycle participants are synchronous and fail fast inside the owning database transition where applicable. Best-effort lifecycle observers run only after commit.
+
+Generic `AuthenticationAttempted`, `AuthenticationSucceeded`, `AuthenticationDenied` and `LoggedOut` notifications are observers. Their failures are isolated and logged; an observer must not retroactively fail an already committed credential transition.
+
+Credential-bearing DTOs and audit containers use redacted debug/JSON representations. `DeniedReasonInterface::$attributes` remains trusted audit context. Public HTTP details are opt-in through scalar `PublicDeniedReasonInterface::$publicDetails`; unsupported/nested public details are dropped rather than serialized.
 
 ## Malformed payload mapping
 
-Strict auth extractors throw `InvalidPayloadException` for malformed client input. Built-in handlers must run behind `InvalidPayloadMiddleware` or an equivalent application exception mapper that turns this exception into a stable HTTP 400 response.
-
-Without that mapping malformed-input behavior is delegated to the application's global exception handler and is not a supported production composition.
+Strict extractors throw `InvalidPayloadException` for malformed client input. Built-in handlers should run behind `InvalidPayloadMiddleware` or an equivalent application exception mapper that turns it into a stable HTTP 400 response.
 
 ## One-time token storage
 
-`TokenManagerInterface::replaceForSubject()` replaces a subject challenge atomically. The built-in SQL manager uses an UPSERT, so the persistence schema must enforce a `UNIQUE` constraint on the canonical subject UUID column. Do not emulate replacement as independent `DELETE` and `INSERT` statements.
+`TokenManagerInterface::replaceForSubject()` replaces a subject challenge atomically. The built-in SQL manager uses UPSERT, so the persistence schema must enforce a `UNIQUE` constraint on the canonical subject UUID column. Do not emulate replacement as independent `DELETE` and `INSERT` operations.
 
 ## Remember-me feature flag
 
-Remember-me is disabled by default. Set `auth.rememberMe.enabled=true` only when the feature is intended to be active. Enabling it automatically adds the built-in termination and regeneration listeners; custom listener lists are deduplicated.
+Remember-me is disabled by default. Set `auth.rememberMe.enabled=true` only when intended. Enabling it activates the built-in termination and regeneration listeners required to keep remember-me credentials synchronized with session lifecycle.
 
-## Housekeeping signatures
+## Bounded housekeeping
 
-The following methods are bounded and return affected rows:
+These public cleanup methods are bounded and return affected rows:
 
 ```php
 SessionManagerInterface::cleanup(int $limit = 1000): int;
@@ -304,26 +277,16 @@ RememberMeTokenManagerInterface::cleanup(int $limit = 1000): int;
 TokenManagerInterface::cleanup(int $limit = 1000): int;
 ```
 
-Invoke them from a worker, cron task or scheduler.
-
-## Composer requirements
-
-The package declares its direct PSR-17 and PSR-15 handler dependencies:
-
-```text
-psr/http-factory
-psr/http-server-handler
-```
-
-`ext-mbstring` remains required.
+Run them from a worker, cron task or scheduler instead of unbounded request-path cleanup.
 
 ## Removed dead API
 
-The following unused/redundant symbols are removed in v2:
+Removed in v2:
 
 ```text
 AuthSubjectInterface
 AuthSubject
+SessionAwareInterface
 RememberMeAwareInterface
 PasswordUpdaterInterface
 TokenRequester
@@ -333,13 +296,28 @@ ConfigKey::MAGIC_LINK
 ConfigKey::PASSWORD_RESET
 ```
 
+## Composer and runtime verification
+
+The package declares its direct PSR-17 and PSR-15 handler dependencies (`psr/http-factory`, `psr/http-server-handler`) and requires PHP 8.4+.
+
+The repository release gate runs the supported PHP/DI matrix:
+
+```text
+PHP 8.4 / DI 2.x
+PHP 8.4 / DI 3.x
+PHP 8.5 / DI 2.x
+PHP 8.5 / DI 3.x
+```
+
+Each job runs syntax checks, PHPUnit, PHPStan max, dependency audit and whitespace checks. The database test suite exercises fast SQLite invariants and also runs the built-in UPSERT/CAS/refresh replay paths against a real MySQL 8.4 InnoDB service.
+
 ## Secure rollout order
 
-1. Update identity/provider contracts to canonical UUID ownership.
-2. Create/alter refresh family/token and OTP challenge tables with the constraints above, including both family `revoked_at` and `compromised_at`.
-3. Configure `auth.otp.hmacKey` and the explicit JWT profile.
-4. Deploy credential writers and the primary-pinned credential readers together.
-5. Register delivery queues/processors and the application `PasswordResetServiceInterface`.
-6. Configure ordered authentication strategies and remember-me feature state.
-7. Put strict auth handlers behind `InvalidPayloadMiddleware` or an equivalent 400 mapper.
-8. Run DB integration/concurrency tests, PHPUnit, PHPStan and dependency audit before production rollout.
+1. Migrate every credential owner to canonical `IdentityInterface::$uuid` / `UuidInterface` contracts.
+2. Remove `SessionAwareInterface`/`currentSessionId` from identity entities and use request/session-manager state explicitly.
+3. Create or alter session, one-time, OTP and refresh tables with the documented constraints.
+4. Configure explicit ordered strategies, the JWT profile, OTP profile/HMAC key and remember-me feature flag.
+5. Deploy credential writers and primary-pinned readers together.
+6. Register delivery queues/processors and `PasswordResetServiceInterface`.
+7. Put strict handlers behind malformed-input mapping and endpoint-specific rate limits/CSRF protection as applicable.
+8. Run the same DB/concurrency tests, PHPUnit, PHPStan and dependency audit before production rollout.
