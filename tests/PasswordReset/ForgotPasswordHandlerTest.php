@@ -40,7 +40,7 @@ final class ForgotPasswordHandlerTest extends TestCase
         );
     }
 
-    public function testRequestPathOnlyEnqueuesOpaqueWork(): void
+    public function testRequestPathOnlyEnqueuesOpaquePurposeBoundWork(): void
     {
         $queue = new PasswordResetQueueFixture();
         $request = $this->createStub(ServerRequestInterface::class);
@@ -58,6 +58,10 @@ final class ForgotPasswordHandlerTest extends TestCase
 
         self::assertSame($response, (new ForgotPasswordHandler($queue, $factory))->handle($request));
         self::assertSame('user@example.com', $queue->request?->identity);
+        self::assertSame(
+            TokenRequest::PURPOSE_PASSWORD_RESET,
+            $queue->request?->purpose,
+        );
     }
 }
 

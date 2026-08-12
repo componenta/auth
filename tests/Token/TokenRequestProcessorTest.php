@@ -39,12 +39,16 @@ final class TokenRequestProcessorTest extends TestCase
                 ['template' => 'account'],
             );
 
-        (new TokenRequestProcessor($provider, $tokens, $sender))->process(
-            new TokenRequest(
-                identity: 'login@example.com',
-                context: ['template' => 'account'],
-            ),
-        );
+        (new TokenRequestProcessor(
+            $provider,
+            $tokens,
+            $sender,
+            TokenRequest::PURPOSE_MAGIC_LINK,
+        ))->process(new TokenRequest(
+            identity: 'login@example.com',
+            purpose: TokenRequest::PURPOSE_MAGIC_LINK,
+            context: ['template' => 'account'],
+        ));
     }
 
     public function testUnknownIdentityPerformsNoTokenOrDeliveryOperation(): void
@@ -56,9 +60,37 @@ final class TokenRequestProcessorTest extends TestCase
         $sender = $this->createMock(SenderInterface::class);
         $sender->expects(self::never())->method('send');
 
-        (new TokenRequestProcessor($provider, $tokens, $sender))->process(
-            new TokenRequest('unknown@example.com'),
+        (new TokenRequestProcessor(
+            $provider,
+            $tokens,
+            $sender,
+            TokenRequest::PURPOSE_PASSWORD_RESET,
+        ))->process(new TokenRequest(
+            'unknown@example.com',
+            TokenRequest::PURPOSE_PASSWORD_RESET,
+        ));
+    }
+
+    public function testMisroutedPurposeFailsBeforeProviderTokenOrDeliveryWork(): void
+    {
+        $provider = $this->createMock(UserProviderInterface::class);
+        $provider->expects(self::never())->method('findByIdentity');
+        $tokens = $this->createMock(TokenManagerInterface::class);
+        $tokens->expects(self::never())->method('replaceForSubject');
+        $sender = $this->createMock(SenderInterface::class);
+        $sender->expects(self::never())->method('send');
+        $processor = new TokenRequestProcessor(
+            $provider,
+            $tokens,
+            $sender,
+            TokenRequest::PURPOSE_MAGIC_LINK,
         );
+
+        $this->expectException(\InvalidArgumentException::class);
+        $processor->process(new TokenRequest(
+            'login@example.com',
+            TokenRequest::PURPOSE_PASSWORD_RESET,
+        ));
     }
 }
 

@@ -37,6 +37,7 @@ final class RequestHandlerTest extends TestCase
             ->method('enqueue')
             ->with(self::callback(static function (TokenRequest $request): bool {
                 return $request->identity === 'user@example.com'
+                    && $request->purpose === TokenRequest::PURPOSE_MAGIC_LINK
                     && $request->context === [];
             }));
         $request = $this->createStub(ServerRequestInterface::class);

@@ -36,7 +36,10 @@ final readonly class ForgotPasswordHandler implements RequestHandlerInterface
             return $this->json(400, ['error' => 'invalid_email']);
         }
 
-        $this->queue->enqueue(new TokenRequest($email));
+        $this->queue->enqueue(new TokenRequest(
+            identity: $email,
+            purpose: TokenRequest::PURPOSE_PASSWORD_RESET,
+        ));
 
         return $this->json(200, [
             'message' => 'If the account exists, a reset link has been sent.',
