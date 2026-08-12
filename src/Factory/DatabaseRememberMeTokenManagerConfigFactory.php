@@ -42,7 +42,6 @@ final readonly class DatabaseRememberMeTokenManagerConfigFactory implements Lazy
 
         return new DatabaseRememberMeTokenManagerConfig(
             table: $config->string(new ConfigPath($prefix . '.table'), 'remember_me_tokens'),
-            dateFormat: $config->string(new ConfigPath($prefix . '.dateFormat'), 'Y-m-d H:i:s'),
             ttl: $config->int(new ConfigPath($prefix . '.ttl'), 2592000),
             idColumn: $config->string(new ConfigPath($prefix . '.columns.id'), 'id'),
             subjectIdColumn: $config->string(new ConfigPath($prefix . '.columns.subjectId'), 'user_id'),

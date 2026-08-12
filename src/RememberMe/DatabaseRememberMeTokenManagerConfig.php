@@ -10,9 +10,10 @@ final readonly class DatabaseRememberMeTokenManagerConfig
 
     private const int MAX_TTL = 315360000;
 
+    public string $dateFormat;
+
     public function __construct(
         public string $table = 'remember_me_tokens',
-        public string $dateFormat = self::DATE_FORMAT,
         public int $ttl = 2592000,
         public string $idColumn = 'id',
         public string $subjectIdColumn = 'user_id',
@@ -22,17 +23,12 @@ final readonly class DatabaseRememberMeTokenManagerConfig
         public string $expiresAtColumn = 'expires_at',
         public string $createdAtColumn = 'created_at',
     ) {
+        $this->dateFormat = self::DATE_FORMAT;
+
         if ($this->ttl < 1 || $this->ttl > self::MAX_TTL) {
             throw new \InvalidArgumentException(sprintf(
                 'Remember-me TTL must be between 1 and %d seconds.',
                 self::MAX_TTL,
-            ));
-        }
-
-        if ($this->dateFormat !== self::DATE_FORMAT) {
-            throw new \InvalidArgumentException(sprintf(
-                'Remember-me database timestamps must use the sortable format %s.',
-                self::DATE_FORMAT,
             ));
         }
 

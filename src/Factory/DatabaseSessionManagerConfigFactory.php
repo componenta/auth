@@ -42,7 +42,6 @@ final readonly class DatabaseSessionManagerConfigFactory implements LazyServiceF
 
         return new DatabaseSessionManagerConfig(
             table: $config->string(new ConfigPath($prefix . '.table'), 'sessions'),
-            dateFormat: $config->string(new ConfigPath($prefix . '.dateFormat'), 'Y-m-d H:i:s'),
             lazyLoad: $config->bool(new ConfigPath($prefix . '.lazyLoad'), true),
             idleTimeout: $config->int(new ConfigPath($prefix . '.idleTimeout'), 1800),
             absoluteTimeout: $config->int(new ConfigPath($prefix . '.absoluteTimeout'), 28800),

@@ -10,11 +10,12 @@ final readonly class TokenConfig
 
     private const int MAX_TTL = 31536000;
 
+    public string $dateFormat;
+
     public function __construct(
         public string $table,
         public string $purpose,
         public int $ttl = 300,
-        public string $dateFormat = self::DATE_FORMAT,
         public string $idColumn = 'id',
         public string $subjectIdColumn = 'user_id',
         public string $tokenColumn = 'token',
@@ -22,6 +23,8 @@ final readonly class TokenConfig
         public string $usedAtColumn = 'used_at',
         public string $createdAtColumn = 'created_at',
     ) {
+        $this->dateFormat = self::DATE_FORMAT;
+
         if (
             preg_match('/\A[a-z][a-z0-9._-]{0,63}\z/D', $this->purpose) !== 1
         ) {
@@ -34,13 +37,6 @@ final readonly class TokenConfig
             throw new \InvalidArgumentException(sprintf(
                 'Token TTL must be between 1 and %d seconds.',
                 self::MAX_TTL,
-            ));
-        }
-
-        if ($this->dateFormat !== self::DATE_FORMAT) {
-            throw new \InvalidArgumentException(sprintf(
-                'One-time token database timestamps must use the sortable format %s.',
-                self::DATE_FORMAT,
             ));
         }
 

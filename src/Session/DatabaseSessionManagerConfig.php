@@ -10,9 +10,10 @@ final readonly class DatabaseSessionManagerConfig
 
     private const int MAX_TIMEOUT = 315360000;
 
+    public string $dateFormat;
+
     public function __construct(
         public string $table = 'sessions',
-        public string $dateFormat = self::DATE_FORMAT,
         public bool $lazyLoad = true,
         public int $idleTimeout = 1800,
         public int $absoluteTimeout = 28800,
@@ -31,12 +32,7 @@ final readonly class DatabaseSessionManagerConfig
         public string $lastActiveAtColumn = 'last_active_at',
         public string $attributesColumn = 'attributes',
     ) {
-        if ($this->dateFormat !== self::DATE_FORMAT) {
-            throw new \InvalidArgumentException(sprintf(
-                'Session database timestamps must use the sortable format %s.',
-                self::DATE_FORMAT,
-            ));
-        }
+        $this->dateFormat = self::DATE_FORMAT;
 
         foreach ([
             'idleTimeout' => $this->idleTimeout,
