@@ -54,7 +54,7 @@ The suite must prove:
 17. refresh rotation/replay is one family-serialized transition and actual replay leaves zero active descendants;
 18. ordinary refresh revocation is distinct from replay compromise, revokes the complete family, serializes with rotation and cannot leave an active successor;
 19. failed refresh-successor persistence rolls back the presented-token claim;
-20. OTP verification/attempt accounting/consume is single-winner over one challenge version;
+20. OTP verification, attempt accounting and consume are one challenge-version transition; reaching `maxAttempts` concurrently with a correct code cannot still authenticate the challenge;
 21. public OTP response code/body do not expose whether a challenge existed; this is not a claim of constant SQL latency;
 22. OTP input matches the configured code length before attempt accounting;
 23. one-time tokens are domain-separated by purpose;
@@ -67,10 +67,11 @@ The suite must prove:
 30. UUID providers cannot substitute a different identity;
 31. credential DATETIME values are UTC with fixed internal representation;
 32. cleanup operations are bounded and recheck security predicates before destructive writes;
-33. event DTO timestamps come from owning clock services, not hidden global time;
-34. Componenta factory wiring honors the shared PSR-20 clock when the container provides it;
-35. third-party GitHub Actions use immutable 40-character commit SHAs.
-36. built-in `RateLimited` denials validate non-negative retry delay and publish it only as the standard `Retry-After` header, not in the JSON body.
+33. refresh-family cleanup serializes with rotation/revocation before its final expiry recheck and cannot delete a concurrently created active successor;
+34. event DTO timestamps come from owning clock services, not hidden global time;
+35. Componenta factory wiring honors the shared PSR-20 clock when the container provides it;
+36. third-party GitHub Actions use immutable 40-character commit SHAs.
+37. built-in `RateLimited` denials validate non-negative retry delay and publish it only as the standard `Retry-After` header, not in the JSON body.
 
 ## Real MySQL concurrency gate
 
@@ -86,9 +87,15 @@ Two workers rotate the same presented token concurrently with different successo
 
 One worker rotates a presented refresh bearer while another ordinarily revokes that bearer. If revocation wins first, rotation is invalid. If rotation commits first, revocation waits for family serialization and revokes the successor. In both orderings the family is ordinarily revoked, `compromised_at` remains `NULL`, and no active token remains.
 
+### Refresh rotation versus housekeeping
+
+One worker rotates a token immediately before its expiry boundary while another cleans the family at that boundary. If rotation wins family serialization, cleanup rechecks under the same family lock and must preserve the new active successor. If cleanup wins first, rotation fails closed as invalid and the expired family is removed.
+
 ### OTP
 
 Two workers verify the same valid OTP concurrently. Exactly one returns `verified`; the other returns `invalid`, and the challenge row is gone.
+
+A separate race submits one correct code and one final wrong attempt with `maxAttempts = 1`. The allowed outcomes are either `verified + invalid` when valid consume linearizes first, or `too_many_attempts + too_many_attempts` when the attempt limit linearizes first. `verified + too_many_attempts` is forbidden because it would mean authentication succeeded after the challenge reached its attempt limit.
 
 ### Remember-me versus logout
 
@@ -104,7 +111,7 @@ SQLite provides deterministic rollback and edge-case coverage. MySQL 8.4 indepen
 
 Security-state reads for session, remember-me, one-time, refresh and OTP stores are also tested with separate WRITE and intentionally stale/empty READ drivers. Moving an authoritative read to a replica therefore fails the suite.
 
-`DatabaseRefreshTokenHousekeeper` is tested separately from rotation. Cleanup may remove only families whose complete token history is expired; active/replay-relevant history is retained.
+`DatabaseRefreshTokenHousekeeper` serializes final cleanup with the same family row used by rotation/revocation, then rechecks expiry on the primary before destructive writes. Cleanup may remove only families whose complete token history is expired; active/replay-relevant history is retained.
 
 Session cleanup is tested on both SQLite and MySQL. A replaced row is a lineage tombstone: after its short regeneration grace expires it is no longer an authenticatable credential, but cleanup retains it until absolute expiry so termination by the old presented ID can still traverse `replaced_by` to an active successor.
 

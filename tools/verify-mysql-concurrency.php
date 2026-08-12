@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Componenta\Auth\Event\EventDispatcher;
 use Componenta\Auth\Event\PriorityListenerProvider;
+use Componenta\Auth\Http\Strategy\Jwt\DatabaseRefreshTokenHousekeeper;
 use Componenta\Auth\Http\Strategy\Jwt\DatabaseRefreshTokenStore;
 use Componenta\Auth\Http\Strategy\Jwt\RefreshToken;
 use Componenta\Auth\Http\Strategy\Otp\DatabaseCodeStore;
@@ -286,6 +287,67 @@ function verifyRefreshRevokeRace(): void
     );
 }
 
+function verifyRefreshHousekeeperRace(): void
+{
+    for ($iteration = 0; $iteration < 16; ++$iteration) {
+        $database = db();
+        resetSchema($database);
+        createRefreshSchema($database);
+
+        $token = str_repeat('a', 64);
+        $successor = str_repeat('b', 64);
+        $family = str_repeat('f', 64);
+        (new DatabaseRefreshTokenStore($database))->storeInitial(
+            new RefreshToken($token, subjectId(), $family, 1000),
+        );
+
+        $results = race([
+            static fn(): string => (new DatabaseRefreshTokenStore(db()))
+                ->rotateAtomically($token, $successor, 5000, 999)
+                ->status->value,
+            static fn(): int => (new DatabaseRefreshTokenHousekeeper(db()))
+                ->cleanup(1000, 10),
+        ]);
+
+        $rotation = $results[0] ?? null;
+        $deleted = $results[1] ?? null;
+        $verify = db();
+        $families = $verify->select()->from('refresh_token_families')
+            ->where('family_id', $family)
+            ->count();
+        $active = $verify->select()->from('refresh_tokens')
+            ->where('family_id', $family)
+            ->where('revoked_at', null)
+            ->where('expires_at', '>', 1000)
+            ->count();
+
+        if ($rotation === 'rotated') {
+            invariant(
+                $deleted === 0,
+                'Refresh cleanup deleted a concurrently rotated family',
+                $results,
+            );
+            invariant($families === 1, 'Rotated refresh family disappeared', $families);
+            invariant($active === 1, 'Rotated refresh successor disappeared', $active);
+
+            continue;
+        }
+
+        invariant(
+            $rotation === 'invalid',
+            'Refresh cleanup race returned an unexpected rotation status',
+            $results,
+        );
+        invariant(
+            $deleted === 1,
+            'Cleanup-winning refresh race did not remove the expired family',
+            $results,
+        );
+        invariant($families === 0, 'Expired refresh family survived cleanup', $families);
+        invariant($active === 0, 'Expired refresh family kept an active token', $active);
+    }
+}
+
 function verifyOtpRace(): void
 {
     $database = db();
@@ -319,6 +381,59 @@ function verifyOtpRace(): void
     sort($results);
     invariant($results === ['invalid', 'verified'], 'OTP verification is not single-winner', $results);
     invariant(db()->select()->from('otp_codes')->count() === 0, 'Consumed OTP challenge remains active');
+}
+
+function verifyOtpAttemptLimitRace(): void
+{
+    $key = 'componenta-auth-concurrency-otp-key-32-bytes-minimum';
+
+    for ($iteration = 0; $iteration < 32; ++$iteration) {
+        $database = db();
+        resetSchema($database);
+        $database->execute(<<<'SQL'
+            CREATE TABLE otp_codes (
+                destination VARCHAR(320) NOT NULL PRIMARY KEY,
+                user_id CHAR(36) NOT NULL,
+                challenge_id CHAR(32) NOT NULL,
+                verifier CHAR(64) NOT NULL,
+                expires_at BIGINT UNSIGNED NOT NULL,
+                attempts INT UNSIGNED NOT NULL
+            ) ENGINE=InnoDB
+            SQL);
+        (new DatabaseCodeStore($database, $key))->store(new StoredCode(
+            subjectId(),
+            '123456',
+            'attempt-race@example.com',
+            5000,
+        ));
+
+        $results = race([
+            static fn(): string => (new DatabaseCodeStore(db(), $key))
+                ->verifyAndConsume(
+                    'attempt-race@example.com',
+                    '123456',
+                    1000,
+                    1,
+                )
+                ->status->value,
+            static fn(): string => (new DatabaseCodeStore(db(), $key))
+                ->verifyAndConsume(
+                    'attempt-race@example.com',
+                    '000000',
+                    1000,
+                    1,
+                )
+                ->status->value,
+        ]);
+        sort($results);
+
+        invariant(
+            $results === ['invalid', 'verified']
+                || $results === ['too_many_attempts', 'too_many_attempts'],
+            'OTP final-attempt race bypassed maxAttempts',
+            $results,
+        );
+    }
 }
 
 function verifyRememberLogoutRace(): void
@@ -397,8 +512,6 @@ function verifySessionLogoutRace(): void
             }
         },
         static function () use ($old): string {
-            // Model a logout request that authenticated the old ID before a
-            // concurrent request committed regeneration, but terminates after.
             usleep(50000);
             sessionManager(db())->terminate($old->id);
             return 'terminated';
@@ -412,7 +525,9 @@ function verifySessionLogoutRace(): void
 try {
     verifyRefreshRace();
     verifyRefreshRevokeRace();
+    verifyRefreshHousekeeperRace();
     verifyOtpRace();
+    verifyOtpAttemptLimitRace();
     verifyRememberLogoutRace();
     verifySessionLogoutRace();
     fwrite(STDOUT, "MySQL concurrency invariants: OK\n");

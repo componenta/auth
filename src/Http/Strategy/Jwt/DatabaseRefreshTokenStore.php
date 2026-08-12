@@ -266,9 +266,9 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
                     $family = $this->findFamily($database, $familyId);
 
                     if ($family === null) {
-                        throw new \UnexpectedValueException(
-                            'Refresh token references a missing family.',
-                        );
+                        // A concurrent housekeeper may have already removed an
+                        // expired family after this token was initially read.
+                        return;
                     }
 
                     return;
@@ -351,9 +351,9 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
         $family = $this->findFamily($database, $familyId);
 
         if ($family === null) {
-            throw new \UnexpectedValueException(
-                'Refresh token references a missing family.',
-            );
+            // Cleanup can win the family serialization race after the
+            // presented token was read but before rotation claimed the family.
+            return RefreshTokenRotationStatus::Invalid;
         }
 
         if (self::nullableIntValue(

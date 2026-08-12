@@ -11,6 +11,7 @@ use Cycle\Database\Query\SelectQuery;
 /** Bounded cleanup for refresh families whose complete token history has expired. */
 final readonly class DatabaseRefreshTokenHousekeeper
 {
+    private const int LOCK_NONCE_BYTES = 16;
     private const int MAX_CLEANUP_LIMIT = 10000;
 
     public function __construct(
@@ -46,7 +47,7 @@ final readonly class DatabaseRefreshTokenHousekeeper
             ->limit($limit)
             ->run()
             ->fetchAll();
-        $familyIds = [];
+        $ids = [];
 
         foreach ($rows as $row) {
             if (!is_array($row)) {
@@ -55,62 +56,78 @@ final readonly class DatabaseRefreshTokenHousekeeper
 
             $familyId = $row[$this->config->familyIdColumn] ?? null;
             if (is_string($familyId) && $familyId !== '') {
-                $familyIds[$familyId] = true;
+                $ids[$familyId] = true;
             }
         }
 
-        if ($familyIds === []) {
-            return 0;
-        }
-
-        $ids = array_keys($familyIds);
-        $query = $this->database->select($this->config->familyIdColumn)->withDriver(
-            $this->database->getDriver(DatabaseInterface::WRITE),
-            $this->database->getPrefix(),
-        );
-
-        if (!$query instanceof SelectQuery) {
-            throw new \LogicException(
-                'Cycle must preserve SelectQuery when pinning the write driver.',
-            );
-        }
-
-        $active = $query
-            ->from($this->config->tokenTable)
-            ->where($this->config->familyIdColumn, 'IN', $ids)
-            ->where($this->config->expiresAtColumn, '>', $now)
-            ->distinct()
-            ->run()
-            ->fetchAll();
-
-        foreach ($active as $row) {
-            if (!is_array($row)) {
-                continue;
-            }
-
-            $familyId = $row[$this->config->familyIdColumn] ?? null;
-            if (is_string($familyId)) {
-                unset($familyIds[$familyId]);
-            }
-        }
-
-        $ids = array_keys($familyIds);
         if ($ids === []) {
             return 0;
         }
 
-        return $this->database->transaction(
-            function (DatabaseInterface $database) use ($ids): int {
-                $database
-                    ->delete($this->config->tokenTable)
-                    ->where($this->config->familyIdColumn, 'IN', $ids)
-                    ->run();
+        $familyIds = array_keys($ids);
+        sort($familyIds, SORT_STRING);
 
-                return $database
-                    ->delete($this->config->familyTable)
-                    ->where($this->config->familyIdColumn, 'IN', $ids)
-                    ->run();
+        return $this->database->transaction(
+            function (DatabaseInterface $database) use ($familyIds, $now): int {
+                $deleted = 0;
+
+                foreach ($familyIds as $familyId) {
+                    // The family row is the same serialization point used by
+                    // rotation and revocation. Once claimed, no successor can
+                    // be inserted until the expiry predicate is rechecked.
+                    $claimed = $database
+                        ->update($this->config->familyTable)
+                        ->where($this->config->familyIdColumn, $familyId)
+                        ->values([
+                            $this->config->lockNonceColumn => self::lockNonce(),
+                        ])
+                        ->run();
+
+                    if ($claimed !== 1) {
+                        continue;
+                    }
+
+                    $query = $database->select($this->config->familyIdColumn)->withDriver(
+                        $database->getDriver(DatabaseInterface::WRITE),
+                        $database->getPrefix(),
+                    );
+
+                    if (!$query instanceof SelectQuery) {
+                        throw new \LogicException(
+                            'Cycle must preserve SelectQuery when pinning the write driver.',
+                        );
+                    }
+
+                    $active = $query
+                        ->from($this->config->tokenTable)
+                        ->where($this->config->familyIdColumn, $familyId)
+                        ->where($this->config->expiresAtColumn, '>', $now)
+                        ->limit(1)
+                        ->run()
+                        ->fetch();
+
+                    if (is_array($active)) {
+                        continue;
+                    }
+
+                    $database
+                        ->delete($this->config->tokenTable)
+                        ->where($this->config->familyIdColumn, $familyId)
+                        ->run();
+
+                    $deleted += $database
+                        ->delete($this->config->familyTable)
+                        ->where($this->config->familyIdColumn, $familyId)
+                        ->run();
+                }
+
+                return $deleted;
             },
         );
+    }
+
+    private static function lockNonce(): string
+    {
+        return bin2hex(random_bytes(self::LOCK_NONCE_BYTES));
     }
 }

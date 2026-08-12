@@ -191,6 +191,11 @@ final readonly class DatabaseCodeStore implements CodeStoreInterface
                         $storedVerifier,
                     )
                     ->where(
+                        $this->config->attemptsColumn,
+                        '<',
+                        $maxAttempts,
+                    )
+                    ->where(
                         $this->config->expiresAtColumn,
                         '>',
                         $now,
