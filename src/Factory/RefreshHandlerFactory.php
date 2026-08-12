@@ -10,6 +10,7 @@ use Componenta\Auth\Http\Strategy\Jwt\JwtUserProviderInterface;
 use Componenta\Auth\Http\Strategy\Jwt\RefreshHandler;
 use Componenta\Auth\Http\Strategy\Jwt\RefreshTokenManager;
 use Componenta\Auth\Http\Strategy\Jwt\SignerInterface;
+use Psr\Clock\ClockInterface;
 use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 
@@ -30,6 +31,27 @@ final readonly class RefreshHandlerFactory
         /** @var ResponseFactoryInterface $responseFactory */
         $responseFactory = $container->get(ResponseFactoryInterface::class);
 
+        if (!$container->has(ClockInterface::class)) {
+            return new RefreshHandler(
+                $refreshManager,
+                $provider,
+                $signer,
+                $config,
+                $deniedResponseFactory,
+                $responseFactory,
+            );
+        }
+
+        $clock = $container->get(ClockInterface::class);
+
+        if (!$clock instanceof ClockInterface) {
+            throw new \LogicException(sprintf(
+                '%s must resolve to %s.',
+                ClockInterface::class,
+                ClockInterface::class,
+            ));
+        }
+
         return new RefreshHandler(
             $refreshManager,
             $provider,
@@ -37,6 +59,7 @@ final readonly class RefreshHandlerFactory
             $config,
             $deniedResponseFactory,
             $responseFactory,
+            $clock,
         );
     }
 }

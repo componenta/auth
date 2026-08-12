@@ -14,6 +14,7 @@ use Componenta\Auth\Exception\AuthenticatorConfigurationException;
 use Componenta\Auth\Http\Strategy\RememberMe\RememberMeStrategy;
 use Componenta\Config\Config;
 use Componenta\Config\ConfigPath;
+use Psr\Clock\ClockInterface;
 use Psr\Container\ContainerInterface;
 
 /** Builds the security-sensitive strategy chain in explicit configured order. */
@@ -99,6 +100,20 @@ final readonly class AuthenticatorFactory
             ));
         }
 
-        return new EventingAuthenticator($authenticator, $dispatcher);
+        if (!$container->has(ClockInterface::class)) {
+            return new EventingAuthenticator($authenticator, $dispatcher);
+        }
+
+        $clock = $container->get(ClockInterface::class);
+
+        if (!$clock instanceof ClockInterface) {
+            throw new AuthenticatorConfigurationException(sprintf(
+                '%s must resolve to %s.',
+                ClockInterface::class,
+                ClockInterface::class,
+            ));
+        }
+
+        return new EventingAuthenticator($authenticator, $dispatcher, $clock);
     }
 }

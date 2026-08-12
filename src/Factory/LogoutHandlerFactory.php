@@ -8,6 +8,7 @@ use Componenta\Auth\Event\EventDispatcher;
 use Componenta\Auth\Http\Handler\LogoutHandler;
 use Componenta\Auth\Http\PayloadStorageInterface;
 use Componenta\Auth\Session\SessionManagerInterface;
+use Psr\Clock\ClockInterface;
 use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 
@@ -38,6 +39,26 @@ final readonly class LogoutHandlerFactory
             $dispatcher = $candidate;
         }
 
-        return new LogoutHandler($storage, $sessionManager, $responseFactory, $dispatcher);
+        if (!$container->has(ClockInterface::class)) {
+            return new LogoutHandler($storage, $sessionManager, $responseFactory, $dispatcher);
+        }
+
+        $clock = $container->get(ClockInterface::class);
+
+        if (!$clock instanceof ClockInterface) {
+            throw new \LogicException(sprintf(
+                '%s must resolve to %s.',
+                ClockInterface::class,
+                ClockInterface::class,
+            ));
+        }
+
+        return new LogoutHandler(
+            $storage,
+            $sessionManager,
+            $responseFactory,
+            $dispatcher,
+            $clock,
+        );
     }
 }

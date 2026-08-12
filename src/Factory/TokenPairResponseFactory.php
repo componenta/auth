@@ -8,6 +8,7 @@ use Componenta\Auth\Http\Strategy\Jwt\JwtConfig;
 use Componenta\Auth\Http\Strategy\Jwt\RefreshTokenManager;
 use Componenta\Auth\Http\Strategy\Jwt\SignerInterface;
 use Componenta\Auth\Http\Strategy\Jwt\TokenPairResponse;
+use Psr\Clock\ClockInterface;
 use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 
@@ -24,6 +25,26 @@ final readonly class TokenPairResponseFactory
         /** @var ResponseFactoryInterface $responseFactory */
         $responseFactory = $container->get(ResponseFactoryInterface::class);
 
-        return new TokenPairResponse($signer, $refreshManager, $config, $responseFactory);
+        if (!$container->has(ClockInterface::class)) {
+            return new TokenPairResponse($signer, $refreshManager, $config, $responseFactory);
+        }
+
+        $clock = $container->get(ClockInterface::class);
+
+        if (!$clock instanceof ClockInterface) {
+            throw new \LogicException(sprintf(
+                '%s must resolve to %s.',
+                ClockInterface::class,
+                ClockInterface::class,
+            ));
+        }
+
+        return new TokenPairResponse(
+            $signer,
+            $refreshManager,
+            $config,
+            $responseFactory,
+            $clock,
+        );
     }
 }
