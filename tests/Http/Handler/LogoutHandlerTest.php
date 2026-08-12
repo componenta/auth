@@ -46,7 +46,7 @@ final class LogoutHandlerTest extends TestCase
         $manager = $this->createMock(SessionManagerInterface::class);
         $manager->expects(self::once())->method('terminate')->with('session');
         $storage->expects(self::never())->method('remove');
-        $response = $this->createStub(ResponseInterface::class);
+        $response = $this->responseStub();
         $responses = $this->createMock(ResponseFactoryInterface::class);
         $responses->expects(self::once())
             ->method('createResponse')
@@ -58,5 +58,41 @@ final class LogoutHandlerTest extends TestCase
             (new LogoutHandler($storage, $manager, $responses))->handle($request),
         );
         self::assertTrue($state->cleared);
+    }
+
+    public function testStandaloneCredentialRemovalIsNonCacheable(): void
+    {
+        $request = $this->createStub(ServerRequestInterface::class);
+        $request->method('getAttribute')->willReturn(null);
+        $response = $this->responseStub();
+        $removed = $this->createStub(ResponseInterface::class);
+        $headers = [];
+        $removed->method('withHeader')->willReturnCallback(
+            static function (string $name, string $value) use (&$headers, $removed): ResponseInterface {
+                $headers[$name] = $value;
+
+                return $removed;
+            },
+        );
+        $storage = $this->createStub(PayloadStorageInterface::class);
+        $storage->method('remove')->willReturn($removed);
+        $manager = $this->createStub(SessionManagerInterface::class);
+        $responses = $this->createStub(ResponseFactoryInterface::class);
+        $responses->method('createResponse')->willReturn($response);
+
+        self::assertSame(
+            $removed,
+            (new LogoutHandler($storage, $manager, $responses))->handle($request),
+        );
+        self::assertSame('no-store', $headers['Cache-Control'] ?? null);
+        self::assertSame('no-cache', $headers['Pragma'] ?? null);
+    }
+
+    private function responseStub(): ResponseInterface
+    {
+        $response = $this->createStub(ResponseInterface::class);
+        $response->method('withHeader')->willReturnSelf();
+
+        return $response;
     }
 }

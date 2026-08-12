@@ -51,6 +51,29 @@ final class SessionRegenerationSecurityTest extends TestCase
         self::assertSame(0, $database->select()->from('sessions')->count());
     }
 
+    public function testCleanupPreservesReplacementLineageUntilAbsoluteExpiry(): void
+    {
+        self::requireSqlite();
+        $database = SqliteDatabaseFixture::create();
+        self::createSchema($database);
+        $manager = self::manager($database, 1000);
+        $old = $manager->create(self::subjectId(), self::attributes());
+        $new = $manager->regenerate($old->id);
+
+        // The old row's regeneration grace period has elapsed, but its
+        // replacement remains active and logout may still hold the old ID.
+        $afterGrace = self::manager($database, 1040);
+
+        self::assertSame(0, $afterGrace->cleanup());
+        self::assertSame(2, $database->select()->from('sessions')->count());
+        self::assertTrue($afterGrace->exists($new->id));
+
+        $afterGrace->terminate($old->id);
+
+        self::assertFalse($afterGrace->exists($new->id));
+        self::assertSame(0, $database->select()->from('sessions')->count());
+    }
+
     public function testRepeatedRegenerationNeverDisclosesWinningSuccessor(): void
     {
         self::requireSqlite();
@@ -67,11 +90,12 @@ final class SessionRegenerationSecurityTest extends TestCase
 
     private static function manager(
         DatabaseInterface $database,
+        int $timestamp = 1000,
     ): DatabaseSessionManager {
         return new DatabaseSessionManager(
             $database,
             new SessionIdGenerator(),
-            new FrozenClock(1000, 'UTC'),
+            new FrozenClock($timestamp, 'UTC'),
             new EventDispatcher(new PriorityListenerProvider()),
             new DatabaseSessionManagerConfig(),
         );

@@ -57,6 +57,11 @@ if grep -R --line-number -E 'getAuthSubjectId\(|isEmpty\(|shouldClear\(|payloads
     exit 1
 fi
 
+if grep -R --line-number -- '->payloads' src tests; then
+    echo 'Credential transport state must not expose queued bearer payloads.' >&2
+    exit 1
+fi
+
 if grep -R --line-number --fixed-strings 'new Clock()' src/Event; then
     echo 'Event DTOs must receive timestamps from owning clock services.' >&2
     exit 1
@@ -98,6 +103,16 @@ if ! grep -q --fixed-strings "withHeader('Referrer-Policy', 'no-referrer')" src/
     echo 'Magic-link response hardening must enforce Referrer-Policy: no-referrer.' >&2
     exit 1
 fi
+
+for mutator in \
+    src/Http/CredentialTransportState.php \
+    src/Http/Handler/LogoutHandler.php
+do
+    if ! grep -q --fixed-strings 'CredentialResponseHeaders::apply' "$mutator"; then
+        echo "Credential mutation path is missing no-store hardening: $mutator" >&2
+        exit 1
+    fi
+done
 
 while IFS= read -r action; do
     [[ -z "$action" ]] && continue

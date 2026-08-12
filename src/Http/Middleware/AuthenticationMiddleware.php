@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Http\Middleware;
 
+use Componenta\Auth\AuthenticationResult;
 use Componenta\Auth\AuthenticatorInterface;
 use Componenta\Auth\Context;
 use Componenta\Auth\ContextInterface;
+use Componenta\Auth\Denied\InvalidCredentials;
 use Componenta\Auth\DeniedReasonInterface;
 use Componenta\Auth\Http\CredentialTransportState;
 use Componenta\Auth\Http\PayloadExtractorInterface;
@@ -32,12 +34,21 @@ final readonly class AuthenticationMiddleware implements MiddlewareInterface
         ServerRequestInterface $request,
         RequestHandlerInterface $handler,
     ): ResponseInterface {
+        // A denial produced by an earlier authentication layer is terminal.
+        // Soft-failure continuation belongs inside Authenticator, not between
+        // independently composed middleware instances.
+        if ($request->getAttribute(DeniedReasonInterface::class) instanceof DeniedReasonInterface) {
+            return $handler->handle($request);
+        }
+
         $payload = $this->extractor->extract($request);
 
         if ($payload === null) {
             return $handler->handle($request);
         }
 
+        $existingIdentity = $request->getAttribute(IdentityInterface::class);
+        $existingSession = $request->getAttribute(SessionInterface::class);
         $existingState = $request->getAttribute(CredentialTransportState::class);
         $ownsTransportState = !$existingState instanceof CredentialTransportState;
         $transportState = $ownsTransportState
@@ -61,8 +72,21 @@ final readonly class AuthenticationMiddleware implements MiddlewareInterface
 
         if (
             $result->subject instanceof IdentityInterface
-            && $result->transportPayload !== null
+            && $existingIdentity instanceof IdentityInterface
+            && !$result->subject->uuid->equals($existingIdentity->uuid)
         ) {
+            // Two independently valid credentials for different principals in
+            // one request are ambiguous. Fail closed and do not commit an
+            // earlier queued rotation for either principal.
+            $transportState->discardQueued();
+            $result = new AuthenticationResult(new InvalidCredentials());
+        }
+
+        if ($result->subject instanceof DeniedReasonInterface) {
+            // A later terminal denial must also cancel credential writes queued
+            // by an earlier successful nested authentication layer.
+            $transportState->discardQueued();
+        } elseif ($result->transportPayload !== null) {
             if ($this->storage === null) {
                 throw new \LogicException(
                     'Authentication credential mutation requires a PayloadStorageInterface before downstream execution.',
@@ -82,17 +106,29 @@ final readonly class AuthenticationMiddleware implements MiddlewareInterface
                 IdentityInterface::class,
                 $result->subject,
             );
+
+            $session = $result->session;
+
+            if (
+                $session === null
+                && $existingIdentity instanceof IdentityInterface
+                && $existingIdentity->uuid->equals($result->subject->uuid)
+                && $existingSession instanceof SessionInterface
+                && $existingSession->subjectId->equals($result->subject->uuid)
+            ) {
+                $session = $existingSession;
+            }
+
+            if ($session !== null) {
+                $request = $request->withAttribute(
+                    SessionInterface::class,
+                    $session,
+                );
+            }
         } else {
             $request = $request->withAttribute(
                 DeniedReasonInterface::class,
                 $result->subject,
-            );
-        }
-
-        if ($result->session !== null) {
-            $request = $request->withAttribute(
-                SessionInterface::class,
-                $result->session,
             );
         }
 

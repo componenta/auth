@@ -6,6 +6,7 @@ namespace Componenta\Auth\Http\Handler;
 
 use Componenta\Auth\Event\EventDispatcher;
 use Componenta\Auth\Event\LoggedOut;
+use Componenta\Auth\Http\CredentialResponseHeaders;
 use Componenta\Auth\Http\CredentialTransportState;
 use Componenta\Auth\Http\PayloadStorageInterface;
 use Componenta\Auth\Session\SessionInterface;
@@ -53,6 +54,6 @@ readonly class LogoutHandler implements RequestHandlerInterface
             );
         }
 
-        return $response;
+        return CredentialResponseHeaders::apply($response);
     }
 }

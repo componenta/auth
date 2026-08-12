@@ -29,43 +29,47 @@ composer audit
 git diff --check
 ```
 
-`tools/verify.sh` also prevents the return of removed identity/session capability APIs, event marker interfaces, `PublicDeniedReasonInterface`, `RememberMeToken`, delete-on-consume remember rotation, hidden clocks in event DTOs, missing magic-link referrer hardening and floating GitHub Action refs.
+`tools/verify.sh` also prevents the return of removed identity/session capability APIs, event marker interfaces, `PublicDeniedReasonInterface`, `RememberMeToken`, delete-on-consume remember rotation, hidden clocks in event DTOs, raw queued credential exposure, missing credential-response cache hardening, missing magic-link referrer hardening and floating GitHub Action refs.
 
 ## Release-blocking invariants
 
 The suite must prove:
 
 1. logout clear is terminal and cannot be overwritten by queued session/remember mutations;
-2. nested authentication layers retain the storage associated with each credential mutation;
-3. a denial can never carry a session or response credential;
-4. strategy denial is terminal unless the strategy explicitly marks a soft failure;
-5. missing credential storage fails before downstream business code executes;
-6. request-local session state never lives on a reusable identity;
-7. a replaced session ID becomes invalid immediately and never resolves to its successor;
-8. terminating a presented session serializes with regeneration and cannot leave an already-created replacement descendant;
-9. session critical listeners are fail-fast inside the owning transition while observers run after commit;
-10. remember-me is disabled by default and enabling it activates the critical lifecycle listeners;
-11. remember bearer rotation is single-winner and concurrent logout/revocation leaves no descendant grant;
-12. remember grants always bind to a session and revocation can match current or previous session lineage;
-13. refresh rotation/replay is one family-serialized transition and actual replay leaves zero active descendants;
-14. ordinary refresh revocation is distinct from replay compromise, revokes the complete family, serializes with rotation and cannot leave an active successor;
-15. failed refresh-successor persistence rolls back the presented-token claim;
-16. OTP verification/attempt accounting/consume is single-winner over one challenge version;
-17. public OTP response code/body do not expose whether a challenge existed; this is not a claim of constant SQL latency;
-18. OTP input matches the configured code length before attempt accounting;
-19. one-time tokens are domain-separated by purpose;
-20. built-in delivery queue messages cannot look up one identity and deliver the credential to a different arbitrary destination;
-21. password reset success represents the complete recovery transition and password-policy rejection is explicit;
-22. denial attributes and bearer credentials are absent from public/debug serialization;
-23. token-bearing responses are non-cacheable and magic-link verification responses use `Referrer-Policy: no-referrer`;
-24. malformed inputs are rejected before provider/hash/storage work;
-25. credential-state reads use the primary/write connection;
-26. UUID providers cannot substitute a different identity;
-27. credential DATETIME values are UTC with fixed internal representation;
-28. cleanup operations are bounded and recheck security predicates before destructive writes;
-29. event DTO timestamps come from owning clock services, not hidden global time;
-30. Componenta factory wiring honors the shared PSR-20 clock when the container provides it;
-31. third-party GitHub Actions use immutable 40-character commit SHAs.
+2. nested authentication layers retain the storage associated with each credential mutation and preserve an existing session when a later successful layer authenticates the same UUID without returning a session;
+3. a terminal denial produced by one `AuthenticationMiddleware` cannot be overwritten by a later authentication layer;
+4. two independently successful credentials for different UUIDs in one nested authentication flow fail closed;
+5. a later terminal nested denial cancels credential writes queued by an earlier successful layer;
+6. a denial can never carry a session or response credential;
+7. strategy denial is terminal unless the strategy explicitly marks a soft failure inside `Authenticator`;
+8. missing credential storage fails before downstream business code executes;
+9. request-local session state never lives on a reusable identity;
+10. a replaced session ID becomes invalid immediately and never resolves to its successor;
+11. terminating a presented session serializes with regeneration and cannot leave an already-created replacement descendant;
+12. cleanup retains replaced-session lineage tombstones until absolute expiry, so a logout holding an older authenticated ID can still terminate its active successor after regeneration grace has elapsed;
+13. session critical listeners are fail-fast inside the owning transition while observers run after commit;
+14. remember-me is disabled by default and enabling it activates the critical lifecycle listeners;
+15. remember bearer rotation is single-winner and concurrent logout/revocation leaves no descendant grant;
+16. remember grants always bind to a session and revocation can match current or previous session lineage;
+17. refresh rotation/replay is one family-serialized transition and actual replay leaves zero active descendants;
+18. ordinary refresh revocation is distinct from replay compromise, revokes the complete family, serializes with rotation and cannot leave an active successor;
+19. failed refresh-successor persistence rolls back the presented-token claim;
+20. OTP verification/attempt accounting/consume is single-winner over one challenge version;
+21. public OTP response code/body do not expose whether a challenge existed; this is not a claim of constant SQL latency;
+22. OTP input matches the configured code length before attempt accounting;
+23. one-time tokens are domain-separated by purpose;
+24. built-in delivery queue messages cannot look up one identity and deliver the credential to a different arbitrary destination;
+25. password reset success represents the complete recovery transition and password-policy rejection is explicit;
+26. denial attributes and bearer credentials are absent from public/debug serialization, and `CredentialTransportState` does not expose queued bearer payloads;
+27. every response-side credential store/remove mutation is non-cacheable, token-bearing responses are non-cacheable, and magic-link verification responses use `Referrer-Policy: no-referrer`;
+28. malformed inputs are rejected before provider/hash/storage work;
+29. credential-state reads use the primary/write connection;
+30. UUID providers cannot substitute a different identity;
+31. credential DATETIME values are UTC with fixed internal representation;
+32. cleanup operations are bounded and recheck security predicates before destructive writes;
+33. event DTO timestamps come from owning clock services, not hidden global time;
+34. Componenta factory wiring honors the shared PSR-20 clock when the container provides it;
+35. third-party GitHub Actions use immutable 40-character commit SHAs.
 
 ## Real MySQL concurrency gate
 
@@ -100,6 +104,8 @@ SQLite provides deterministic rollback and edge-case coverage. MySQL 8.4 indepen
 Security-state reads for session, remember-me, one-time, refresh and OTP stores are also tested with separate WRITE and intentionally stale/empty READ drivers. Moving an authoritative read to a replica therefore fails the suite.
 
 `DatabaseRefreshTokenHousekeeper` is tested separately from rotation. Cleanup may remove only families whose complete token history is expired; active/replay-relevant history is retained.
+
+Session cleanup is tested on both SQLite and MySQL. A replaced row is a lineage tombstone: after its short regeneration grace expires it is no longer an authenticatable credential, but cleanup retains it until absolute expiry so termination by the old presented ID can still traverse `replaced_by` to an active successor.
 
 The built-in session table contains live session identifiers because enumeration and replacement-lineage management require recoverable IDs. The database is therefore part of the credential trust boundary even though session DTO debug/JSON output redacts IDs.
 

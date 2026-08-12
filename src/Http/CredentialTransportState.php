@@ -26,14 +26,6 @@ final class CredentialTransportState
         get => $this->clear;
     }
 
-    /** @var list<object> */
-    public array $payloads {
-        get => array_map(
-            static fn(array $entry): object => $entry['payload'],
-            $this->queued,
-        );
-    }
-
     public function register(PayloadStorageInterface $storage): void
     {
         $this->storages[spl_object_id($storage)] = $storage;
@@ -46,6 +38,12 @@ final class CredentialTransportState
         if (!$this->clear) {
             $this->queued[] = ['storage' => $storage, 'payload' => $payload];
         }
+    }
+
+    /** Cancels pending credential writes after a terminal authentication denial. */
+    public function discardQueued(): void
+    {
+        $this->queued = [];
     }
 
     public function clear(PayloadStorageInterface $storage): void
@@ -64,6 +62,10 @@ final class CredentialTransportState
                 $response = $storage->remove($request, $response);
             }
 
+            return CredentialResponseHeaders::apply($response);
+        }
+
+        if ($this->queued === []) {
             return $response;
         }
 
@@ -75,6 +77,6 @@ final class CredentialTransportState
             );
         }
 
-        return $response;
+        return CredentialResponseHeaders::apply($response);
     }
 }

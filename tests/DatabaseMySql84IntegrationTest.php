@@ -4,12 +4,17 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Tests;
 
+use Componenta\Auth\Event\EventDispatcher;
+use Componenta\Auth\Event\PriorityListenerProvider;
 use Componenta\Auth\Http\Strategy\Jwt\DatabaseRefreshTokenStore;
 use Componenta\Auth\Http\Strategy\Jwt\RefreshToken;
 use Componenta\Auth\Http\Strategy\Jwt\RefreshTokenRotationStatus;
 use Componenta\Auth\Http\Strategy\Otp\CodeVerificationStatus;
 use Componenta\Auth\Http\Strategy\Otp\DatabaseCodeStore;
 use Componenta\Auth\Http\Strategy\Otp\StoredCode;
+use Componenta\Auth\Session\DatabaseSessionManager;
+use Componenta\Auth\Session\DatabaseSessionManagerConfig;
+use Componenta\Auth\Session\SessionIdGenerator;
 use Componenta\Auth\Tests\Support\MySqlDatabaseFixture;
 use Componenta\Auth\Token\TokenConfig;
 use Componenta\Auth\Token\TokenManager;
@@ -188,6 +193,44 @@ final class DatabaseMySql84IntegrationTest extends TestCase
         );
     }
 
+    public function testSessionCleanupPreservesReplacementLineageOnMySql(): void
+    {
+        $database = self::database();
+        self::resetSchema($database);
+        $database->execute(<<<'SQL'
+            CREATE TABLE sessions (
+                id VARCHAR(512) NOT NULL PRIMARY KEY,
+                user_id CHAR(36) NOT NULL,
+                ip VARCHAR(45) NOT NULL,
+                user_agent VARCHAR(1024) NOT NULL,
+                expires_at DATETIME NOT NULL,
+                absolute_expires_at DATETIME NOT NULL,
+                regenerate_at DATETIME NOT NULL,
+                replaced_by VARCHAR(512) NULL,
+                created_at DATETIME NOT NULL,
+                last_active_at DATETIME NOT NULL,
+                attributes TEXT NOT NULL,
+                INDEX idx_session_subject (user_id),
+                INDEX idx_session_replaced (replaced_by)
+            ) ENGINE=InnoDB
+            SQL);
+        $manager = self::sessionManager($database, 1000);
+        $old = $manager->create(self::subjectId(), [
+            DatabaseSessionManager::ATTR_IP => '127.0.0.1',
+            DatabaseSessionManager::ATTR_USER_AGENT => 'mysql-lineage-test',
+        ]);
+        $new = $manager->regenerate($old->id);
+        $afterGrace = self::sessionManager($database, 1040);
+
+        self::assertSame(0, $afterGrace->cleanup());
+        self::assertSame(2, $database->select()->from('sessions')->count());
+        self::assertTrue($afterGrace->exists($new->id));
+
+        $afterGrace->terminate($old->id);
+
+        self::assertSame(0, $database->select()->from('sessions')->count());
+    }
+
     private static function database(): DatabaseInterface
     {
         if (!MySqlDatabaseFixture::available()) {
@@ -197,6 +240,19 @@ final class DatabaseMySql84IntegrationTest extends TestCase
         }
 
         return MySqlDatabaseFixture::create();
+    }
+
+    private static function sessionManager(
+        DatabaseInterface $database,
+        int $timestamp,
+    ): DatabaseSessionManager {
+        return new DatabaseSessionManager(
+            $database,
+            new SessionIdGenerator(),
+            new FrozenClock($timestamp, 'UTC'),
+            new EventDispatcher(new PriorityListenerProvider()),
+            new DatabaseSessionManagerConfig(),
+        );
     }
 
     private static function subjectId(): \Componenta\Identity\UuidInterface
@@ -215,6 +271,7 @@ final class DatabaseMySql84IntegrationTest extends TestCase
             'refresh_token_families',
             'otp_codes',
             'one_time_tokens',
+            'sessions',
         ] as $table) {
             $database->execute('DROP TABLE IF EXISTS ' . $table);
         }

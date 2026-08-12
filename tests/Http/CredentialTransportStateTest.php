@@ -15,8 +15,8 @@ final class CredentialTransportStateTest extends TestCase
     public function testClearWinsOverQueuedAndFutureCredentials(): void
     {
         $request = $this->createStub(ServerRequestInterface::class);
-        $response = $this->createStub(ResponseInterface::class);
-        $cleared = $this->createStub(ResponseInterface::class);
+        $response = $this->responseStub();
+        $cleared = $this->responseStub();
         $storage = $this->createMock(PayloadStorageInterface::class);
         $storage->expects(self::never())->method('store');
         $storage->expects(self::once())->method('remove')
@@ -30,7 +30,6 @@ final class CredentialTransportStateTest extends TestCase
         self::assertSame($cleared, $state->apply($request, $response));
         self::assertTrue($state->cleared);
         self::assertFalse($state->empty);
-        self::assertSame([], $state->payloads);
     }
 
     public function testQueuedPayloadUsesItsOwnStorage(): void
@@ -38,9 +37,9 @@ final class CredentialTransportStateTest extends TestCase
         $payloadA = new \stdClass();
         $payloadB = new \stdClass();
         $request = $this->createStub(ServerRequestInterface::class);
-        $response = $this->createStub(ResponseInterface::class);
-        $afterA = $this->createStub(ResponseInterface::class);
-        $afterB = $this->createStub(ResponseInterface::class);
+        $response = $this->responseStub();
+        $afterA = $this->responseStub();
+        $afterB = $this->responseStub();
         $storageA = $this->createMock(PayloadStorageInterface::class);
         $storageB = $this->createMock(PayloadStorageInterface::class);
         $storageA->expects(self::once())->method('store')
@@ -53,16 +52,15 @@ final class CredentialTransportStateTest extends TestCase
         $state->queue($storageA, $payloadA);
         $state->queue($storageB, $payloadB);
 
-        self::assertSame([$payloadA, $payloadB], $state->payloads);
         self::assertSame($afterB, $state->apply($request, $response));
     }
 
     public function testClearRemovesEveryRegisteredTransport(): void
     {
         $request = $this->createStub(ServerRequestInterface::class);
-        $response = $this->createStub(ResponseInterface::class);
-        $afterA = $this->createStub(ResponseInterface::class);
-        $afterB = $this->createStub(ResponseInterface::class);
+        $response = $this->responseStub();
+        $afterA = $this->responseStub();
+        $afterB = $this->responseStub();
         $storageA = $this->createMock(PayloadStorageInterface::class);
         $storageB = $this->createMock(PayloadStorageInterface::class);
         $storageA->expects(self::once())->method('remove')
@@ -76,5 +74,51 @@ final class CredentialTransportStateTest extends TestCase
         $state->clear($storageB);
 
         self::assertSame($afterB, $state->apply($request, $response));
+    }
+
+    public function testDiscardQueuedCancelsPendingCredentialWrites(): void
+    {
+        $request = $this->createStub(ServerRequestInterface::class);
+        $response = $this->responseStub();
+        $storage = $this->createMock(PayloadStorageInterface::class);
+        $storage->expects(self::never())->method('store');
+        $state = new CredentialTransportState();
+        $state->queue($storage, new \stdClass());
+
+        $state->discardQueued();
+
+        self::assertTrue($state->empty);
+        self::assertSame($response, $state->apply($request, $response));
+    }
+
+    public function testCredentialMutationForcesNoStoreHeaders(): void
+    {
+        $request = $this->createStub(ServerRequestInterface::class);
+        $response = $this->responseStub();
+        $mutated = $this->createStub(ResponseInterface::class);
+        $headers = [];
+        $mutated->method('withHeader')->willReturnCallback(
+            static function (string $name, string $value) use (&$headers, $mutated): ResponseInterface {
+                $headers[$name] = $value;
+
+                return $mutated;
+            },
+        );
+        $storage = $this->createStub(PayloadStorageInterface::class);
+        $storage->method('store')->willReturn($mutated);
+        $state = new CredentialTransportState();
+        $state->queue($storage, new \stdClass());
+
+        self::assertSame($mutated, $state->apply($request, $response));
+        self::assertSame('no-store', $headers['Cache-Control'] ?? null);
+        self::assertSame('no-cache', $headers['Pragma'] ?? null);
+    }
+
+    private function responseStub(): ResponseInterface
+    {
+        $response = $this->createStub(ResponseInterface::class);
+        $response->method('withHeader')->willReturnSelf();
+
+        return $response;
     }
 }

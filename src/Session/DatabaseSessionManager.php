@@ -277,7 +277,11 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
                     throw new \LogicException('Cycle must provide a SelectQuery to the predicate.');
                 }
 
+                // Replaced rows are lineage tombstones. Keep them until
+                // absolute expiry so a logout holding an older authenticated
+                // credential can still reach and terminate its successor.
                 $query
+                    ->where($this->config->replacedByColumn, null)
                     ->where($this->config->expiresAtColumn, '<=', $now)
                     ->orWhere($this->config->absoluteExpiresAtColumn, '<=', $now);
             })
@@ -309,6 +313,7 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
                     }
 
                     $query
+                        ->where($this->config->replacedByColumn, null)
                         ->where($this->config->expiresAtColumn, '<=', $now)
                         ->orWhere(
                             $this->config->absoluteExpiresAtColumn,
