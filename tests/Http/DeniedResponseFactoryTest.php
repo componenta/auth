@@ -74,11 +74,27 @@ final class DeniedResponseFactoryTest extends TestCase
 
     public function testNonScalarPublicDetailsAreRejected(): void
     {
-        $responseFactory = $this->createStub(ResponseFactoryInterface::class);
-        $factory = new DeniedResponseFactory($responseFactory);
+        $stream = $this->createMock(StreamInterface::class);
+        $stream->expects(self::once())
+            ->method('write')
+            ->with(self::callback(static function (string $json): bool {
+                $decoded = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
 
-        $this->expectException(\UnexpectedValueException::class);
-        $factory->create(new InvalidPublicReasonFixture());
+                return $decoded === ['error' => 'invalid_public'];
+            }))
+            ->willReturn(1);
+        $response = $this->createStub(ResponseInterface::class);
+        $response->method('getBody')->willReturn($stream);
+        $response->method('withHeader')->willReturnSelf();
+        $responseFactory = $this->createStub(ResponseFactoryInterface::class);
+        $responseFactory->method('createResponse')->willReturn($response);
+
+        self::assertSame(
+            $response,
+            (new DeniedResponseFactory($responseFactory))->create(
+                new InvalidPublicReasonFixture(),
+            ),
+        );
     }
 
     public function testRateLimitMetadataIsNotPublicWithoutExplicitInterface(): void
