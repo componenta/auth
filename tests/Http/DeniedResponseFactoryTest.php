@@ -9,7 +9,6 @@ use Componenta\Auth\Denied\RateLimited;
 use Componenta\Auth\Denied\UserDisabled;
 use Componenta\Auth\Event\AuthenticationDenied;
 use Componenta\Auth\Http\DeniedResponseFactory;
-use Componenta\Auth\PublicDeniedReasonInterface;
 use Componenta\Identity\Uuid;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
@@ -19,60 +18,7 @@ use Psr\Http\Message\StreamInterface;
 
 final class DeniedResponseFactoryTest extends TestCase
 {
-    public function testTrustedAttributesAreNotSerializedByDefault(): void
-    {
-        $stream = $this->createMock(StreamInterface::class);
-        $stream->expects(self::once())
-            ->method('write')
-            ->with(self::callback(
-                static fn(string $json): bool => !str_contains($json, 'secret-audit-value')
-                    && str_contains($json, 'invalid_credentials'),
-            ))
-            ->willReturn(1);
-        $response = $this->createStub(ResponseInterface::class);
-        $response->method('getBody')->willReturn($stream);
-        $response->method('withHeader')->willReturnSelf();
-        $responseFactory = $this->createStub(ResponseFactoryInterface::class);
-        $responseFactory->method('createResponse')->willReturn($response);
-        $factory = new DeniedResponseFactory($responseFactory);
-
-        self::assertSame(
-            $response,
-            $factory->create(new DeniedReason(
-                'invalid_credentials',
-                ['diagnostic' => 'secret-audit-value'],
-            )),
-        );
-    }
-
-    public function testPublicDetailsAreExplicitlyAllowlisted(): void
-    {
-        $reason = new PublicReasonFixture();
-        $stream = $this->createMock(StreamInterface::class);
-        $stream->expects(self::once())
-            ->method('write')
-            ->with(self::callback(static function (string $json): bool {
-                $decoded = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
-
-                return $decoded === [
-                    'error' => 'rate_limited',
-                    'details' => ['retry_after' => 30],
-                ];
-            }))
-            ->willReturn(1);
-        $response = $this->createStub(ResponseInterface::class);
-        $response->method('getBody')->willReturn($stream);
-        $response->method('withHeader')->willReturnSelf();
-        $responseFactory = $this->createStub(ResponseFactoryInterface::class);
-        $responseFactory->method('createResponse')->willReturn($response);
-
-        self::assertSame(
-            $response,
-            (new DeniedResponseFactory($responseFactory))->create($reason),
-        );
-    }
-
-    public function testNonScalarPublicDetailsAreRejected(): void
+    public function testTrustedAttributesAreNeverSerializedByDefault(): void
     {
         $stream = $this->createMock(StreamInterface::class);
         $stream->expects(self::once())
@@ -80,7 +26,7 @@ final class DeniedResponseFactoryTest extends TestCase
             ->with(self::callback(static function (string $json): bool {
                 $decoded = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
 
-                return $decoded === ['error' => 'invalid_public'];
+                return $decoded === ['error' => 'invalid_credentials'];
             }))
             ->willReturn(1);
         $response = $this->createStub(ResponseInterface::class);
@@ -92,20 +38,20 @@ final class DeniedResponseFactoryTest extends TestCase
         self::assertSame(
             $response,
             (new DeniedResponseFactory($responseFactory))->create(
-                new InvalidPublicReasonFixture(),
+                new DeniedReason(
+                    'invalid_credentials',
+                    ['diagnostic' => 'secret-audit-value'],
+                ),
             ),
         );
     }
 
-    public function testRateLimitMetadataIsNotPublicWithoutExplicitInterface(): void
+    public function testRateLimitMetadataRemainsAuditOnly(): void
     {
         $stream = $this->createMock(StreamInterface::class);
         $stream->expects(self::once())
             ->method('write')
-            ->with(self::callback(
-                static fn(string $json): bool => !str_contains($json, 'retry_after')
-                    && str_contains($json, 'rate_limited'),
-            ))
+            ->with('{"error":"rate_limited"}')
             ->willReturn(1);
         $response = $this->createStub(ResponseInterface::class);
         $response->method('getBody')->willReturn($stream);
@@ -115,6 +61,24 @@ final class DeniedResponseFactoryTest extends TestCase
 
         (new DeniedResponseFactory($responseFactory))->create(
             new RateLimited(30),
+        );
+    }
+
+    public function testInvalidReasonCodeFallsBackToStablePublicCode(): void
+    {
+        $stream = $this->createMock(StreamInterface::class);
+        $stream->expects(self::once())
+            ->method('write')
+            ->with('{"error":"authentication_denied"}')
+            ->willReturn(1);
+        $response = $this->createStub(ResponseInterface::class);
+        $response->method('getBody')->willReturn($stream);
+        $response->method('withHeader')->willReturnSelf();
+        $responseFactory = $this->createStub(ResponseFactoryInterface::class);
+        $responseFactory->method('createResponse')->willReturn($response);
+
+        (new DeniedResponseFactory($responseFactory))->create(
+            new DeniedReason('INVALID CODE', ['secret' => 'value']),
         );
     }
 
@@ -153,35 +117,5 @@ final class DeniedResponseFactoryTest extends TestCase
             'moderation-secret',
             $disabled->attributes['reason'] ?? null,
         );
-    }
-}
-
-final class PublicReasonFixture implements PublicDeniedReasonInterface
-{
-    public string $code {
-        get => 'rate_limited';
-    }
-
-    public array $attributes {
-        get => ['internal' => 'secret'];
-    }
-
-    public array $publicDetails {
-        get => ['retry_after' => 30];
-    }
-}
-
-final class InvalidPublicReasonFixture implements PublicDeniedReasonInterface
-{
-    public string $code {
-        get => 'invalid_public';
-    }
-
-    public array $attributes {
-        get => [];
-    }
-
-    public array $publicDetails {
-        get => ['nested' => ['not-allowed']];
     }
 }
