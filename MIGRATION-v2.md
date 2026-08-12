@@ -54,10 +54,21 @@ CredentialTransportState::isEmpty()     -> $state->empty
 CredentialTransportState::shouldClear() -> $state->cleared
 CredentialTransportState::payloads()    -> $state->payloads
 RefreshToken::isRevoked()               -> $token->revoked
-PublicDeniedReasonInterface::publicDetails() -> $reason->publicDetails
 ```
 
 Methods remain methods when they accept input or perform an action, for example `getAttribute($name)`, `find($id)`, `consume($token)`, `queue()` and `clear()`.
+
+## Denial response boundary
+
+`PublicDeniedReasonInterface` and the `publicDetails` capability have been removed.
+
+`DeniedReasonInterface::$attributes` is trusted audit context only. The built-in `DeniedResponseFactory` serializes only the validated denial `code`:
+
+```json
+{"error":"invalid_credentials"}
+```
+
+If an application intentionally needs additional client-facing denial fields, replace `DeniedResponseFactoryInterface` with an application-owned implementation. Do not reuse audit attributes as an implicit wire format.
 
 ## Password providers
 
@@ -253,7 +264,7 @@ Security-critical session lifecycle participants are synchronous and fail fast i
 
 Generic `AuthenticationAttempted`, `AuthenticationSucceeded`, `AuthenticationDenied` and `LoggedOut` notifications are observers. Their failures are isolated and logged; an observer must not retroactively fail an already committed credential transition.
 
-Credential-bearing DTOs and audit containers use redacted debug/JSON representations. `DeniedReasonInterface::$attributes` remains trusted audit context. Public HTTP details are opt-in through scalar `PublicDeniedReasonInterface::$publicDetails`; unsupported/nested public details are dropped rather than serialized.
+Credential-bearing DTOs and audit containers use redacted debug/JSON representations. `DeniedReasonInterface::$attributes` remains trusted audit context and is never part of the built-in HTTP denial payload.
 
 ## Malformed payload mapping
 
@@ -287,6 +298,7 @@ Removed in v2:
 AuthSubjectInterface
 AuthSubject
 SessionAwareInterface
+PublicDeniedReasonInterface
 RememberMeAwareInterface
 PasswordUpdaterInterface
 TokenRequester
