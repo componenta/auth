@@ -8,9 +8,7 @@ use Componenta\Auth\AuthenticationResult;
 use Componenta\Auth\AuthenticatorInterface;
 use Componenta\Auth\Context;
 use Componenta\Auth\Event\AuthenticationAttempted;
-use Componenta\Auth\Event\AuthenticationAttemptedListenerInterface;
 use Componenta\Auth\Event\AuthenticationSucceeded;
-use Componenta\Auth\Event\AuthenticationSucceededListenerInterface;
 use Componenta\Auth\Event\EventDispatcher;
 use Componenta\Auth\Event\EventInterface;
 use Componenta\Auth\Event\EventListenerInterface;
@@ -40,15 +38,15 @@ final class EventingAuthenticatorTest extends TestCase
             ->attempt($payload, new Context());
 
         self::assertSame($identity, $result->subject);
-        self::assertCount(2, $listener->events);
-        self::assertInstanceOf(AuthenticationAttempted::class, $listener->events[0]);
-        self::assertSame(EventCredentialFixture::class, $listener->events[0]->payloadType);
+        self::assertCount(2, $listener->collected);
+        self::assertInstanceOf(AuthenticationAttempted::class, $listener->collected[0]);
+        self::assertSame(EventCredentialFixture::class, $listener->collected[0]->payloadType);
         self::assertArrayNotHasKey(
             'payload',
-            get_object_vars($listener->events[0]),
+            get_object_vars($listener->collected[0]),
         );
 
-        $succeeded = $listener->events[1];
+        $succeeded = $listener->collected[1];
         self::assertInstanceOf(AuthenticationSucceeded::class, $succeeded);
         self::assertTrue($succeeded->subjectId->equals($identity->uuid));
         $succeededProperties = get_object_vars($succeeded);
@@ -56,7 +54,7 @@ final class EventingAuthenticatorTest extends TestCase
         self::assertArrayNotHasKey('identity', $succeededProperties);
         self::assertStringNotContainsString(
             'secret',
-            serialize($listener->events),
+            serialize($listener->collected),
         );
     }
 }
@@ -76,17 +74,19 @@ final class EventingIdentityFixture implements IdentityInterface
     }
 }
 
-final class EventCollectorFixture implements
-    AuthenticationAttemptedListenerInterface,
-    AuthenticationSucceededListenerInterface
+final class EventCollectorFixture implements EventListenerInterface
 {
+    public array $events {
+        get => [AuthenticationAttempted::class, AuthenticationSucceeded::class];
+    }
+
     /** @var list<EventInterface> */
-    public array $events = [];
+    public array $collected = [];
 
     #[\Override]
     public function handleEvent(EventInterface $event): void
     {
-        $this->events[] = $event;
+        $this->collected[] = $event;
     }
 }
 

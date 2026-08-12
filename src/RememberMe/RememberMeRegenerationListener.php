@@ -7,12 +7,13 @@ namespace Componenta\Auth\RememberMe;
 use Componenta\Auth\Event\CriticalEventListenerInterface;
 use Componenta\Auth\Event\EventInterface;
 use Componenta\Auth\Event\SessionRegenerated;
-use Componenta\Auth\Event\SessionRegeneratedListenerInterface;
 
-final readonly class RememberMeRegenerationListener implements
-    SessionRegeneratedListenerInterface,
-    CriticalEventListenerInterface
+final readonly class RememberMeRegenerationListener implements CriticalEventListenerInterface
 {
+    public array $events {
+        get => [SessionRegenerated::class];
+    }
+
     public function __construct(private RememberMeTokenManagerInterface $tokenManager) {}
 
     #[\Override]

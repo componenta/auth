@@ -115,6 +115,10 @@ final readonly class ListenerProviderFixture implements EventListenerProviderInt
 
 class ThrowingListenerFixture implements EventListenerInterface
 {
+    public array $events {
+        get => [EventFixture::class];
+    }
+
     public function handleEvent(EventInterface $event): void
     {
         throw new \RuntimeException('observer failure');
@@ -131,6 +135,10 @@ final class CriticalThrowingListenerFixture extends ThrowingListenerFixture impl
 
 final readonly class CallbackListenerFixture implements EventListenerInterface
 {
+    public array $events {
+        get => [EventFixture::class];
+    }
+
     /** @param \Closure(): void $callback */
     public function __construct(private \Closure $callback) {}
 
@@ -140,10 +148,12 @@ final readonly class CallbackListenerFixture implements EventListenerInterface
     }
 }
 
-final readonly class CriticalCallbackListenerFixture implements
-    EventListenerInterface,
-    CriticalEventListenerInterface
+final readonly class CriticalCallbackListenerFixture implements CriticalEventListenerInterface
 {
+    public array $events {
+        get => [EventFixture::class];
+    }
+
     /** @param \Closure(): void $callback */
     public function __construct(private \Closure $callback) {}
 

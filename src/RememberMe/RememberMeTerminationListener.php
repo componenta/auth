@@ -5,17 +5,16 @@ declare(strict_types=1);
 namespace Componenta\Auth\RememberMe;
 
 use Componenta\Auth\Event\AllSessionsTerminated;
-use Componenta\Auth\Event\AllSessionsTerminatedListenerInterface;
 use Componenta\Auth\Event\CriticalEventListenerInterface;
 use Componenta\Auth\Event\EventInterface;
 use Componenta\Auth\Event\SessionsTerminated;
-use Componenta\Auth\Event\SessionsTerminatedListenerInterface;
 
-final readonly class RememberMeTerminationListener implements
-    SessionsTerminatedListenerInterface,
-    AllSessionsTerminatedListenerInterface,
-    CriticalEventListenerInterface
+final readonly class RememberMeTerminationListener implements CriticalEventListenerInterface
 {
+    public array $events {
+        get => [SessionsTerminated::class, AllSessionsTerminated::class];
+    }
+
     public function __construct(
         private RememberMeTokenManagerInterface $tokenManager,
     ) {}
