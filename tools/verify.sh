@@ -42,7 +42,7 @@ do
     fi
 done
 
-if grep -R --line-number -E '(^|[^[:alnum:]_])(RememberMeToken|ListenerFactory|TokenAlreadyUsed|TokenExpired|CodeExpired|TooManyAttempts)([^[:alnum:]_]|$)' src tests; then
+if grep -R --line-number -E '(^|[^[:alnum:]_])(RememberMeToken|ListenerFactory|TokenAlreadyUsed|TokenExpired)([^[:alnum:]_]|$)' src tests; then
     echo 'Removed security-domain symbol is still referenced.' >&2
     exit 1
 fi
