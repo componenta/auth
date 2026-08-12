@@ -17,7 +17,6 @@ final readonly class PasswordExtractor implements PayloadExtractorInterface
         public string $identityField = 'email',
         public string $passwordField = 'password',
         public string $rememberField = 'remember',
-        public bool $normalizeIdentity = true,
     ) {
         $fields = [
             'identity' => $this->identityField,
@@ -63,19 +62,18 @@ final readonly class PasswordExtractor implements PayloadExtractorInterface
             !is_string($identity)
             || $identity === ''
             || strlen($identity) > self::MAX_IDENTITY_LENGTH
+            || trim($identity) !== $identity
             || preg_match('/[\x00-\x1F\x7F]/', $identity) === 1
         ) {
             throw InvalidPayloadException::invalidField($this->identityField);
         }
-        if (!is_string($password) || $password === '' || strlen($password) > self::MAX_PASSWORD_LENGTH) {
-            throw InvalidPayloadException::invalidField($this->passwordField);
-        }
 
-        if ($this->normalizeIdentity) {
-            $identity = strtolower(trim($identity));
-            if ($identity === '') {
-                throw InvalidPayloadException::invalidField($this->identityField);
-            }
+        if (
+            !is_string($password)
+            || $password === ''
+            || strlen($password) > self::MAX_PASSWORD_LENGTH
+        ) {
+            throw InvalidPayloadException::invalidField($this->passwordField);
         }
 
         return new Payload(
