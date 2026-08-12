@@ -10,6 +10,7 @@ for removed in \
     AuthSubjectInterface \
     RememberMeAwareInterface \
     SessionAwareInterface \
+    PublicDeniedReasonInterface \
     PasswordUpdaterInterface \
     TokenRequester \
     OtpRequester
@@ -40,8 +41,8 @@ if grep -R --line-number --fixed-strings 'currentSessionId' src; then
     exit 1
 fi
 
-if grep -R --line-number -E 'getAuthSubjectId\(|isEmpty\(|shouldClear\(|payloads\(|publicDetails\(|isRevoked\(' src tests; then
-    echo 'Legacy getter-style state API is still referenced.' >&2
+if grep -R --line-number -E 'getAuthSubjectId\(|isEmpty\(|shouldClear\(|payloads\(|publicDetails|isRevoked\(' src tests; then
+    echo 'Legacy getter/capability state API is still referenced.' >&2
     exit 1
 fi
 
