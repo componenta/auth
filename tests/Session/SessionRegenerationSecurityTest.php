@@ -33,6 +33,24 @@ final class SessionRegenerationSecurityTest extends TestCase
         self::assertSame($new->id, $manager->find($new->id)?->id);
     }
 
+    public function testTerminationOfPresentedCredentialTerminatesItsRegeneratedSuccessor(): void
+    {
+        self::requireSqlite();
+        $database = SqliteDatabaseFixture::create();
+        self::createSchema($database);
+        $manager = self::manager($database);
+        $old = $manager->create(self::subjectId(), self::attributes());
+        $new = $manager->regenerate($old->id);
+
+        // Models logout holding the previously authenticated session while a
+        // concurrent request has already committed regeneration.
+        $manager->terminate($old->id);
+
+        self::assertFalse($manager->exists($old->id));
+        self::assertFalse($manager->exists($new->id));
+        self::assertSame(0, $database->select()->from('sessions')->count());
+    }
+
     public function testRepeatedRegenerationNeverDisclosesWinningSuccessor(): void
     {
         self::requireSqlite();

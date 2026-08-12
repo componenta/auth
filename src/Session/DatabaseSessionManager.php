@@ -197,18 +197,34 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
             return;
         }
 
-        $event = new SessionsTerminated($ids, $this->dateTimeFactory->now());
+        $now = $this->dateTimeFactory->now();
+        $event = null;
 
-        $this->database->transaction(function () use ($ids, $event): void {
-            foreach (array_chunk($ids, self::DELETE_CHUNK_SIZE) as $chunk) {
-                $this->database
+        $this->database->transaction(function (DatabaseInterface $database) use (
+            $ids,
+            $now,
+            &$event,
+        ): void {
+            $terminationIds = $this->terminationLineageIds(
+                $database,
+                $ids,
+                $now,
+            );
+
+            foreach (array_chunk($terminationIds, self::DELETE_CHUNK_SIZE) as $chunk) {
+                $database
                     ->delete($this->config->table)
                     ->where($this->config->idColumn, 'IN', $chunk)
                     ->run();
             }
 
+            $event = new SessionsTerminated($terminationIds, $now);
             $this->dispatcher->dispatchCritical($event);
         });
+
+        if (!$event instanceof SessionsTerminated) {
+            throw new \LogicException('Session termination transaction did not produce an event.');
+        }
 
         $this->dispatcher->dispatchBestEffort($event);
     }
@@ -404,6 +420,102 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
         $this->dispatcher->dispatchBestEffort($event);
 
         return $new;
+    }
+
+    /**
+     * Expands requested session IDs to every already-created replacement in
+     * their lineage while serializing with a concurrent regeneration.
+     *
+     * @param list<string> $ids
+     * @return list<string>
+     */
+    private function terminationLineageIds(
+        DatabaseInterface $database,
+        array $ids,
+        \DateTimeImmutable $now,
+    ): array {
+        /** @var array<string, true> $expanded */
+        $expanded = [];
+        $formattedNow = $now->format($this->config->dateFormat);
+
+        foreach ($ids as $rootId) {
+            $currentId = $rootId;
+            /** @var array<string, true> $path */
+            $path = [];
+
+            while (true) {
+                if (isset($path[$currentId])) {
+                    throw new \UnexpectedValueException(
+                        'Session replacement lineage contains a cycle.',
+                    );
+                }
+
+                if (isset($expanded[$currentId])) {
+                    break;
+                }
+
+                $path[$currentId] = true;
+                $expanded[$currentId] = true;
+
+                // This conditional write is the serialization point with
+                // regenerate(). If termination wins, expiry makes the later
+                // regeneration CAS fail. If regeneration wins, the write waits
+                // and then the primary read below observes replaced_by.
+                $database
+                    ->update($this->config->table)
+                    ->where($this->config->idColumn, $currentId)
+                    ->where($this->config->replacedByColumn, null)
+                    ->values([
+                        $this->config->expiresAtColumn => $formattedNow,
+                    ])
+                    ->run();
+
+                $row = $this->findRow($database, $currentId);
+
+                if ($row === null) {
+                    break;
+                }
+
+                $replacement = $row[$this->config->replacedByColumn] ?? null;
+
+                if ($replacement === null) {
+                    break;
+                }
+
+                $currentId = self::stringValue(
+                    $row,
+                    $this->config->replacedByColumn,
+                );
+                self::assertSessionId($currentId);
+            }
+        }
+
+        return array_keys($expanded);
+    }
+
+    /** @return array<array-key, mixed>|null */
+    private function findRow(
+        DatabaseInterface $database,
+        string $sessionId,
+    ): ?array {
+        $query = $database->select()->withDriver(
+            $database->getDriver(DatabaseInterface::WRITE),
+            $database->getPrefix(),
+        );
+
+        if (!$query instanceof SelectQuery) {
+            throw new \LogicException(
+                'Cycle must preserve SelectQuery when pinning the write driver.',
+            );
+        }
+
+        $row = $query
+            ->from($this->config->table)
+            ->where($this->config->idColumn, $sessionId)
+            ->run()
+            ->fetch();
+
+        return is_array($row) ? $row : null;
     }
 
     private function insert(SessionInterface $session, string $ip, string $userAgent): void

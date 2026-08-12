@@ -31,7 +31,12 @@ interface SessionManagerInterface
         ?\DateTimeImmutable $lastActiveAt = null,
     ): void;
 
-    /** @param string|iterable<string>|SessionCollectionInterface $sessionId */
+    /**
+     * Terminates the supplied credential lineages. A replacement created by a
+     * concurrent regeneration must not remain authenticatable after this call.
+     *
+     * @param string|iterable<string>|SessionCollectionInterface $sessionId
+     */
     public function terminate(
         string|iterable|SessionCollectionInterface $sessionId,
     ): void;

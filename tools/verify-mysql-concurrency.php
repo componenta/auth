@@ -2,11 +2,17 @@
 
 declare(strict_types=1);
 
+use Componenta\Auth\Event\EventDispatcher;
+use Componenta\Auth\Event\PriorityListenerProvider;
 use Componenta\Auth\Http\Strategy\Jwt\DatabaseRefreshTokenStore;
 use Componenta\Auth\Http\Strategy\Jwt\RefreshToken;
 use Componenta\Auth\Http\Strategy\Otp\DatabaseCodeStore;
 use Componenta\Auth\Http\Strategy\Otp\StoredCode;
 use Componenta\Auth\RememberMe\DatabaseRememberMeTokenManager;
+use Componenta\Auth\Session\ConcurrentRegenerationException;
+use Componenta\Auth\Session\DatabaseSessionManager;
+use Componenta\Auth\Session\DatabaseSessionManagerConfig;
+use Componenta\Auth\Session\SessionIdGenerator;
 use Componenta\Auth\Tests\Support\MySqlDatabaseFixture;
 use Componenta\Clock\FrozenClock;
 use Componenta\Identity\Uuid;
@@ -141,6 +147,7 @@ function resetSchema(DatabaseInterface $database): void
         'refresh_token_families',
         'otp_codes',
         'remember_me_tokens',
+        'sessions',
     ] as $table) {
         $database->execute('DROP TABLE IF EXISTS ' . $table);
     }
@@ -150,6 +157,17 @@ function resetSchema(DatabaseInterface $database): void
 function subjectId(): Componenta\Identity\UuidInterface
 {
     return Uuid::fromString('018f6d5d-3f7a-7a9b-8c2f-123456789abc');
+}
+
+function sessionManager(DatabaseInterface $database): DatabaseSessionManager
+{
+    return new DatabaseSessionManager(
+        $database,
+        new SessionIdGenerator(),
+        new FrozenClock(1000, 'UTC'),
+        new EventDispatcher(new PriorityListenerProvider()),
+        new DatabaseSessionManagerConfig(),
+    );
 }
 
 function verifyRefreshRace(): void
@@ -284,10 +302,60 @@ function verifyRememberLogoutRace(): void
     invariant(db()->select()->from('remember_me_tokens')->count() === 0, 'Concurrent logout left a remember-me descendant');
 }
 
+function verifySessionLogoutRace(): void
+{
+    $database = db();
+    resetSchema($database);
+    $database->execute(<<<'SQL'
+        CREATE TABLE sessions (
+            id VARCHAR(512) NOT NULL PRIMARY KEY,
+            user_id CHAR(36) NOT NULL,
+            ip VARCHAR(45) NOT NULL,
+            user_agent VARCHAR(1024) NOT NULL,
+            expires_at DATETIME NOT NULL,
+            absolute_expires_at DATETIME NOT NULL,
+            regenerate_at DATETIME NOT NULL,
+            replaced_by VARCHAR(512) NULL,
+            created_at DATETIME NOT NULL,
+            last_active_at DATETIME NOT NULL,
+            attributes TEXT NOT NULL,
+            INDEX idx_session_subject (user_id),
+            INDEX idx_session_replaced (replaced_by)
+        ) ENGINE=InnoDB
+        SQL);
+
+    $old = sessionManager($database)->create(subjectId(), [
+        DatabaseSessionManager::ATTR_IP => '127.0.0.1',
+        DatabaseSessionManager::ATTR_USER_AGENT => 'mysql-concurrency-session-test',
+    ]);
+
+    $results = race([
+        static function () use ($old): string {
+            try {
+                sessionManager(db())->regenerate($old->id);
+                return 'regenerated';
+            } catch (ConcurrentRegenerationException|InvalidArgumentException) {
+                return 'regeneration-lost';
+            }
+        },
+        static function () use ($old): string {
+            // Model a logout request that authenticated the old ID before a
+            // concurrent request committed regeneration, but terminates after.
+            usleep(50000);
+            sessionManager(db())->terminate($old->id);
+            return 'terminated';
+        },
+    ]);
+
+    invariant(in_array('terminated', $results, true), 'Session terminate worker did not complete', $results);
+    invariant(db()->select()->from('sessions')->count() === 0, 'Concurrent session regeneration left an active logout descendant');
+}
+
 try {
     verifyRefreshRace();
     verifyOtpRace();
     verifyRememberLogoutRace();
+    verifySessionLogoutRace();
     fwrite(STDOUT, "MySQL concurrency invariants: OK\n");
 } catch (Throwable $exception) {
     fwrite(STDERR, $exception::class . ': ' . $exception->getMessage() . "\n");
