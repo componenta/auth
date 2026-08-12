@@ -135,12 +135,14 @@ final class CriticalThrowingListenerFixture extends ThrowingListenerFixture impl
 
 final readonly class CallbackListenerFixture implements EventListenerInterface
 {
-    public array $events {
-        get => [EventFixture::class];
-    }
+    /** @var non-empty-list<class-string<EventInterface>> */
+    public array $events;
 
     /** @param \Closure(): void $callback */
-    public function __construct(private \Closure $callback) {}
+    public function __construct(private \Closure $callback)
+    {
+        $this->events = [EventFixture::class];
+    }
 
     public function handleEvent(EventInterface $event): void
     {
@@ -150,12 +152,14 @@ final readonly class CallbackListenerFixture implements EventListenerInterface
 
 final readonly class CriticalCallbackListenerFixture implements CriticalEventListenerInterface
 {
-    public array $events {
-        get => [EventFixture::class];
-    }
+    /** @var non-empty-list<class-string<EventInterface>> */
+    public array $events;
 
     /** @param \Closure(): void $callback */
-    public function __construct(private \Closure $callback) {}
+    public function __construct(private \Closure $callback)
+    {
+        $this->events = [EventFixture::class];
+    }
 
     public function handleEvent(EventInterface $event): void
     {

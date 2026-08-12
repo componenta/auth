@@ -10,11 +10,13 @@ use Componenta\Auth\Event\SessionRegenerated;
 
 final readonly class RememberMeRegenerationListener implements CriticalEventListenerInterface
 {
-    public array $events {
-        get => [SessionRegenerated::class];
-    }
+    /** @var non-empty-list<class-string<EventInterface>> */
+    public array $events;
 
-    public function __construct(private RememberMeTokenManagerInterface $tokenManager) {}
+    public function __construct(private RememberMeTokenManagerInterface $tokenManager)
+    {
+        $this->events = [SessionRegenerated::class];
+    }
 
     #[\Override]
     public function handleEvent(EventInterface $event): void
