@@ -10,9 +10,12 @@ use Componenta\Auth\ContextInterface;
 use Componenta\Auth\Denied\InvalidCredentials;
 use Componenta\Auth\Http\Strategy\Session\UserProviderInterface;
 use Componenta\Auth\Http\Transport\SessionPayload;
+use Componenta\Auth\RememberMe\RememberMeRotation;
 use Componenta\Auth\RememberMe\RememberMeTokenManagerInterface;
+use Componenta\Auth\Session\ConcurrentRegenerationException;
 use Componenta\Auth\Session\SessionAttributeExtractor;
 use Componenta\Auth\Session\SessionAttributeExtractorInterface;
+use Componenta\Auth\Session\SessionInterface;
 use Componenta\Auth\Session\SessionManagerInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
@@ -39,45 +42,77 @@ final readonly class RememberMeStrategy implements AuthenticationStrategyInterfa
         $plainToken = $payload->rememberMeToken;
 
         if ($plainToken === null) {
-            return new AuthenticationResult(new InvalidCredentials());
+            return $this->denied();
         }
 
-        $consumed = $this->tokenManager->consume($plainToken);
+        $rotation = $this->tokenManager->rotate($plainToken);
 
-        if ($consumed === null) {
-            return new AuthenticationResult(new InvalidCredentials());
+        if ($rotation === null) {
+            return $this->denied();
         }
 
-        $identity = $this->provider->findByUuid($consumed->subjectId);
+        $identity = $this->provider->findByUuid($rotation->subjectId);
 
         if (
             $identity === null
-            || !$consumed->subjectId->equals($identity->uuid)
+            || !$rotation->subjectId->equals($identity->uuid)
         ) {
-            return new AuthenticationResult(new InvalidCredentials());
+            $this->tokenManager->revoke($rotation->successorToken);
+
+            return $this->denied();
         }
 
-        if ($consumed->sessionId !== null) {
-            $this->sessionManager->terminate($consumed->sessionId);
+        try {
+            $session = $this->resolveSession($rotation, $context);
+        } catch (ConcurrentRegenerationException|\InvalidArgumentException) {
+            $this->tokenManager->revoke($rotation->successorToken);
+
+            return $this->denied();
+        } catch (\Throwable $exception) {
+            $this->tokenManager->revoke($rotation->successorToken);
+
+            throw $exception;
+        }
+
+        if (!$this->tokenManager->bindRotation($rotation, $session->id)) {
+            $this->sessionManager->terminate($session->id);
+
+            return $this->denied();
+        }
+
+        return new AuthenticationResult(
+            subject: $identity,
+            transportPayload: new SessionPayload(
+                $session->id,
+                $rotation->successorToken,
+            ),
+            session: $session,
+        );
+    }
+
+    private function resolveSession(
+        RememberMeRotation $rotation,
+        ContextInterface $context,
+    ): SessionInterface {
+        $existing = $this->sessionManager->find($rotation->previousSessionId);
+
+        if ($existing !== null) {
+            return $this->sessionManager->regenerate($existing->id);
         }
 
         $request = $context->getAttribute(ServerRequestInterface::class);
         $attributes = $request instanceof ServerRequestInterface
             ? $this->attributeExtractor->extract($request)
             : [];
-        $session = $this->sessionManager->create(
-            $consumed->subjectId,
+
+        return $this->sessionManager->create(
+            $rotation->subjectId,
             $attributes,
         );
-        $newToken = $this->tokenManager->create(
-            $consumed->subjectId,
-            $session->id,
-        );
+    }
 
-        return new AuthenticationResult(
-            subject: $identity,
-            transportPayload: new SessionPayload($session->id, $newToken),
-            session: $session,
-        );
+    private function denied(): AuthenticationResult
+    {
+        return new AuthenticationResult(new InvalidCredentials());
     }
 }

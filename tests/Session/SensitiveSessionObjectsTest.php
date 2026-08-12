@@ -7,7 +7,7 @@ namespace Componenta\Auth\Tests\Session;
 use Componenta\Auth\Event\AllSessionsTerminated;
 use Componenta\Auth\Event\SessionRegenerated;
 use Componenta\Auth\Event\SessionsTerminated;
-use Componenta\Auth\RememberMe\RememberMeToken;
+use Componenta\Auth\RememberMe\RememberMeRotation;
 use Componenta\Auth\Session\Session;
 use Componenta\Auth\Session\SessionCollection;
 use Componenta\Identity\Uuid;
@@ -34,12 +34,11 @@ final class SensitiveSessionObjectsTest extends TestCase
             attributes: ['private' => 'attribute-secret'],
         );
         $collection = new SessionCollection([$session]);
-        $remember = new RememberMeToken(
-            id: 1,
-            subjectId: $subjectId,
-            sessionId: 'session-secret',
-            expiresAt: new DateTimeImmutable('@3000'),
-            createdAt: $createdAt,
+        $remember = new RememberMeRotation(
+            $subjectId,
+            'session-secret',
+            str_repeat('a', 64),
+            new DateTimeImmutable('@3000'),
         );
         $objects = [
             $session,

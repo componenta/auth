@@ -10,10 +10,20 @@ interface RememberMeTokenManagerInterface
 {
     public function create(
         UuidInterface $subjectId,
-        ?string $sessionId = null,
+        string $sessionId,
     ): string;
 
-    public function consume(string $plainToken): ?RememberMeToken;
+    /** Atomically invalidates the presented bearer and returns its successor. */
+    public function rotate(string $plainToken): ?RememberMeRotation;
+
+    /**
+     * Binds a rotated grant to a new session. False means the grant was revoked
+     * or changed concurrently and the caller must not issue the new session.
+     */
+    public function bindRotation(
+        RememberMeRotation $rotation,
+        string $newSessionId,
+    ): bool;
 
     public function revoke(string $plainToken): void;
 
@@ -32,6 +42,6 @@ interface RememberMeTokenManagerInterface
         string $newSessionId,
     ): void;
 
-    /** Removes at most $limit expired tokens and returns affected rows. */
+    /** Removes at most $limit expired grants and returns affected rows. */
     public function cleanup(int $limit = 1000): int;
 }

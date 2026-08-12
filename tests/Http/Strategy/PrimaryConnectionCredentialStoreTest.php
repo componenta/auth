@@ -58,7 +58,7 @@ final class PrimaryConnectionCredentialStoreTest extends TestCase
         self::assertFalse($manager->all($subjectId)->empty);
     }
 
-    public function testRememberMeConsumptionReadsFromPrimary(): void
+    public function testRememberMeRotationReadsFromPrimary(): void
     {
         self::requireSqlite();
         $database = self::splitDatabase();
@@ -69,11 +69,11 @@ final class PrimaryConnectionCredentialStoreTest extends TestCase
         );
         $plainToken = $manager->create(self::subjectId(), 'session-id');
 
-        $consumed = $manager->consume($plainToken);
+        $rotation = $manager->rotate($plainToken);
 
-        self::assertNotNull($consumed);
-        self::assertSame('session-id', $consumed->sessionId);
-        self::assertNull($manager->consume($plainToken));
+        self::assertNotNull($rotation);
+        self::assertSame('session-id', $rotation->previousSessionId);
+        self::assertNull($manager->rotate($plainToken));
     }
 
     public function testOneTimeTokenLookupReadsFromPrimary(): void
@@ -199,7 +199,8 @@ final class PrimaryConnectionCredentialStoreTest extends TestCase
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id TEXT NOT NULL,
                 token TEXT NOT NULL UNIQUE,
-                session_id TEXT NULL,
+                session_id TEXT NOT NULL,
+                previous_session_id TEXT NULL,
                 expires_at TEXT NOT NULL,
                 created_at TEXT NOT NULL
             )

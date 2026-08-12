@@ -11,6 +11,7 @@ use Cycle\Database\DatabaseInterface;
 use Cycle\Database\Query\DeleteQuery;
 use Cycle\Database\Query\SelectQuery;
 
+/** SQL remember-me grants with single-winner bearer rotation and session lineage revocation. */
 final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenManagerInterface
 {
     private const int REVOKE_CHUNK_SIZE = 500;
@@ -30,17 +31,16 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
     #[\Override]
     public function create(
         UuidInterface $subjectId,
-        ?string $sessionId = null,
+        string $sessionId,
     ): string {
-        if ($sessionId !== null) {
-            self::assertId($sessionId, 'Session ID');
-        }
-
-        $plainToken = bin2hex(random_bytes(32));
+        self::assertId($sessionId, 'Session ID');
+        $plainToken = self::token();
         $now = $this->dateTimeFactory->now();
+
         $this->database->insert($this->config->table)->values([
             $this->config->subjectIdColumn => $subjectId->toString(),
             $this->config->sessionIdColumn => $sessionId,
+            $this->config->previousSessionIdColumn => null,
             $this->config->tokenColumn => self::hash($plainToken),
             $this->config->expiresAtColumn => $now
                 ->modify("+{$this->config->ttl} seconds")
@@ -52,56 +52,87 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
     }
 
     #[\Override]
-    public function consume(string $plainToken): ?RememberMeToken
+    public function rotate(string $plainToken): ?RememberMeRotation
     {
         if (!self::validToken($plainToken)) {
             return null;
         }
 
-        $query = $this->database->select()->withDriver(
-            $this->database->getDriver(DatabaseInterface::WRITE),
-            $this->database->getPrefix(),
-        );
+        $oldHash = self::hash($plainToken);
+        $row = $this->findByHash($oldHash);
 
-        if (!$query instanceof SelectQuery) {
-            throw new \LogicException(
-                'Cycle must preserve SelectQuery when pinning the write driver.',
-            );
-        }
-
-        $row = $query
-            ->from($this->config->table)
-            ->where($this->config->tokenColumn, self::hash($plainToken))
-            ->run()
-            ->fetch();
-
-        if (!is_array($row)) {
+        if ($row === null) {
             return null;
         }
 
-        $token = $this->hydrate($row);
         $now = $this->dateTimeFactory->now();
-
-        if ($token->expiresAt <= $now) {
-            $this->database
-                ->delete($this->config->table)
-                ->where($this->config->idColumn, $token->id)
-                ->run();
-
-            return null;
-        }
-
-        $affectedRows = $this->database
-            ->delete($this->config->table)
-            ->where($this->config->idColumn, $token->id)
-            ->where(
-                $this->config->expiresAtColumn,
-                '>',
-                $now->format($this->config->dateFormat),
-            )
+        $formattedNow = $now->format($this->config->dateFormat);
+        $expiresAt = $now->modify("+{$this->config->ttl} seconds");
+        $successor = self::token();
+        $affected = $this->database
+            ->update($this->config->table)
+            ->where($this->config->idColumn, self::intValue($row, $this->config->idColumn))
+            ->where($this->config->tokenColumn, $oldHash)
+            ->where($this->config->expiresAtColumn, '>', $formattedNow)
+            ->values([
+                $this->config->tokenColumn => self::hash($successor),
+                $this->config->expiresAtColumn => $expiresAt->format($this->config->dateFormat),
+                $this->config->createdAtColumn => $formattedNow,
+            ])
             ->run();
 
-        return $affectedRows === 0 ? null : $token;
+        if ($affected !== 1) {
+            return null;
+        }
+
+        return new RememberMeRotation(
+            subjectId: self::uuidValue($row, $this->config->subjectIdColumn),
+            previousSessionId: self::stringValue($row, $this->config->sessionIdColumn),
+            successorToken: $successor,
+            expiresAt: $expiresAt,
+        );
+    }
+
+    #[\Override]
+    public function bindRotation(
+        RememberMeRotation $rotation,
+        string $newSessionId,
+    ): bool {
+        self::assertId($newSessionId, 'New session ID');
+        $oldSessionId = $rotation->previousSessionId;
+        self::assertId($oldSessionId, 'Previous session ID');
+        $now = $this->dateTimeFactory->now()->format($this->config->dateFormat);
+        $tokenHash = self::hash($rotation->successorToken);
+
+        $affected = $this->database
+            ->update($this->config->table)
+            ->where($this->config->tokenColumn, $tokenHash)
+            ->where($this->config->subjectIdColumn, $rotation->subjectId->toString())
+            ->where($this->config->sessionIdColumn, $oldSessionId)
+            ->where($this->config->expiresAtColumn, '>', $now)
+            ->values([
+                $this->config->previousSessionIdColumn => $oldSessionId,
+                $this->config->sessionIdColumn => $newSessionId,
+            ])
+            ->run();
+
+        if ($affected === 1) {
+            return true;
+        }
+
+        // Session regeneration may already have moved the same grant via its
+        // critical listener. Re-read on primary to distinguish that safe state
+        // from a grant deleted by concurrent logout/revocation.
+        $row = $this->findByHash($tokenHash);
+
+        return $row !== null
+            && self::stringValue($row, $this->config->subjectIdColumn)
+                === $rotation->subjectId->toString()
+            && self::stringValue($row, $this->config->sessionIdColumn)
+                === $newSessionId
+            && self::nullableStringValue($row, $this->config->previousSessionIdColumn)
+                === $oldSessionId
+            && self::stringValue($row, $this->config->expiresAtColumn) > $now;
     }
 
     #[\Override]
@@ -143,7 +174,15 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
         foreach (array_chunk(array_keys($ids), self::REVOKE_CHUNK_SIZE) as $chunk) {
             $this->database
                 ->delete($this->config->table)
-                ->where($this->config->sessionIdColumn, 'IN', $chunk)
+                ->where(function (mixed $query) use ($chunk): void {
+                    if (!$query instanceof DeleteQuery) {
+                        throw new \LogicException('Cycle must provide a DeleteQuery to the predicate.');
+                    }
+
+                    $query
+                        ->where($this->config->sessionIdColumn, 'IN', $chunk)
+                        ->orWhere($this->config->previousSessionIdColumn, 'IN', $chunk);
+                })
                 ->run();
         }
     }
@@ -159,15 +198,7 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
 
         if ($exceptSessionId !== null) {
             self::assertId($exceptSessionId, 'Session ID');
-            $delete->where(function (mixed $query) use ($exceptSessionId): void {
-                if (!$query instanceof DeleteQuery) {
-                    throw new \LogicException('Cycle must provide a DeleteQuery to the predicate.');
-                }
-
-                $query
-                    ->where($this->config->sessionIdColumn, '!=', $exceptSessionId)
-                    ->orWhere($this->config->sessionIdColumn, null);
-            });
+            $delete->where($this->config->sessionIdColumn, '!=', $exceptSessionId);
         }
 
         $delete->run();
@@ -183,7 +214,10 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
         $this->database
             ->update($this->config->table)
             ->where($this->config->sessionIdColumn, $oldSessionId)
-            ->values([$this->config->sessionIdColumn => $newSessionId])
+            ->values([
+                $this->config->previousSessionIdColumn => $oldSessionId,
+                $this->config->sessionIdColumn => $newSessionId,
+            ])
             ->run();
     }
 
@@ -226,6 +260,34 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
         return $deleted;
     }
 
+    /** @return array<array-key, mixed>|null */
+    private function findByHash(string $tokenHash): ?array
+    {
+        $query = $this->database->select()->withDriver(
+            $this->database->getDriver(DatabaseInterface::WRITE),
+            $this->database->getPrefix(),
+        );
+
+        if (!$query instanceof SelectQuery) {
+            throw new \LogicException(
+                'Cycle must preserve SelectQuery when pinning the write driver.',
+            );
+        }
+
+        $row = $query
+            ->from($this->config->table)
+            ->where($this->config->tokenColumn, $tokenHash)
+            ->run()
+            ->fetch();
+
+        return is_array($row) ? $row : null;
+    }
+
+    private static function token(): string
+    {
+        return bin2hex(random_bytes(32));
+    }
+
     private static function validToken(string $token): bool
     {
         return preg_match('/\A[a-f0-9]{64}\z/D', $token) === 1;
@@ -248,31 +310,6 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
     }
 
     /** @param array<array-key, mixed> $row */
-    private function hydrate(array $row): RememberMeToken
-    {
-        $sessionId = $row[$this->config->sessionIdColumn] ?? null;
-
-        return new RememberMeToken(
-            id: self::intValue($row, $this->config->idColumn),
-            subjectId: Uuid::fromString(self::stringValue(
-                $row,
-                $this->config->subjectIdColumn,
-            )),
-            sessionId: $sessionId === null
-                ? null
-                : self::stringValue($row, $this->config->sessionIdColumn),
-            expiresAt: $this->dateTimeFactory->parse(self::stringValue(
-                $row,
-                $this->config->expiresAtColumn,
-            )),
-            createdAt: $this->dateTimeFactory->parse(self::stringValue(
-                $row,
-                $this->config->createdAtColumn,
-            )),
-        );
-    }
-
-    /** @param array<array-key, mixed> $row */
     private static function stringValue(array $row, string $key): string
     {
         $value = $row[$key] ?? null;
@@ -288,6 +325,14 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
     }
 
     /** @param array<array-key, mixed> $row */
+    private static function nullableStringValue(array $row, string $key): ?string
+    {
+        return !array_key_exists($key, $row) || $row[$key] === null
+            ? null
+            : self::stringValue($row, $key);
+    }
+
+    /** @param array<array-key, mixed> $row */
     private static function intValue(array $row, string $key): int
     {
         $value = $row[$key] ?? null;
@@ -300,5 +345,18 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
         }
 
         return (int) $value;
+    }
+
+    /** @param array<array-key, mixed> $row */
+    private static function uuidValue(array $row, string $key): UuidInterface
+    {
+        try {
+            return Uuid::fromString(self::stringValue($row, $key));
+        } catch (\InvalidArgumentException $exception) {
+            throw new \UnexpectedValueException(
+                sprintf('Database column "%s" must contain a valid UUID.', $key),
+                previous: $exception,
+            );
+        }
     }
 }

@@ -48,6 +48,10 @@ final readonly class DatabaseRememberMeTokenManagerConfigFactory implements Lazy
             subjectIdColumn: $config->string(new ConfigPath($prefix . '.columns.subjectId'), 'user_id'),
             tokenColumn: $config->string(new ConfigPath($prefix . '.columns.token'), 'token'),
             sessionIdColumn: $config->string(new ConfigPath($prefix . '.columns.sessionId'), 'session_id'),
+            previousSessionIdColumn: $config->string(
+                new ConfigPath($prefix . '.columns.previousSessionId'),
+                'previous_session_id',
+            ),
             expiresAtColumn: $config->string(new ConfigPath($prefix . '.columns.expiresAt'), 'expires_at'),
             createdAtColumn: $config->string(new ConfigPath($prefix . '.columns.createdAt'), 'created_at'),
         );

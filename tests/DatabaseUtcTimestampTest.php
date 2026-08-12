@@ -47,7 +47,7 @@ final class DatabaseUtcTimestampTest extends TestCase
         self::assertSame('UTC', $session->createdAt->getTimezone()->getName());
     }
 
-    public function testRememberMeTimestampsAreStoredAndHydratedInUtc(): void
+    public function testRememberMeTimestampsAreStoredAndRotatedInUtc(): void
     {
         self::requireSqlite();
         $database = SqliteDatabaseFixture::create();
@@ -62,13 +62,13 @@ final class DatabaseUtcTimestampTest extends TestCase
             ->from('remember_me_tokens')
             ->run()
             ->fetch();
-        $token = $manager->consume($plainToken);
+        $rotation = $manager->rotate($plainToken);
 
         self::assertIsArray($row);
         self::assertSame('1970-01-01 00:16:40', $row['created_at']);
         self::assertSame('1970-01-31 00:16:40', $row['expires_at']);
-        self::assertNotNull($token);
-        self::assertSame('UTC', $token->createdAt->getTimezone()->getName());
+        self::assertNotNull($rotation);
+        self::assertSame('UTC', $rotation->expiresAt->getTimezone()->getName());
     }
 
     public function testOneTimeTokenTimestampsAreStoredAndHydratedInUtc(): void
@@ -138,7 +138,8 @@ final class DatabaseUtcTimestampTest extends TestCase
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id TEXT NOT NULL,
                 token TEXT NOT NULL UNIQUE,
-                session_id TEXT NULL,
+                session_id TEXT NOT NULL,
+                previous_session_id TEXT NULL,
                 expires_at TEXT NOT NULL,
                 created_at TEXT NOT NULL
             )

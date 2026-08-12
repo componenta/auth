@@ -9,7 +9,7 @@ use Componenta\Auth\Denied\InvalidCredentials;
 use Componenta\Auth\Http\Strategy\RememberMe\RememberMeStrategy;
 use Componenta\Auth\Http\Strategy\Session\UserProviderInterface;
 use Componenta\Auth\Http\Transport\SessionPayload;
-use Componenta\Auth\RememberMe\RememberMeToken;
+use Componenta\Auth\RememberMe\RememberMeRotation;
 use Componenta\Auth\RememberMe\RememberMeTokenManagerInterface;
 use Componenta\Auth\Session\SessionManagerInterface;
 use Componenta\Identity\IdentityInterface;
@@ -25,19 +25,21 @@ final class RememberMeStrategyTest extends TestCase
         $subjectId = Uuid::fromString(
             '018f6d5d-3f7a-7a9b-8c2f-123456789abc',
         );
+        $rotation = new RememberMeRotation(
+            $subjectId,
+            'old-session',
+            str_repeat('a', 64),
+            new DateTimeImmutable('@2000'),
+        );
         $manager = $this->createMock(RememberMeTokenManagerInterface::class);
-        $manager->expects(self::once())->method('consume')
+        $manager->expects(self::once())->method('rotate')
             ->with('remember-secret')
-            ->willReturn(new RememberMeToken(
-                id: 1,
-                subjectId: $subjectId,
-                sessionId: 'old-session',
-                expiresAt: new DateTimeImmutable('@2000'),
-                createdAt: new DateTimeImmutable('@500'),
-            ));
-        $manager->expects(self::never())->method('create');
+            ->willReturn($rotation);
+        $manager->expects(self::once())->method('revoke')
+            ->with($rotation->successorToken);
+        $manager->expects(self::never())->method('bindRotation');
         $sessionManager = $this->createMock(SessionManagerInterface::class);
-        $sessionManager->expects(self::never())->method('terminate');
+        $sessionManager->expects(self::never())->method('find');
         $sessionManager->expects(self::never())->method('create');
         $provider = $this->createStub(UserProviderInterface::class);
         $provider->method('findByUuid')->willReturn(

@@ -18,6 +18,7 @@ final readonly class DatabaseRememberMeTokenManagerConfig
         public string $subjectIdColumn = 'user_id',
         public string $tokenColumn = 'token',
         public string $sessionIdColumn = 'session_id',
+        public string $previousSessionIdColumn = 'previous_session_id',
         public string $expiresAtColumn = 'expires_at',
         public string $createdAtColumn = 'created_at',
     ) {
@@ -41,6 +42,7 @@ final readonly class DatabaseRememberMeTokenManagerConfig
             'subjectIdColumn' => $this->subjectIdColumn,
             'tokenColumn' => $this->tokenColumn,
             'sessionIdColumn' => $this->sessionIdColumn,
+            'previousSessionIdColumn' => $this->previousSessionIdColumn,
             'expiresAtColumn' => $this->expiresAtColumn,
             'createdAtColumn' => $this->createdAtColumn,
         ] as $name => $identifier) {
