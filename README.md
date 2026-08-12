@@ -265,7 +265,7 @@ Generic authentication events contain the payload type, never the raw password, 
 
 Security-critical session lifecycle listeners run before best-effort observers. For database-backed session transitions, critical listeners participate in the transaction; observers only see an event after commit.
 
-`DeniedReasonInterface::$attributes` is trusted audit context. The default response exposes only the stable error code. A reason may explicitly expose allowlisted scalar fields through `PublicDeniedReasonInterface::$publicDetails`.
+`DeniedReasonInterface::$attributes` is trusted audit context. The built-in `DeniedResponseFactory` always emits only the stable error code. Applications that intentionally need additional client-facing denial fields must provide their own `DeniedResponseFactoryInterface`; the base package never serializes denial attributes.
 
 ## Input and cookie validation
 
