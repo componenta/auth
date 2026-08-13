@@ -18,7 +18,9 @@
 
 ## Authenticator
 
-Порядок strategies задаётся явно. Denial **терминален по умолчанию**. Продолжение chain разрешается только через явный `AuthenticationResult(..., continueOnFailure: true)` для мягких отказов, например invalid session при наличии remember-me credential в том же request. Таким образом `RateLimited`, `UserDisabled` и другие security denials нельзя обойти более поздней strategy только из-за совпадения payload type.
+Порядок strategies задаётся явно. Для middleware-oriented chain remember-me следует подключать через `CompensatingRememberMeStrategy::class`, а не через raw `RememberMeStrategy::class`. `AuthenticatorFactory` намеренно отклоняет raw strategy: после успешной rotation queued response credential может быть отменён более поздним denial/UUID conflict/login replacement/exception, и в таком случае successor grant и непубликованная session должны быть компенсированы. Raw `RememberMeStrategy` остаётся low-level primitive для прямого вызова, когда caller сам владеет публикацией и rollback результата.
+
+Denial **терминален по умолчанию**. Продолжение chain разрешается только через явный `AuthenticationResult(..., continueOnFailure: true)` для мягких отказов, например invalid session при наличии remember-me credential в том же request. Таким образом `RateLimited`, `UserDisabled` и другие security denials нельзя обойти более поздней strategy только из-за совпадения payload type.
 
 `AuthenticationResult` fail-closed: denial не может содержать session или credential mutation; success не может продолжать chain; session обязана принадлежать возвращённой identity.
 
@@ -27,6 +29,8 @@
 Вложенные `AuthenticationMiddleware` используют один `CredentialTransportState`, но каждая queued mutation сохраняет свой `PayloadStorageInterface`. Поэтому разные nested transports не применяют чужие credentials.
 
 `clear()` терминален и очищает все зарегистрированные transports. Если успешная authentication требует response credential, но storage не настроен, middleware падает **до** downstream application handler.
+
+Explicit password и OTP session login полностью заменяют старое browser auth-state. Public magic-link session verifier принимает только `ReplacingPayloadStorage`, поэтому direct construction не может случайно сохранить или повторно применить credential прежнего principal; стандартная Componenta factory подставляет wrapper автоматически.
 
 Текущая session живёт в request attribute `SessionInterface::class`, а не в identity.
 
@@ -53,6 +57,8 @@ bindRotation(RememberMeRotation $rotation, string $newSessionId): bool;
 ```
 
 Grant хранит текущий `session_id` и `previous_session_id`. Logout/revoke совпадает по обоим значениям. Поэтому конкурентный logout не может пропустить уже начатую ротацию и оставить новый persistent credential.
+
+При работе через `AuthenticationMiddleware` используется `CompensatingRememberMeStrategy`. Она делегирует authentication raw strategy, но после успешного bind регистрирует request-scoped compensation. Если более поздний terminal denial, UUID conflict, explicit login replacement, missing storage или downstream exception отменяет queued replacement credential, successor remember bearer отзывается, а непубликованная session завершается. После успешного `CredentialTransportState::apply()` callback удаляется и доставленный credential не отзывается.
 
 Минимальная schema:
 
@@ -110,7 +116,7 @@ JWT profile явно задаёт issuer/audience/type; проверяются s
 
 `DatabaseRefreshTokenHousekeeper::cleanup($now, $limit)` bounded-удаляет только полностью истёкшие families. Финальный delete сериализуется через ту же family row, что rotation/revocation, и повторно проверяет expiry на primary под этой сериализацией, поэтому cleanup не может удалить concurrently созданный active successor.
 
-Credential responses получают `Cache-Control: no-store` и `Pragma: no-cache`.
+Credential responses получают `Cache-Control: no-store` и `Pragma: no-cache`. Пустой token response не заявляет JSON content type, когда response stream сообщает нулевой размер.
 
 ## Password reset
 
@@ -132,9 +138,11 @@ interface EventListenerInterface
 
 Семь event-specific marker interfaces и `ListenerFactory` удалены. `CriticalEventListenerInterface` сохранён из-за самостоятельной fail-fast семантики.
 
-Event DTO не создают `Clock` самостоятельно: timestamp обязателен и передаётся owning service с внедрённым clock. Generic auth/logout events — best-effort observers; critical session events выполняются в owning transition.
+Event DTO не создают `Clock` самостоятельно: timestamp обязателен и передаётся owning service с внедрённым clock. Generic auth/logout events — best-effort observers; critical session events выполняются в owning transition. Best-effort session GC также изолирует scheduler/random/logger failures от уже успешного application response.
 
 Componenta factories также используют общий PSR-20 `ClockInterface` для event timestamps, JWT access/refresh issuance/validation и logout observer time. Constructor defaults остаются только fallback для прямого создания объектов вне стандартного Componenta container.
+
+Credential-bearing DTO скрывают bearer material в debug/JSON. Package-owned bearer-facing manager methods используют `#[SensitiveParameter]` там, где raw bearer пересекает exception-prone boundary; custom adapters должны соблюдать тот же контракт и не публиковать stack traces внешним клиентам.
 
 ## Denials и malformed input
 
