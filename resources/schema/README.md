@@ -3,13 +3,17 @@
 `mysql-8.4.sql` is the canonical MySQL 8.4/InnoDB schema for the built-in
 `componenta/auth` SQL stores. The table and column names may be changed through
 package configuration, but the constraints, compatible column widths,
-case-sensitivity and indexes are part of the store contract rather than merely
-example tuning.
+byte-comparison semantics and indexes are part of the store contract rather
+than merely example tuning.
 
 ## Required invariants
 
-- session IDs and OTP destinations are compared byte-for-byte; use a binary
-  collation when storing them;
+- opaque session IDs, session lineage IDs, User-Agent bytes and OTP destinations
+  are stored byte-for-byte. The public contracts do not require UTF-8, so the
+  reference schema uses `VARBINARY` rather than a text collation for these
+  values;
+- UUIDs, hexadecimal hashes and refresh family IDs use byte-exact `ascii_bin`
+  comparison;
 - remember-me and one-time bearer representations are unique;
 - one-time token tables have one row per subject because
   `TokenManager::replaceForSubject()` is implemented as an upsert on the subject
@@ -36,10 +40,11 @@ widen `family_id` to `VARCHAR(128)` in both refresh tables when a narrower type
 was used previously. The foreign-key columns must remain type/collation
 compatible.
 
-Also add the cleanup indexes shown in `mysql-8.4.sql`. If existing session IDs or
-OTP destinations were stored under a case-insensitive collation, migrate them to
-a binary collation only after checking for values that would collide under the
-new comparison semantics.
+Also add the cleanup indexes shown in `mysql-8.4.sql`. Existing textual session
+and remember-me lineage columns can be migrated to `VARBINARY(512)` without
+changing their bytes. OTP destinations can likewise be migrated to
+`VARBINARY(320)`. Check for collisions before changing any previously
+case-insensitive key column to byte-exact comparison semantics.
 
 Magic-link and password-reset managers should use separate purpose-specific
 one-time-token tables as shown. Purpose is cryptographically domain-separated in
