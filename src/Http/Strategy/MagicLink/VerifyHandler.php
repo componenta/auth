@@ -40,6 +40,10 @@ final readonly class VerifyHandler implements RequestHandlerInterface
             return $this->json(400, ['error' => 'missing_token']);
         }
 
+        // Complete request-derived and response-allocation work before the
+        // one-time magic-link bearer can be consumed.
+        $attributes = $this->attributeExtractor->extract($request);
+        $response = $this->successResponse();
         $result = $this->authenticator->attempt($payload, new Context([
             ServerRequestInterface::class => $request,
             ContextInterface::EXTRACTOR => $this->extractor,
@@ -53,20 +57,28 @@ final readonly class VerifyHandler implements RequestHandlerInterface
 
         $session = $this->sessionManager->create(
             $result->subject->uuid,
-            $this->attributeExtractor->extract($request),
-        );
-        $response = $this->storage->store(
-            $request,
-            $this->responseFactory->createResponse(200),
-            new SessionPayload($session->id),
+            $attributes,
         );
 
-        return MagicLinkResponseHeaders::apply(
-            $response
-                ->withHeader('Content-Type', 'application/json')
-                ->withHeader('Cache-Control', 'no-store')
-                ->withHeader('Pragma', 'no-cache'),
-        );
+        try {
+            $stored = $this->storage->store(
+                $request,
+                $response,
+                new SessionPayload($session->id),
+            );
+
+            return MagicLinkResponseHeaders::apply(
+                $stored
+                    ->withHeader('Content-Type', 'application/json')
+                    ->withHeader('Cache-Control', 'no-store')
+                    ->withHeader('Pragma', 'no-cache'),
+            );
+        } catch (\Throwable $exception) {
+            // The magic-link token is already consumed and remains single-use;
+            // only the unpublished server-side session is compensated.
+            $this->sessionManager->terminate($session->id);
+            throw $exception;
+        }
     }
 
     /** @param array<string, mixed> $payload */
@@ -77,6 +89,17 @@ final readonly class VerifyHandler implements RequestHandlerInterface
 
         return MagicLinkResponseHeaders::apply(
             $response
+                ->withHeader('Content-Type', 'application/json')
+                ->withHeader('Cache-Control', 'no-store')
+                ->withHeader('Pragma', 'no-cache'),
+        );
+    }
+
+    private function successResponse(): ResponseInterface
+    {
+        return MagicLinkResponseHeaders::apply(
+            $this->responseFactory
+                ->createResponse(200)
                 ->withHeader('Content-Type', 'application/json')
                 ->withHeader('Cache-Control', 'no-store')
                 ->withHeader('Pragma', 'no-cache'),
