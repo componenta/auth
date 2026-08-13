@@ -146,6 +146,7 @@ for required in \
     'family_id VARCHAR(128)' \
     'idx_otp_expiry' \
     'idx_refresh_family_expiry' \
+    'idx_refresh_token_expiry' \
     'idx_sessions_cleanup_absolute'
 do
     if ! grep -q --fixed-strings "$required" resources/schema/mysql-8.4.sql; then

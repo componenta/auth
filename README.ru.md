@@ -114,9 +114,9 @@ JWT profile явно задаёт issuer/audience/type; проверяются s
 
 `DatabaseRefreshTokenStore` хранит только SHA-256 bearer representations, сериализует transitions через family-row и выполняет consume presented token + insert successor одной transaction. Ordinary revoke теперь terminal для всей family и сериализуется с rotation; он остаётся отдельным от replay compromise. Replay помечает family compromised и отзывает всех active descendants.
 
-`DatabaseRefreshTokenHousekeeper::cleanup($now, $limit)` bounded-удаляет только полностью истёкшие families. Финальный delete сериализуется через ту же family row, что rotation/revocation, и повторно проверяет expiry на primary под этой сериализацией, поэтому cleanup не может удалить concurrently созданный active successor.
+`DatabaseRefreshTokenHousekeeper::cleanup($now, $limit)` выполняет bounded housekeeping в два этапа. Сначала он удаляет не более `$limit` history rows, у которых истёк срок именно соответствующего bearer, включая истёкшую history ещё живой sliding family; каждое такое удаление сериализуется через family row. Затем рассматривается не более `$limit` terminal family candidates; family удаляется только после полного drain её history и повторной проверки expiry на primary под той же сериализацией. Поэтому cleanup не может удалить concurrently созданный active successor.
 
-Credential responses получают `Cache-Control: no-store` и `Pragma: no-cache`. Пустой token response не заявляет JSON content type, когда response stream сообщает нулевой размер.
+Credential responses получают `Cache-Control: no-store` и `Pragma: no-cache`. Для семантически пустого token response `Content-Type` удаляется явно; семантика response не определяется размером PSR-7 stream, который законно может быть неизвестен.
 
 ## Password reset
 
