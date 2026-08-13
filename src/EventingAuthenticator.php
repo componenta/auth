@@ -21,8 +21,11 @@ final readonly class EventingAuthenticator implements AuthenticatorInterface
     ) {}
 
     #[\Override]
-    public function attempt(object $payload, ContextInterface $context): AuthenticationResult
-    {
+    public function attempt(
+        #[\SensitiveParameter]
+        object $payload,
+        ContextInterface $context,
+    ): AuthenticationResult {
         $payloadType = $payload::class;
         $this->dispatcher->dispatchObservers(new AuthenticationAttempted(
             $payloadType,
