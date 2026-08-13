@@ -7,6 +7,7 @@ namespace Componenta\Auth\Factory;
 use Componenta\Auth\AuthenticatorInterface;
 use Componenta\Auth\Http\DeniedResponseFactoryInterface;
 use Componenta\Auth\Http\PayloadStorageInterface;
+use Componenta\Auth\Http\ReplacingPayloadStorage;
 use Componenta\Auth\Http\Strategy\MagicLink\VerifyExtractor;
 use Componenta\Auth\Http\Strategy\MagicLink\VerifyHandler;
 use Componenta\Auth\Session\SessionAttributeExtractorInterface;
@@ -37,7 +38,7 @@ final readonly class MagicLinkVerifyHandlerFactory
             $extractor,
             $authenticator,
             $sessionManager,
-            $storage,
+            new ReplacingPayloadStorage($storage),
             $deniedResponseFactory,
             $responseFactory,
             $attributeExtractor,
