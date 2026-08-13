@@ -34,17 +34,22 @@ final readonly class SessionGarbageCollectionMiddleware implements MiddlewareInt
     ): ResponseInterface {
         $response = $handler->handle($request);
 
-        if (random_int(1, $this->lottery) !== 1) {
-            return $response;
-        }
-
         try {
+            if (random_int(1, $this->lottery) !== 1) {
+                return $response;
+            }
+
             $this->scheduler->schedule();
         } catch (Throwable $exception) {
-            $this->logger?->warning(
-                'Unable to schedule session cleanup.',
-                ['exception' => $exception],
-            );
+            try {
+                $this->logger?->warning(
+                    'Unable to schedule session cleanup.',
+                    ['exception' => $exception],
+                );
+            } catch (Throwable) {
+                // Cleanup and its diagnostics are best-effort and must never
+                // replace an already successful application response.
+            }
         }
 
         return $response;
