@@ -26,7 +26,7 @@ final readonly class RevokeHandler implements RequestHandlerInterface
             $this->refreshManager->revoke($tokenId);
         }
 
-        return TokenResponseHeaders::apply(
+        return TokenResponseHeaders::applyEmpty(
             $this->responseFactory->createResponse(200),
         );
     }
