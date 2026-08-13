@@ -25,6 +25,7 @@ interface RememberMeTokenManagerInterface
      * or changed concurrently and the caller must not issue the new session.
      */
     public function bindRotation(
+        #[\SensitiveParameter]
         RememberMeRotation $rotation,
         #[\SensitiveParameter]
         string $newSessionId,
@@ -35,18 +36,27 @@ interface RememberMeTokenManagerInterface
         string $plainToken,
     ): void;
 
-    public function revokeForSession(string $sessionId): void;
+    public function revokeForSession(
+        #[\SensitiveParameter]
+        string $sessionId,
+    ): void;
 
     /** @param iterable<string> $sessionIds */
-    public function revokeForSessions(iterable $sessionIds): void;
+    public function revokeForSessions(
+        #[\SensitiveParameter]
+        iterable $sessionIds,
+    ): void;
 
     public function revokeAllForSubject(
         UuidInterface $subjectId,
+        #[\SensitiveParameter]
         ?string $exceptSessionId = null,
     ): void;
 
     public function updateSessionId(
+        #[\SensitiveParameter]
         string $oldSessionId,
+        #[\SensitiveParameter]
         string $newSessionId,
     ): void;
 
