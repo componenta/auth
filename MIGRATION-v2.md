@@ -46,10 +46,12 @@ Custom strategies that previously relied on the old "every denial continues" beh
 $state->register($storage);
 $state->queue($storage, $payload);
 $state->clear($storage);
+$state->onDiscard($callback);
+$state->discardQueued();
 $state->apply($request, $response);
 ```
 
-Nested middleware may use different storages. Terminal clear removes every registered transport and discards pending writes.
+Nested middleware may use different storages. Terminal clear removes every registered transport and discards pending writes. `onDiscard()` registers compensation for server-side credential state that has been created but not yet published to the client; `discardQueued()` executes those pending compensations when a later authentication layer makes the queued credential unusable.
 
 A middleware producing a successful credential mutation must have a `PayloadStorageInterface` before downstream application code runs.
 
@@ -65,19 +67,19 @@ bindRotation(RememberMeRotation $rotation, string $newSessionId): bool;
 
 `sessionId` is no longer nullable.
 
-Add the lineage column and indexes before deploying the new manager:
+Add the lineage column and indexes before deploying the new manager. Session IDs are opaque byte strings, so the canonical schema uses binary columns rather than a text collation:
 
 ```sql
 ALTER TABLE remember_me_tokens
-  MODIFY session_id VARCHAR(512) NOT NULL,
-  ADD previous_session_id VARCHAR(512) NULL,
+  MODIFY session_id VARBINARY(512) NOT NULL,
+  ADD previous_session_id VARBINARY(512) NULL,
   ADD INDEX idx_remember_session (session_id),
   ADD INDEX idx_remember_previous_session (previous_session_id);
 ```
 
-Exact types should match your schema. The security property is that revocation can match both the current and immediately previous session ID while bearer rotation/session binding is in flight.
+Exact types should match the byte-preserving contract of your schema. The security property is that revocation can match both the current and immediately previous session ID while bearer rotation/session binding is in flight.
 
-Deploy the new manager, strategy and lifecycle listeners together. Do not mix the old delete-on-consume manager with the new strategy.
+When remember-me authentication runs through `AuthenticationMiddleware`/`CredentialTransportState`, configure `CompensatingRememberMeStrategy` in the authentication chain rather than the raw `RememberMeStrategy`. The wrapper revokes a rotated successor bearer and terminates its unpublished session if a later layer discards the queued client credential. Deploy the new manager, compensating strategy and lifecycle listeners together. Do not mix the old delete-on-consume manager with the new strategy.
 
 ## Built-in SQL schema contract
 
@@ -123,6 +125,8 @@ new TokenRequest(
 ```
 
 Magic-link requests enqueue `magic_link`; forgot-password requests enqueue `password_reset`. Queue adapters serving multiple one-time-token flows must preserve and route on `TokenRequest::$purpose`. Construct each `TokenRequestProcessor` with its expected purpose; it rejects misrouted work before provider lookup, token generation or delivery. Workers must serialize the same `(purpose, identity)` key in enqueue order because each purpose-specific built-in store keeps one current token per subject.
+
+The public `MagicLink\VerifyHandler` now requires `ReplacingPayloadStorage`. This is a constructor-level security contract: successful magic-link verification must discard the previous browser principal before storing the new session credential. Custom/manual construction must wrap the underlying storage in `ReplacingPayloadStorage`; a generic `PayloadStorageInterface` is no longer sufficient.
 
 ## Events
 
@@ -173,9 +177,11 @@ findActiveSubject(string $tokenId, int $now): ?UuidInterface;
 
 It is deliberately non-authoritative. It allows provider lookup, access-token signing and response allocation to fail before the presented refresh bearer is irreversibly rotated; `rotateAtomically()` remains the final serialized authorization decision and must repeat every state check. Custom stores must preserve that distinction.
 
-`DatabaseRefreshTokenHousekeeper::cleanup($now, $limit)` now selects candidates from indexed `refresh_token_families.expires_at` instead of aggregating the complete token-history table. Rotation extends that family deadline in the same transaction that consumes the presented token and inserts its successor. Final cleanup still serializes through the family row and rechecks token expiry before destructive writes.
+`DatabaseRefreshTokenHousekeeper::cleanup($now, $limit)` uses indexed `refresh_tokens.expires_at` to prune expired token-history rows in a bounded batch, including history belonging to a still-live sliding family. Each history deletion serializes through the family row. It then selects terminal family candidates from indexed `refresh_token_families.expires_at`; final family deletion uses the same serialization point and occurs only after the bounded history drain has left the family with no token rows.
 
-Custom `RefreshTokenStoreInterface` implementations must provide equivalent family serialization, successor rollback, replay-compromise semantics, primary-read preflight, and safe retention cleanup.
+Replay detection therefore applies only while the presented bearer itself is unexpired. Reuse of a consumed bearer before its `expires_at` still compromises the complete family. Once that bearer has expired, it may be removed by housekeeping and a later presentation is merely expired/invalid; it must not compromise a live successor family. Schedule housekeeping regularly and retain the canonical expiry indexes, including `idx_refresh_token_expiry`.
+
+Custom `RefreshTokenStoreInterface` implementations must provide equivalent family serialization, successor rollback, replay-compromise semantics for unexpired bearers, primary-read preflight, and bounded safe retention cleanup.
 
 ## JWT bearer size contract
 
@@ -218,9 +224,9 @@ ListenerFactory
 1. Upgrade identity ownership to canonical UUID contracts and move identity normalization into providers/application policy.
 2. Apply the canonical SQL-store migration requirements in `resources/schema/README.md`, including remember-me lineage, binary credential-key comparison, cleanup indexes and refresh family retention state.
 3. Configure OTP HMAC secret/profile and update custom `CodeStoreInterface` implementations for bounded cleanup.
-4. Assign a distinct one-time-token `purpose` to every flow and preserve `TokenRequest::$purpose` through queue routing/workers; serialize issuance workers per identity/purpose key.
-5. Update custom `RefreshTokenStoreInterface` implementations for primary preflight plus family-level indexed retention cleanup.
-6. Deploy primary-pinned credential stores and lifecycle listeners together.
+4. Assign a distinct one-time-token `purpose` to every flow and preserve `TokenRequest::$purpose` through queue routing/workers; serialize issuance workers per identity/purpose key, and construct magic-link verification with `ReplacingPayloadStorage`.
+5. Update custom `RefreshTokenStoreInterface` implementations for primary preflight, bounded expired-history pruning and family-level retention cleanup.
+6. Deploy primary-pinned credential stores and lifecycle listeners together; use `CompensatingRememberMeStrategy` in middleware chains.
 7. Update custom event listeners to `$events` property subscriptions and pass timestamps explicitly when creating events.
 8. Keep strict handlers behind `InvalidPayloadMiddleware` or an equivalent 400 mapper.
 9. Run the repository's MySQL concurrency tests against the deployment database/dialect.
