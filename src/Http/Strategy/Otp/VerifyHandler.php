@@ -8,6 +8,7 @@ use Componenta\Auth\AuthenticatorInterface;
 use Componenta\Auth\Context;
 use Componenta\Auth\ContextInterface;
 use Componenta\Auth\DeniedReasonInterface;
+use Componenta\Auth\Http\CredentialTransportState;
 use Componenta\Auth\Http\DeniedResponseFactoryInterface;
 use Componenta\Auth\Http\PayloadStorageInterface;
 use Componenta\Auth\Http\Transport\SessionPayload;
@@ -40,8 +41,6 @@ final readonly class VerifyHandler implements RequestHandlerInterface
             return $this->json(400, ['error' => 'missing_credentials']);
         }
 
-        // Complete request-derived and response-allocation work before the
-        // one-time challenge can be consumed.
         $attributes = $this->attributeExtractor->extract($request);
         $response = $this->successResponse();
         $result = $this->authenticator->attempt($payload, new Context([
@@ -53,12 +52,18 @@ final readonly class VerifyHandler implements RequestHandlerInterface
             return $this->deniedResponseFactory->create($result->subject);
         }
 
+        $transportState = $request->getAttribute(CredentialTransportState::class);
+        if ($transportState instanceof CredentialTransportState) {
+            $transportState->discardQueued();
+        }
+
         $session = $this->sessionManager->create(
             $result->subject->uuid,
             $attributes,
         );
 
         try {
+            $response = $this->storage->remove($request, $response);
             $stored = $this->storage->store(
                 $request,
                 $response,
@@ -70,8 +75,6 @@ final readonly class VerifyHandler implements RequestHandlerInterface
                 ->withHeader('Cache-Control', 'no-store')
                 ->withHeader('Pragma', 'no-cache');
         } catch (\Throwable $exception) {
-            // OTP is already consumed and must remain single-use, but an
-            // unpublished session is safe to compensate and must not survive.
             $this->sessionManager->terminate($session->id);
             throw $exception;
         }
@@ -91,10 +94,13 @@ final readonly class VerifyHandler implements RequestHandlerInterface
 
     private function successResponse(): ResponseInterface
     {
-        return $this->responseFactory
+        $response = $this->responseFactory
             ->createResponse(200)
             ->withHeader('Content-Type', 'application/json')
             ->withHeader('Cache-Control', 'no-store')
             ->withHeader('Pragma', 'no-cache');
+        $response->getBody()->write('{}');
+
+        return $response;
     }
 }
