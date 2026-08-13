@@ -75,7 +75,7 @@ final readonly class SessionStrategy implements AuthenticationStrategyInterface
             if ($transportState instanceof CredentialTransportState) {
                 $regeneratedId = $session->id;
                 $transportState->onDiscard(
-                    fn(): void => $this->sessionManager->terminate($regeneratedId),
+                    fn() => $this->sessionManager->terminate($regeneratedId),
                 );
             }
         }
