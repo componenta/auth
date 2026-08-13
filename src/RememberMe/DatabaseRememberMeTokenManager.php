@@ -120,9 +120,6 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
             return true;
         }
 
-        // Session regeneration may already have moved the same grant via its
-        // critical listener. Re-read on primary to distinguish that safe state
-        // from a grant deleted by concurrent logout/revocation.
         $row = $this->findByHash($tokenHash);
 
         return $row !== null
@@ -157,7 +154,7 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
     #[\Override]
     public function revokeForSessions(iterable $sessionIds): void
     {
-        /** @var array<string, true> $ids */
+        /** @var array<string, string> $ids */
         $ids = [];
 
         foreach ($sessionIds as $sessionId) {
@@ -168,10 +165,10 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
             }
 
             self::assertId($sessionId, 'Session ID');
-            $ids[$sessionId] = true;
+            $ids[self::idKey($sessionId)] = $sessionId;
         }
 
-        foreach (array_chunk(array_keys($ids), self::REVOKE_CHUNK_SIZE) as $chunk) {
+        foreach (array_chunk(array_values($ids), self::REVOKE_CHUNK_SIZE) as $chunk) {
             $this->database
                 ->delete($this->config->table)
                 ->where(function (mixed $query) use ($chunk): void {
@@ -296,6 +293,11 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
     private static function hash(string $plainToken): string
     {
         return hash('sha256', $plainToken);
+    }
+
+    private static function idKey(string $value): string
+    {
+        return 's:' . $value;
     }
 
     private static function assertId(string $value, string $label): void
