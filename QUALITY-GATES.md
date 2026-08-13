@@ -73,7 +73,9 @@ The suite must prove:
 36. third-party GitHub Actions use immutable 40-character commit SHAs;
 37. built-in `RateLimited` denials validate non-negative retry delay and publish it only as the standard `Retry-After` header, not in the JSON body;
 38. best-effort session cleanup scheduling and its diagnostics cannot replace an already successful application response;
-39. empty token responses remain non-cacheable but do not claim `Content-Type: application/json`, while non-empty token responses do.
+39. empty token responses remain non-cacheable but do not claim `Content-Type: application/json`, while non-empty token responses do;
+40. the public magic-link session verifier requires replacing credential storage, so direct construction cannot preserve or re-apply an older browser principal;
+41. remember-me authentication used with `CredentialTransportState` is wrapped by `CompensatingRememberMeStrategy`, and discarding an unpublished successful rotation revokes its successor bearer and terminates its session.
 
 ## Real MySQL concurrency gate
 
