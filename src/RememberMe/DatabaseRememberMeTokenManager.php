@@ -31,6 +31,7 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
     #[\Override]
     public function create(
         UuidInterface $subjectId,
+        #[\SensitiveParameter]
         string $sessionId,
     ): string {
         self::assertId($sessionId, 'Session ID');
@@ -97,7 +98,9 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
 
     #[\Override]
     public function bindRotation(
+        #[\SensitiveParameter]
         RememberMeRotation $rotation,
+        #[\SensitiveParameter]
         string $newSessionId,
     ): bool {
         self::assertId($newSessionId, 'New session ID');
@@ -150,14 +153,18 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
     }
 
     #[\Override]
-    public function revokeForSession(string $sessionId): void
-    {
+    public function revokeForSession(
+        #[\SensitiveParameter]
+        string $sessionId,
+    ): void {
         $this->revokeForSessions([$sessionId]);
     }
 
     #[\Override]
-    public function revokeForSessions(iterable $sessionIds): void
-    {
+    public function revokeForSessions(
+        #[\SensitiveParameter]
+        iterable $sessionIds,
+    ): void {
         /** @var array<string, string> $ids */
         $ids = [];
 
@@ -191,6 +198,7 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
     #[\Override]
     public function revokeAllForSubject(
         UuidInterface $subjectId,
+        #[\SensitiveParameter]
         ?string $exceptSessionId = null,
     ): void {
         $delete = $this->database
@@ -207,7 +215,9 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
 
     #[\Override]
     public function updateSessionId(
+        #[\SensitiveParameter]
         string $oldSessionId,
+        #[\SensitiveParameter]
         string $newSessionId,
     ): void {
         self::assertId($oldSessionId, 'Old session ID');
@@ -303,13 +313,18 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
         return hash('sha256', $plainToken);
     }
 
-    private static function idKey(string $value): string
-    {
+    private static function idKey(
+        #[\SensitiveParameter]
+        string $value,
+    ): string {
         return 's:' . $value;
     }
 
-    private static function assertId(string $value, string $label): void
-    {
+    private static function assertId(
+        #[\SensitiveParameter]
+        string $value,
+        string $label,
+    ): void {
         if (
             $value === ''
             || strlen($value) > self::MAX_ID_LENGTH
@@ -320,8 +335,11 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
     }
 
     /** @param array<array-key, mixed> $row */
-    private static function stringValue(array $row, string $key): string
-    {
+    private static function stringValue(
+        #[\SensitiveParameter]
+        array $row,
+        string $key,
+    ): string {
         $value = $row[$key] ?? null;
 
         if (!is_string($value) && !is_int($value)) {
@@ -335,16 +353,22 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
     }
 
     /** @param array<array-key, mixed> $row */
-    private static function nullableStringValue(array $row, string $key): ?string
-    {
+    private static function nullableStringValue(
+        #[\SensitiveParameter]
+        array $row,
+        string $key,
+    ): ?string {
         return !array_key_exists($key, $row) || $row[$key] === null
             ? null
             : self::stringValue($row, $key);
     }
 
     /** @param array<array-key, mixed> $row */
-    private static function intValue(array $row, string $key): int
-    {
+    private static function intValue(
+        #[\SensitiveParameter]
+        array $row,
+        string $key,
+    ): int {
         $value = $row[$key] ?? null;
 
         if (!is_int($value) && !(is_string($value) && ctype_digit($value))) {
@@ -358,8 +382,11 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
     }
 
     /** @param array<array-key, mixed> $row */
-    private static function uuidValue(array $row, string $key): UuidInterface
-    {
+    private static function uuidValue(
+        #[\SensitiveParameter]
+        array $row,
+        string $key,
+    ): UuidInterface {
         try {
             return Uuid::fromString(self::stringValue($row, $key));
         } catch (\InvalidArgumentException $exception) {
