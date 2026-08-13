@@ -15,10 +15,16 @@ interface SessionManagerInterface
     ): SessionInterface;
 
     /** Returns true only for a currently authenticatable session credential. */
-    public function exists(string $sessionId): bool;
+    public function exists(
+        #[\SensitiveParameter]
+        string $sessionId,
+    ): bool;
 
     /** Returns only a currently authenticatable, non-replaced session. */
-    public function find(string $sessionId): ?SessionInterface;
+    public function find(
+        #[\SensitiveParameter]
+        string $sessionId,
+    ): ?SessionInterface;
 
     public function all(UuidInterface $subjectId): SessionCollectionInterface;
 
@@ -27,6 +33,7 @@ interface SessionManagerInterface
      * atomic last-active predicate in addition to any caller-side check.
      */
     public function touch(
+        #[\SensitiveParameter]
         string $sessionId,
         ?\DateTimeImmutable $lastActiveAt = null,
     ): void;
@@ -38,11 +45,13 @@ interface SessionManagerInterface
      * @param string|iterable<string>|SessionCollectionInterface $sessionId
      */
     public function terminate(
+        #[\SensitiveParameter]
         string|iterable|SessionCollectionInterface $sessionId,
     ): void;
 
     public function terminateAll(
         UuidInterface $subjectId,
+        #[\SensitiveParameter]
         ?string $exceptSessionId = null,
     ): void;
 
@@ -50,7 +59,10 @@ interface SessionManagerInterface
      * Rotates one active credential. A concurrent loser must fail instead of
      * receiving the winning successor ID.
      */
-    public function regenerate(string $sessionId): SessionInterface;
+    public function regenerate(
+        #[\SensitiveParameter]
+        string $sessionId,
+    ): SessionInterface;
 
     /** Removes at most $limit expired sessions and returns affected rows. */
     public function cleanup(int $limit = 1000): int;
