@@ -39,10 +39,10 @@ final readonly class RefreshHandler implements RequestHandlerInterface
             return $this->invalidRequest();
         }
 
-        // Preflight is deliberately non-authoritative. It lets provider lookup,
-        // access-token signing and response allocation fail before the bearer
-        // is irreversibly rotated; rotate() below still repeats all store state
-        // checks under family serialization.
+        // Preflight is deliberately non-authoritative. It lets the most common
+        // provider/signing/response-allocation failures happen before the
+        // bearer is irreversibly rotated; rotate() below still repeats all
+        // credential-state checks under family serialization.
         $subjectId = $this->refreshManager->findActiveSubject($tokenId);
 
         if ($subjectId === null) {
@@ -94,6 +94,27 @@ final readonly class RefreshHandler implements RequestHandlerInterface
         }
 
         if (!$subjectId->equals($result->subjectId)) {
+            $this->refreshManager->revoke($result->id);
+
+            return TokenResponseHeaders::apply(
+                $this->deniedResponseFactory->create(new InvalidRefreshToken()),
+            );
+        }
+
+        // The provider is application-owned mutable account state. Recheck it
+        // after the serialized credential transition so a deletion/disablement
+        // racing the preflight cannot receive a freshly rotated credential.
+        try {
+            $currentIdentity = $this->provider->findByUuid($result->subjectId);
+        } catch (\Throwable $exception) {
+            $this->refreshManager->revoke($result->id);
+            throw $exception;
+        }
+
+        if (
+            $currentIdentity === null
+            || !$result->subjectId->equals($currentIdentity->uuid)
+        ) {
             $this->refreshManager->revoke($result->id);
 
             return TokenResponseHeaders::apply(
