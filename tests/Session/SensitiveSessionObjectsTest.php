@@ -25,6 +25,7 @@ use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
 use SensitiveParameter;
+use SensitiveParameterValue;
 
 final class SensitiveSessionObjectsTest extends TestCase
 {
@@ -113,6 +114,40 @@ final class SensitiveSessionObjectsTest extends TestCase
                 $match->getAttributes(SensitiveParameter::class),
                 $class . '::' . $method . ' must redact ' . $parameter,
             );
+        }
+    }
+
+    public function testSensitivePayloadIsRedactedFromActualExceptionTrace(): void
+    {
+        $previous = ini_get('zend.exception_ignore_args');
+        self::assertIsString($previous);
+        self::assertNotFalse(ini_set('zend.exception_ignore_args', '0'));
+
+        try {
+            $payload = new class {
+                public string $secret = 'trace-secret';
+            };
+            $exception = new NoStrategyFoundException($payload);
+            $frame = null;
+
+            foreach ($exception->getTrace() as $candidate) {
+                if (
+                    ($candidate['class'] ?? null) === NoStrategyFoundException::class
+                    && ($candidate['function'] ?? null) === '__construct'
+                ) {
+                    $frame = $candidate;
+                    break;
+                }
+            }
+
+            self::assertIsArray($frame);
+            self::assertArrayHasKey('args', $frame);
+            self::assertInstanceOf(
+                SensitiveParameterValue::class,
+                $frame['args'][0] ?? null,
+            );
+        } finally {
+            ini_set('zend.exception_ignore_args', $previous);
         }
     }
 }
