@@ -198,9 +198,10 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
                 $token = $this->findToken($database, $presentedHash);
 
                 if ($token === null) {
-                    throw new \UnexpectedValueException(
-                        'Refresh token disappeared while its family was locked.',
-                    );
+                    // Bounded housekeeping may prune a bearer after its own
+                    // expiry while rotation waits for family serialization.
+                    // Missing credential state always fails closed.
+                    return RefreshTokenRotationResult::invalid();
                 }
 
                 if (
@@ -210,6 +211,13 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
                     throw new \UnexpectedValueException(
                         'Refresh token family changed during rotation.',
                     );
+                }
+
+                if (
+                    self::intValue($token, $this->config->expiresAtColumn)
+                    <= $now
+                ) {
+                    return RefreshTokenRotationResult::expired();
                 }
 
                 if (self::nullableIntValue(
@@ -226,13 +234,6 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
                     $this->config->revokedAtColumn,
                 ) !== null) {
                     return RefreshTokenRotationResult::invalid();
-                }
-
-                if (
-                    self::intValue($token, $this->config->expiresAtColumn)
-                    <= $now
-                ) {
-                    return RefreshTokenRotationResult::expired();
                 }
 
                 $affected = $database
