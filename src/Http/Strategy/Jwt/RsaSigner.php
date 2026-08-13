@@ -92,8 +92,10 @@ final readonly class RsaSigner implements SignerInterface
     }
 
     #[\Override]
-    public function parse(string $token): ?Claims
-    {
+    public function parse(
+        #[\SensitiveParameter]
+        string $token,
+    ): ?Claims {
         if (!BearerCredential::isValid($token)) {
             return null;
         }
