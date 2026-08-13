@@ -76,7 +76,7 @@ final class CredentialTransportStateTest extends TestCase
         self::assertSame($afterB, $state->apply($request, $response));
     }
 
-    public function testDiscardQueuedCancelsPendingCredentialWrites(): void
+    public function testDiscardQueuedCancelsPendingCredentialWritesAndRunsCompensation(): void
     {
         $request = $this->createStub(ServerRequestInterface::class);
         $response = $this->responseStub();
@@ -84,11 +84,63 @@ final class CredentialTransportStateTest extends TestCase
         $storage->expects(self::never())->method('store');
         $state = new CredentialTransportState();
         $state->queue($storage, new \stdClass());
+        $compensated = false;
+        $state->onDiscard(static function () use (&$compensated): void {
+            $compensated = true;
+        });
 
         $state->discardQueued();
 
+        self::assertTrue($compensated);
         self::assertTrue($state->empty);
         self::assertSame($response, $state->apply($request, $response));
+    }
+
+    public function testTransportFailureCompensatesUnpublishedDurableState(): void
+    {
+        $request = $this->createStub(ServerRequestInterface::class);
+        $response = $this->responseStub();
+        $storage = $this->createStub(PayloadStorageInterface::class);
+        $storage->method('store')->willThrowException(
+            new \RuntimeException('transport failed'),
+        );
+        $state = new CredentialTransportState();
+        $state->queue($storage, new \stdClass());
+        $compensated = false;
+        $state->onDiscard(static function () use (&$compensated): void {
+            $compensated = true;
+        });
+
+        try {
+            $state->apply($request, $response);
+            self::fail('Transport failure must escape.');
+        } catch (\RuntimeException $exception) {
+            self::assertSame('transport failed', $exception->getMessage());
+        }
+
+        self::assertTrue($compensated);
+        self::assertTrue($state->empty);
+    }
+
+    public function testSuccessfulApplyCommitsDiscardCallbacks(): void
+    {
+        $request = $this->createStub(ServerRequestInterface::class);
+        $response = $this->responseStub();
+        $mutated = $this->responseStub();
+        $storage = $this->createStub(PayloadStorageInterface::class);
+        $storage->method('store')->willReturn($mutated);
+        $state = new CredentialTransportState();
+        $state->queue($storage, new \stdClass());
+        $discarded = false;
+        $state->onDiscard(static function () use (&$discarded): void {
+            $discarded = true;
+        });
+
+        self::assertSame($mutated, $state->apply($request, $response));
+        $state->discardQueued();
+
+        self::assertFalse($discarded);
+        self::assertTrue($state->empty);
     }
 
     public function testCredentialMutationForcesNoStoreHeaders(): void
