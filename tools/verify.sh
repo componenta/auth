@@ -120,7 +120,9 @@ if [[ ! -f resources/schema/mysql-8.4.sql ]]; then
 fi
 
 for required in \
-    'COLLATE utf8mb4_bin' \
+    'id VARBINARY(512)' \
+    'user_agent VARBINARY(1024)' \
+    'destination VARBINARY(320)' \
     'family_id VARCHAR(128)' \
     'idx_otp_expiry' \
     'idx_refresh_family_expiry' \
