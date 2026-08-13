@@ -7,7 +7,6 @@ namespace Componenta\Auth\Tests\Session;
 use Componenta\Auth\Event\CriticalEventListenerInterface;
 use Componenta\Auth\Event\EventDispatcher;
 use Componenta\Auth\Event\EventInterface;
-use Componenta\Auth\Event\EventListenerInterface;
 use Componenta\Auth\Event\EventListenerProviderInterface;
 use Componenta\Auth\Event\PriorityListenerProvider;
 use Componenta\Auth\Event\SessionRegenerated;
@@ -15,6 +14,7 @@ use Componenta\Auth\Event\SessionsTerminated;
 use Componenta\Auth\Session\DatabaseSessionManager;
 use Componenta\Auth\Session\DatabaseSessionManagerConfig;
 use Componenta\Auth\Session\SessionIdGenerator;
+use Componenta\Auth\Session\SessionIdGeneratorInterface;
 use Componenta\Auth\Tests\Support\SqliteDatabaseFixture;
 use Componenta\Clock\FrozenClock;
 use Componenta\Identity\Uuid;
@@ -76,6 +76,26 @@ final class DatabaseSessionManagerIntegrationTest extends TestCase
                 ->where('id', 'LIKE', 'expired-%')
                 ->count(),
         );
+    }
+
+    public function testNumericStringSessionIdRemainsTerminable(): void
+    {
+        self::requireSqlite();
+
+        $database = SqliteDatabaseFixture::create();
+        self::createSchema($database);
+        $manager = self::manager(
+            $database,
+            new FrozenClock(1000, 'UTC'),
+            new EventDispatcher(new PriorityListenerProvider()),
+            new NumericSessionIdGeneratorFixture(),
+        );
+        $session = $manager->create(self::subjectId(), self::attributes());
+
+        self::assertSame('1', $session->id);
+        $manager->terminate(['1', '1']);
+        self::assertNull($manager->find('1'));
+        self::assertSame(0, self::sessionCount($database));
     }
 
     public function testCriticalTerminationFailureRollsBackDeletedSession(): void
@@ -141,10 +161,11 @@ final class DatabaseSessionManagerIntegrationTest extends TestCase
         DatabaseInterface $database,
         FrozenClock $clock,
         EventDispatcher $dispatcher,
+        ?SessionIdGeneratorInterface $idGenerator = null,
     ): DatabaseSessionManager {
         return new DatabaseSessionManager(
             $database,
-            new SessionIdGenerator(),
+            $idGenerator ?? new SessionIdGenerator(),
             $clock,
             $dispatcher,
             new DatabaseSessionManagerConfig(touchInterval: 60),
@@ -210,6 +231,14 @@ final class DatabaseSessionManagerIntegrationTest extends TestCase
     private static function sessionCount(DatabaseInterface $database): int
     {
         return $database->select()->from('sessions')->count();
+    }
+}
+
+final readonly class NumericSessionIdGeneratorFixture implements SessionIdGeneratorInterface
+{
+    public function generate(): string
+    {
+        return '1';
     }
 }
 
