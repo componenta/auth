@@ -31,7 +31,7 @@ return [
     'auth' => [
         'strategies' => [
             SessionStrategy::class,
-            RememberMeStrategy::class,
+            CompensatingRememberMeStrategy::class,
             PasswordStrategy::class,
             JwtStrategy::class,
         ],
@@ -41,7 +41,7 @@ return [
 ];
 ```
 
-`AuthenticatorFactory` rejects empty lists, duplicates, missing/non-strategy services and use of the built-in `RememberMeStrategy` while remember-me is disabled.
+`AuthenticatorFactory` rejects empty lists, duplicates, missing/non-strategy services and use of remember-me strategies while remember-me is disabled. The raw built-in `RememberMeStrategy` is deliberately rejected in this middleware-oriented chain; configure `CompensatingRememberMeStrategy` so a successfully rotated remember bearer and session are revoked if their response-side replacement is later discarded. Direct callers that do not use `CredentialTransportState` may still use the raw strategy as a low-level primitive and own publication/rollback themselves.
 
 A denial is **terminal by default**. A strategy may return `AuthenticationResult(..., continueOnFailure: true)` only for an intentional soft failure such as an invalid session credential when a remember-me credential from the same request may still authenticate the subject. Security denials such as rate limiting or disabled-account decisions therefore cannot be bypassed by a later strategy merely because it supports the same payload.
 
@@ -57,6 +57,8 @@ A denial is **terminal by default**. A strategy may return `AuthenticationResult
 `AuthenticationMiddleware` shares one `CredentialTransportState` through nested authentication layers. Each queued mutation retains its own `PayloadStorageInterface`, so different nested transports do not accidentally apply each other's payloads.
 
 `clear()` is terminal. A logout clears every transport registered on the request and discards queued credential writes. If a successful authentication result needs a transport mutation but the middleware has no storage, it fails **before** invoking the downstream application handler.
+
+Explicit password and OTP session login replace existing browser authentication state. The public magic-link session verifier requires `ReplacingPayloadStorage`, so direct construction cannot accidentally preserve or re-apply an older session/remember principal; the Componenta factory supplies this wrapper automatically.
 
 The current authenticated session is attached to the PSR-7 request under `SessionInterface::class`; it is not stored on the identity.
 
@@ -94,6 +96,8 @@ bindRotation(RememberMeRotation $rotation, string $newSessionId): bool;
 ```
 
 The bearer rotation is single-winner. The grant tracks both the current `session_id` and `previous_session_id`; logout/revocation matches either value. This prevents a concurrent remember-me rotation from escaping a logout that targets the session from which the grant originated.
+
+When remember-me runs inside `AuthenticationMiddleware`, use `CompensatingRememberMeStrategy`. It delegates authentication to the raw strategy but registers request-scoped compensation after a successful bind. If a later nested denial, UUID conflict, explicit login replacement, missing storage or downstream exception discards the queued replacement credential, the successor remember bearer is revoked and the unpublished session is terminated. A successfully applied response clears the compensation without revoking the delivered credential.
 
 Minimum schema:
 
@@ -175,7 +179,7 @@ Refresh grants use opaque 32-64 byte bearer IDs. The default `DatabaseRefreshTok
 
 `DatabaseRefreshTokenHousekeeper::cleanup($now, $limit)` provides bounded housekeeping. Final deletion serializes through the same family row used by rotation/revocation and rechecks expiry on the primary while that serialization point is held, so cleanup cannot delete a concurrently created active successor.
 
-Token responses use `Cache-Control: no-store` and `Pragma: no-cache`.
+Token responses use `Cache-Control: no-store` and `Pragma: no-cache`. Empty token responses do not claim a JSON content type when the response stream reports an empty body.
 
 ## Password reset
 
@@ -199,11 +203,11 @@ interface EventListenerInterface
 
 The old per-event marker interfaces and `ListenerFactory` are removed. `CriticalEventListenerInterface` remains because it has independent failure semantics.
 
-Event DTOs do not create clocks. Their timestamp is mandatory and is supplied by the service that owns the transition. Generic authentication/logout events are best-effort observers; security-critical session lifecycle listeners participate in the owning transition where applicable.
+Event DTOs do not create clocks. Their timestamp is mandatory and is supplied by the service that owns the transition. Generic authentication/logout events are best-effort observers; security-critical session lifecycle listeners participate in the owning transition where applicable. Best-effort session-GC scheduling likewise isolates scheduler, random-source and logger failures from an already successful application response.
 
 Componenta factories also honor the shared PSR-20 `ClockInterface` for event timestamps, JWT access/refresh issuance/validation and logout observer time. Constructor defaults remain only as a direct-construction fallback for non-Componenta containers.
 
-Credential-bearing DTOs and audit containers use redacted debug/JSON representations. Generic authentication events contain payload type/subject UUID metadata, never raw credentials.
+Credential-bearing DTOs and audit containers use redacted debug/JSON representations. Generic authentication events contain payload type/subject UUID metadata, never raw credentials. Package-owned bearer-facing manager methods use `#[SensitiveParameter]` where raw bearer strings cross exception-prone boundaries; applications should apply the same rule to custom adapters and should not expose exception traces to untrusted clients.
 
 ## Denial responses and malformed input
 
