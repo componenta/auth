@@ -58,8 +58,10 @@ final readonly class TokenManager implements TokenManagerInterface
     }
 
     #[\Override]
-    public function find(string $plainToken): ?Token
-    {
+    public function find(
+        #[\SensitiveParameter]
+        string $plainToken,
+    ): ?Token {
         if (!self::validToken($plainToken)) {
             return null;
         }
@@ -85,8 +87,10 @@ final readonly class TokenManager implements TokenManagerInterface
     }
 
     #[\Override]
-    public function consume(string $plainToken): bool
-    {
+    public function consume(
+        #[\SensitiveParameter]
+        string $plainToken,
+    ): bool {
         if (!self::validToken($plainToken)) {
             return false;
         }
@@ -167,8 +171,10 @@ final readonly class TokenManager implements TokenManagerInterface
         return preg_match('/\A[a-f0-9]{64}\z/D', $token) === 1;
     }
 
-    private function hash(string $plainToken): string
-    {
+    private function hash(
+        #[\SensitiveParameter]
+        string $plainToken,
+    ): string {
         return hash('sha256', $this->config->purpose . "\0" . $plainToken);
     }
 
