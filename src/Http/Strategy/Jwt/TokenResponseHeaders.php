@@ -12,12 +12,20 @@ final class TokenResponseHeaders
 
     public static function apply(ResponseInterface $response): ResponseInterface
     {
-        $response = $response
+        return self::noStore($response)
+            ->withHeader('Content-Type', 'application/json');
+    }
+
+    public static function applyEmpty(ResponseInterface $response): ResponseInterface
+    {
+        return self::noStore($response)
+            ->withoutHeader('Content-Type');
+    }
+
+    private static function noStore(ResponseInterface $response): ResponseInterface
+    {
+        return $response
             ->withHeader('Cache-Control', 'no-store')
             ->withHeader('Pragma', 'no-cache');
-
-        return $response->getBody()->getSize() === 0
-            ? $response->withoutHeader('Content-Type')
-            : $response->withHeader('Content-Type', 'application/json');
     }
 }
