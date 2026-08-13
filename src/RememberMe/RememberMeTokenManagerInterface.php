@@ -14,7 +14,10 @@ interface RememberMeTokenManagerInterface
     ): string;
 
     /** Atomically invalidates the presented bearer and returns its successor. */
-    public function rotate(string $plainToken): ?RememberMeRotation;
+    public function rotate(
+        #[\SensitiveParameter]
+        string $plainToken,
+    ): ?RememberMeRotation;
 
     /**
      * Binds a rotated grant to a new session. False means the grant was revoked
@@ -25,7 +28,10 @@ interface RememberMeTokenManagerInterface
         string $newSessionId,
     ): bool;
 
-    public function revoke(string $plainToken): void;
+    public function revoke(
+        #[\SensitiveParameter]
+        string $plainToken,
+    ): void;
 
     public function revokeForSession(string $sessionId): void;
 
