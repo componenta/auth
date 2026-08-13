@@ -37,8 +37,8 @@ final class TokenResponseHeadersTest extends TestCase
     {
         $response = $this->createStub(ResponseInterface::class);
         $response->method('withHeader')->willReturnCallback(
-            static function (string $name, string|array $value) use (&$headers, $response): ResponseInterface {
-                $headers[$name] = is_array($value) ? implode(', ', $value) : $value;
+            static function (string $name, string $value) use (&$headers, $response): ResponseInterface {
+                $headers[$name] = $value;
 
                 return $response;
             },
