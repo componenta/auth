@@ -22,7 +22,7 @@ final readonly class SessionCollection implements SessionCollectionInterface, \J
         $indexed = [];
 
         foreach ($sessions as $session) {
-            $indexed[$session->id] = $session;
+            $indexed[self::idKey($session->id)] = $session;
         }
 
         $this->sessions = $indexed;
@@ -49,10 +49,22 @@ final readonly class SessionCollection implements SessionCollectionInterface, \J
     public function find(string|array $id): SessionInterface|self|null
     {
         if (is_string($id)) {
-            return $this->sessions[$id] ?? null;
+            return $this->sessions[self::idKey($id)] ?? null;
         }
 
-        return new self(array_intersect_key($this->sessions, array_flip($id)));
+        $found = [];
+        foreach ($id as $sessionId) {
+            if (!is_string($sessionId)) {
+                throw new \InvalidArgumentException('Every session ID must be a string.');
+            }
+
+            $key = self::idKey($sessionId);
+            if (isset($this->sessions[$key])) {
+                $found[] = $this->sessions[$key];
+            }
+        }
+
+        return new self($found);
     }
 
     #[\Override]
@@ -100,5 +112,10 @@ final readonly class SessionCollection implements SessionCollectionInterface, \J
     public function getIterator(): \Traversable
     {
         yield from $this->toArray();
+    }
+
+    private static function idKey(string $id): string
+    {
+        return 's:' . $id;
     }
 }
