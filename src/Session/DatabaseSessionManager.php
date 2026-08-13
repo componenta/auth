@@ -676,8 +676,10 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
     }
 
     /** @param array<array-key, mixed> $row */
-    private function hydrate(array $row): SessionInterface
-    {
+    private function hydrate(
+        #[\SensitiveParameter]
+        array $row,
+    ): SessionInterface {
         $replacedBy = $row[$this->config->replacedByColumn] ?? null;
         $attributesJson = self::stringValue($row, $this->config->attributesColumn);
         $attributes = json_decode(
@@ -737,8 +739,11 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
     }
 
     /** @param array<array-key, mixed> $row */
-    private static function stringValue(array $row, string $key): string
-    {
+    private static function stringValue(
+        #[\SensitiveParameter]
+        array $row,
+        string $key,
+    ): string {
         $value = $row[$key] ?? null;
 
         if (!is_string($value) && !is_int($value)) {
