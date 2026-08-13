@@ -7,6 +7,7 @@ namespace Componenta\Auth;
 use Componenta\Auth\Event\EventDispatcher;
 use Componenta\Auth\Event\EventListenerProviderInterface;
 use Componenta\Auth\Factory\AuthenticatorFactory;
+use Componenta\Auth\Factory\CompensatingRememberMeStrategyFactory;
 use Componenta\Auth\Factory\DatabaseCodeStoreConfigFactory;
 use Componenta\Auth\Factory\DatabaseCodeStoreFactory;
 use Componenta\Auth\Factory\DatabaseRefreshTokenStoreConfigFactory;
@@ -58,6 +59,7 @@ use Componenta\Auth\Http\Strategy\Otp\OtpConfig;
 use Componenta\Auth\Http\Strategy\Otp\RequestHandler as OtpRequestHandler;
 use Componenta\Auth\Http\Strategy\Otp\VerifyHandler as OtpVerifyHandler;
 use Componenta\Auth\Http\Strategy\Password\LoginHandler;
+use Componenta\Auth\Http\Strategy\RememberMe\CompensatingRememberMeStrategy;
 use Componenta\Auth\PasswordReset\ForgotPasswordHandler;
 use Componenta\Auth\PasswordReset\ResetPasswordHandler;
 use Componenta\Auth\RememberMe\DatabaseRememberMeTokenManagerConfig;
@@ -84,6 +86,7 @@ class ConfigProvider extends \Componenta\Config\ConfigProvider
             SessionManagerInterface::class => DatabaseSessionManagerFactory::class,
             DatabaseRememberMeTokenManagerConfig::class => DatabaseRememberMeTokenManagerConfigFactory::class,
             RememberMeTokenManagerInterface::class => DatabaseRememberMeTokenManagerFactory::class,
+            CompensatingRememberMeStrategy::class => CompensatingRememberMeStrategyFactory::class,
             DatabaseRefreshTokenStoreConfig::class => DatabaseRefreshTokenStoreConfigFactory::class,
             RefreshTokenStoreInterface::class => DatabaseRefreshTokenStoreFactory::class,
             OtpConfig::class => OtpConfigFactory::class,
