@@ -1,16 +1,16 @@
 -- Canonical MySQL 8.4 / InnoDB schema for componenta/auth built-in stores.
--- Constraints, widths, binary collations and cleanup indexes are part of the
--- store contract. See resources/schema/README.md before adapting this schema.
+-- Constraints, widths, byte-exact credential columns and cleanup indexes are
+-- part of the store contract. See resources/schema/README.md before adapting.
 
 CREATE TABLE sessions (
-    id VARCHAR(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
+    id VARBINARY(512) NOT NULL,
     user_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-    ip VARCHAR(45) NOT NULL,
-    user_agent VARCHAR(1024) NOT NULL,
+    ip VARCHAR(45) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    user_agent VARBINARY(1024) NOT NULL,
     expires_at DATETIME NOT NULL,
     absolute_expires_at DATETIME NOT NULL,
     regenerate_at DATETIME NOT NULL,
-    replaced_by VARCHAR(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL,
+    replaced_by VARBINARY(512) NULL,
     created_at DATETIME NOT NULL,
     last_active_at DATETIME NOT NULL,
     attributes TEXT NOT NULL,
@@ -24,8 +24,8 @@ CREATE TABLE sessions (
 CREATE TABLE remember_me_tokens (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     user_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-    session_id VARCHAR(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
-    previous_session_id VARCHAR(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL,
+    session_id VARBINARY(512) NOT NULL,
+    previous_session_id VARBINARY(512) NULL,
     token CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
     expires_at DATETIME NOT NULL,
     created_at DATETIME NOT NULL,
@@ -38,7 +38,7 @@ CREATE TABLE remember_me_tokens (
 ) ENGINE=InnoDB;
 
 CREATE TABLE otp_codes (
-    destination VARCHAR(320) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
+    destination VARBINARY(320) NOT NULL,
     user_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
     challenge_id CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
     verifier CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
