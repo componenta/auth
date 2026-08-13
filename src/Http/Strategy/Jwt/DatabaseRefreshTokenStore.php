@@ -64,6 +64,7 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
 
     #[\Override]
     public function findActiveSubject(
+        #[\SensitiveParameter]
         string $tokenId,
         int $now,
     ): ?UuidInterface {
@@ -131,7 +132,9 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
 
     #[\Override]
     public function rotateAtomically(
+        #[\SensitiveParameter]
         string $presentedTokenId,
+        #[\SensitiveParameter]
         string $successorTokenId,
         int $successorExpiresAt,
         int $now,
@@ -311,8 +314,11 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
     }
 
     #[\Override]
-    public function revoke(string $tokenId, int $revokedAt): void
-    {
+    public function revoke(
+        #[\SensitiveParameter]
+        string $tokenId,
+        int $revokedAt,
+    ): void {
         if (!self::validIdentifier($tokenId)) {
             return;
         }
