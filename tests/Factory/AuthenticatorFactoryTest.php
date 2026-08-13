@@ -12,6 +12,7 @@ use Componenta\Auth\ContextInterface;
 use Componenta\Auth\Denied\DeniedReason;
 use Componenta\Auth\Exception\AuthenticatorConfigurationException;
 use Componenta\Auth\Factory\AuthenticatorFactory;
+use Componenta\Auth\Http\Strategy\RememberMe\CompensatingRememberMeStrategy;
 use Componenta\Auth\Http\Strategy\RememberMe\RememberMeStrategy;
 use Componenta\Auth\Http\Strategy\Session\UserProviderInterface;
 use Componenta\Auth\RememberMe\RememberMeTokenManagerInterface;
@@ -56,11 +57,7 @@ final class AuthenticatorFactoryTest extends TestCase
 
     public function testRejectsBuiltInRememberMeStrategyWhenFeatureIsDisabled(): void
     {
-        $rememberMe = new RememberMeStrategy(
-            $this->createStub(RememberMeTokenManagerInterface::class),
-            $this->createStub(SessionManagerInterface::class),
-            $this->createStub(UserProviderInterface::class),
-        );
+        $rememberMe = $this->rawRememberStrategy();
         $container = new FactoryContainerFixture([
             ConfigKey::CONFIG => new Config([
                 ConfigKey::AUTH => [
@@ -76,6 +73,61 @@ final class AuthenticatorFactoryTest extends TestCase
         $this->expectExceptionMessage('auth.rememberMe.enabled=true');
 
         (new AuthenticatorFactory())($container);
+    }
+
+    public function testRejectsRawRememberMeStrategyEvenWhenFeatureIsEnabled(): void
+    {
+        $container = new FactoryContainerFixture([
+            ConfigKey::CONFIG => new Config([
+                ConfigKey::AUTH => [
+                    ConfigKey::STRATEGIES => ['remember'],
+                    ConfigKey::EVENTS => false,
+                    ConfigKey::REMEMBER_ME => [ConfigKey::ENABLED => true],
+                ],
+            ]),
+            'remember' => $this->rawRememberStrategy(),
+        ]);
+
+        $this->expectException(AuthenticatorConfigurationException::class);
+        $this->expectExceptionMessage(CompensatingRememberMeStrategy::class);
+
+        (new AuthenticatorFactory())($container);
+    }
+
+    public function testAcceptsCompensatingRememberMeStrategyWhenFeatureIsEnabled(): void
+    {
+        $tokens = $this->createStub(RememberMeTokenManagerInterface::class);
+        $sessions = $this->createStub(SessionManagerInterface::class);
+        $safe = new CompensatingRememberMeStrategy(
+            new RememberMeStrategy(
+                $tokens,
+                $sessions,
+                $this->createStub(UserProviderInterface::class),
+            ),
+            $tokens,
+            $sessions,
+        );
+        $container = new FactoryContainerFixture([
+            ConfigKey::CONFIG => new Config([
+                ConfigKey::AUTH => [
+                    ConfigKey::STRATEGIES => ['remember'],
+                    ConfigKey::EVENTS => false,
+                    ConfigKey::REMEMBER_ME => [ConfigKey::ENABLED => true],
+                ],
+            ]),
+            'remember' => $safe,
+        ]);
+
+        self::assertNotNull((new AuthenticatorFactory())($container));
+    }
+
+    private function rawRememberStrategy(): RememberMeStrategy
+    {
+        return new RememberMeStrategy(
+            $this->createStub(RememberMeTokenManagerInterface::class),
+            $this->createStub(SessionManagerInterface::class),
+            $this->createStub(UserProviderInterface::class),
+        );
     }
 }
 
