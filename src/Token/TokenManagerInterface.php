@@ -14,9 +14,15 @@ interface TokenManagerInterface
      */
     public function replaceForSubject(UuidInterface $subjectId): string;
 
-    public function find(string $plainToken): ?Token;
+    public function find(
+        #[\SensitiveParameter]
+        string $plainToken,
+    ): ?Token;
 
-    public function consume(string $plainToken): bool;
+    public function consume(
+        #[\SensitiveParameter]
+        string $plainToken,
+    ): bool;
 
     /** Removes at most $limit expired or consumed tokens. */
     public function cleanup(int $limit = 1000): int;
