@@ -7,7 +7,7 @@ namespace Componenta\Auth\Http\Strategy\Jwt;
 use Cycle\Database\DatabaseInterface;
 use Cycle\Database\Query\SelectQuery;
 
-/** Bounded cleanup for refresh families whose complete token history has expired. */
+/** Bounded cleanup for expired refresh-token history and terminal families. */
 final readonly class DatabaseRefreshTokenHousekeeper
 {
     private const int LOCK_NONCE_BYTES = 16;
@@ -18,7 +18,7 @@ final readonly class DatabaseRefreshTokenHousekeeper
         private DatabaseRefreshTokenStoreConfig $config = new DatabaseRefreshTokenStoreConfig(),
     ) {}
 
-    /** Removes at most $limit terminally expired families and returns family rows removed. */
+    /** Removes bounded expired history and returns the number of family rows removed. */
     public function cleanup(int $now, int $limit = 1000): int
     {
         if ($now < 1) {
@@ -33,6 +33,8 @@ final readonly class DatabaseRefreshTokenHousekeeper
                 self::MAX_CLEANUP_LIMIT,
             ));
         }
+
+        $this->pruneExpiredHistory($now, $limit);
 
         $query = $this->database
             ->select($this->config->familyIdColumn)
@@ -76,9 +78,6 @@ final readonly class DatabaseRefreshTokenHousekeeper
                 $deleted = 0;
 
                 foreach ($familyIds as $familyId) {
-                    // The conditional write is the same family serialization
-                    // point used by rotation/revocation and also rechecks the
-                    // indexed retention deadline after any waiter completes.
                     $claimed = $database
                         ->update($this->config->familyTable)
                         ->where($this->config->familyIdColumn, $familyId)
@@ -103,9 +102,6 @@ final readonly class DatabaseRefreshTokenHousekeeper
                         );
                     }
 
-                    // Defense in depth: the family deadline is maintained as
-                    // the maximum token expiry, but recheck token state before
-                    // destructive writes in case persistence was corrupted.
                     $active = $query
                         ->from($this->config->tokenTable)
                         ->where($this->config->familyIdColumn, $familyId)
@@ -120,10 +116,9 @@ final readonly class DatabaseRefreshTokenHousekeeper
                         );
                     }
 
-                    $database
-                        ->delete($this->config->tokenTable)
-                        ->where($this->config->familyIdColumn, $familyId)
-                        ->run();
+                    if ($this->familyHasTokenRows($database, $familyId)) {
+                        continue;
+                    }
 
                     $deleted += $database
                         ->delete($this->config->familyTable)
@@ -135,6 +130,105 @@ final readonly class DatabaseRefreshTokenHousekeeper
                 return $deleted;
             },
         );
+    }
+
+    private function pruneExpiredHistory(int $now, int $limit): void
+    {
+        $query = $this->database
+            ->select([
+                $this->config->tokenHashColumn,
+                $this->config->familyIdColumn,
+            ])
+            ->withDriver(
+                $this->database->getDriver(DatabaseInterface::WRITE),
+                $this->database->getPrefix(),
+            );
+
+        if (!$query instanceof SelectQuery) {
+            throw new \LogicException(
+                'Cycle must preserve SelectQuery when pinning the write driver.',
+            );
+        }
+
+        $rows = $query
+            ->from($this->config->tokenTable)
+            ->where($this->config->expiresAtColumn, '<=', $now)
+            ->orderBy($this->config->expiresAtColumn, 'ASC')
+            ->limit($limit)
+            ->run()
+            ->fetchAll();
+
+        foreach ($rows as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+
+            $tokenHash = self::stringValue($row, $this->config->tokenHashColumn);
+            $familyId = self::stringValue($row, $this->config->familyIdColumn);
+
+            $this->database->transaction(
+                function (DatabaseInterface $database) use ($tokenHash, $familyId, $now): void {
+                    $claimed = $database
+                        ->update($this->config->familyTable)
+                        ->where($this->config->familyIdColumn, $familyId)
+                        ->values([
+                            $this->config->lockNonceColumn => self::lockNonce(),
+                        ])
+                        ->run();
+
+                    if ($claimed !== 1) {
+                        return;
+                    }
+
+                    $database
+                        ->delete($this->config->tokenTable)
+                        ->where($this->config->tokenHashColumn, $tokenHash)
+                        ->where($this->config->familyIdColumn, $familyId)
+                        ->where($this->config->expiresAtColumn, '<=', $now)
+                        ->run();
+                },
+            );
+        }
+    }
+
+    private function familyHasTokenRows(
+        DatabaseInterface $database,
+        string $familyId,
+    ): bool {
+        $query = $database->select($this->config->tokenHashColumn)->withDriver(
+            $database->getDriver(DatabaseInterface::WRITE),
+            $database->getPrefix(),
+        );
+
+        if (!$query instanceof SelectQuery) {
+            throw new \LogicException(
+                'Cycle must preserve SelectQuery when pinning the write driver.',
+            );
+        }
+
+        return is_array(
+            $query
+                ->from($this->config->tokenTable)
+                ->where($this->config->familyIdColumn, $familyId)
+                ->limit(1)
+                ->run()
+                ->fetch(),
+        );
+    }
+
+    /** @param array<array-key, mixed> $row */
+    private static function stringValue(array $row, string $key): string
+    {
+        $value = $row[$key] ?? null;
+
+        if (!is_string($value) && !is_int($value)) {
+            throw new \UnexpectedValueException(sprintf(
+                'Database column "%s" must contain a string-compatible value.',
+                $key,
+            ));
+        }
+
+        return (string) $value;
     }
 
     private static function lockNonce(): string
