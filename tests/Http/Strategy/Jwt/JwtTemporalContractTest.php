@@ -119,7 +119,7 @@ final readonly class JwtTemporalSignerFixture implements SignerInterface
         return 'token';
     }
 
-    public function parse(string $token): ?Claims
+    public function parse(string $token): Claims
     {
         return $this->claims;
     }
