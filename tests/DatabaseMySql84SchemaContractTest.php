@@ -45,13 +45,13 @@ final class DatabaseMySql84SchemaContractTest extends TestCase
 
         $sessions = new DatabaseSessionManager(
             $database,
-            new SchemaSessionIdGenerator('CaseSession', 'casesession'),
+            new SchemaSessionIdGenerator("CaseSession\x80", "casesession\x80"),
             $clock,
             new EventDispatcher(new PriorityListenerProvider()),
         );
         $first = $sessions->create($subjectId, [
             DatabaseSessionManager::ATTR_IP => '127.0.0.1',
-            DatabaseSessionManager::ATTR_USER_AGENT => 'schema-contract',
+            DatabaseSessionManager::ATTR_USER_AGENT => "schema-contract\x80",
         ]);
         $second = $sessions->create($subjectId, [
             DatabaseSessionManager::ATTR_IP => '127.0.0.1',
@@ -67,13 +67,13 @@ final class DatabaseMySql84SchemaContractTest extends TestCase
         $otp->store(new StoredCode(
             $subjectId,
             '123456',
-            'CaseSensitive@example.com',
+            "CaseSensitive\x80@example.com",
             900,
         ));
         $otp->store(new StoredCode(
             $subjectId,
             '654321',
-            'casesensitive@example.com',
+            "casesensitive\x80@example.com",
             2000,
         ));
         self::assertSame(1, $otp->cleanup(1000, 10));
