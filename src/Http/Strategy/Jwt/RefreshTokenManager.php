@@ -39,8 +39,10 @@ final readonly class RefreshTokenManager
      * work before rotating the presented bearer. rotate() remains the final
      * serialized authorization decision.
      */
-    public function findActiveSubject(string $tokenId): ?UuidInterface
-    {
+    public function findActiveSubject(
+        #[\SensitiveParameter]
+        string $tokenId,
+    ): ?UuidInterface {
         if (!self::validTokenId($tokenId)) {
             return null;
         }
@@ -48,8 +50,10 @@ final readonly class RefreshTokenManager
         return $this->store->findActiveSubject($tokenId, $this->now());
     }
 
-    public function rotate(string $tokenId): RefreshToken|DeniedReasonInterface
-    {
+    public function rotate(
+        #[\SensitiveParameter]
+        string $tokenId,
+    ): RefreshToken|DeniedReasonInterface {
         if (!self::validTokenId($tokenId)) {
             return new InvalidRefreshToken();
         }
@@ -76,8 +80,10 @@ final readonly class RefreshTokenManager
         };
     }
 
-    public function revoke(string $tokenId): void
-    {
+    public function revoke(
+        #[\SensitiveParameter]
+        string $tokenId,
+    ): void {
         if (self::validTokenId($tokenId)) {
             $this->store->revoke($tokenId, $this->now());
         }
