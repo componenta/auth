@@ -23,8 +23,11 @@ final readonly class Authenticator implements AuthenticatorInterface
      * @throws NoStrategyFoundException If no strategy supports the payload
      * @throws AuthenticationExceptionInterface
      */
-    public function attempt(object $payload, ContextInterface $context): AuthenticationResult
-    {
+    public function attempt(
+        #[\SensitiveParameter]
+        object $payload,
+        ContextInterface $context,
+    ): AuthenticationResult {
         $lastResult = null;
 
         foreach ($this->strategies as $strategy) {
