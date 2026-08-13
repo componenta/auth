@@ -8,6 +8,7 @@ use Componenta\Auth\AuthenticatorInterface;
 use Componenta\Auth\Context;
 use Componenta\Auth\ContextInterface;
 use Componenta\Auth\DeniedReasonInterface;
+use Componenta\Auth\Http\CredentialTransportState;
 use Componenta\Auth\Http\DeniedResponseFactoryInterface;
 use Componenta\Auth\Http\PayloadStorageInterface;
 use Componenta\Auth\Http\Transport\SessionPayload;
@@ -47,13 +48,16 @@ readonly class LoginHandler implements RequestHandlerInterface
             return $this->deniedResponseFactory->create($result->subject);
         }
 
-        // Allocate and harden the response before creating any durable bearer
-        // state. A response-factory/header failure therefore cannot strand an
-        // unknown session or remember-me grant.
         $response = $this->responseFactory
             ->createResponse(200)
             ->withHeader('Cache-Control', 'no-store')
             ->withHeader('Pragma', 'no-cache');
+
+        $transportState = $request->getAttribute(CredentialTransportState::class);
+        if ($transportState instanceof CredentialTransportState) {
+            $transportState->discardQueued();
+        }
+
         $subjectId = $result->subject->uuid;
         $session = $this->sessionManager->create(
             $subjectId,
@@ -65,6 +69,7 @@ readonly class LoginHandler implements RequestHandlerInterface
             $rememberMeToken = $payload->remember && $this->tokenManager !== null
                 ? $this->tokenManager->create($subjectId, $session->id)
                 : null;
+            $response = $this->storage->remove($request, $response);
 
             return $this->storage->store(
                 $request,
@@ -80,12 +85,6 @@ readonly class LoginHandler implements RequestHandlerInterface
         }
     }
 
-    /**
-     * The response carrying these credentials was not returned. Remove every
-     * durable credential created by this handler. Cleanup failures are not
-     * swallowed because an active unpublished bearer requires operator
-     * attention.
-     */
     private function rollbackUnpublishedCredentials(
         SessionInterface $session,
         ?string $rememberMeToken,
