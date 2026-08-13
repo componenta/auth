@@ -53,6 +53,7 @@ final readonly class DatabaseRefreshTokenHousekeeper
             ->from($this->config->familyTable)
             ->where($this->config->familyExpiresAtColumn, '<=', $now)
             ->orderBy($this->config->familyExpiresAtColumn, 'ASC')
+            ->orderBy($this->config->familyIdColumn, 'ASC')
             ->limit($limit)
             ->run()
             ->fetchAll();
@@ -154,6 +155,8 @@ final readonly class DatabaseRefreshTokenHousekeeper
             ->from($this->config->tokenTable)
             ->where($this->config->expiresAtColumn, '<=', $now)
             ->orderBy($this->config->expiresAtColumn, 'ASC')
+            ->orderBy($this->config->familyIdColumn, 'ASC')
+            ->orderBy($this->config->tokenHashColumn, 'ASC')
             ->limit($limit)
             ->run()
             ->fetchAll();
