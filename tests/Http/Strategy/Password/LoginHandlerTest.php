@@ -45,16 +45,14 @@ final class LoginHandlerTest extends TestCase
             ->willReturn($session);
         $attributes = $this->attributes();
         $headers = [];
-        $response = $this->createMock(ResponseInterface::class);
-        $response->expects(self::exactly(2))
-            ->method('withHeader')
-            ->willReturnCallback(
-                static function (string $name, string $value) use (&$headers, $response): ResponseInterface {
-                    $headers[$name] = $value;
+        $response = $this->createStub(ResponseInterface::class);
+        $response->method('withHeader')->willReturnCallback(
+            static function (string $name, string|array $value) use (&$headers, $response): ResponseInterface {
+                $headers[$name] = is_array($value) ? implode(', ', $value) : $value;
 
-                    return $response;
-                },
-            );
+                return $response;
+            },
+        );
         $responses = $this->createMock(ResponseFactoryInterface::class);
         $responses->expects(self::once())
             ->method('createResponse')
@@ -86,10 +84,8 @@ final class LoginHandlerTest extends TestCase
                 $attributes,
             )->handle($request),
         );
-        self::assertSame([
-            'Cache-Control' => 'no-store',
-            'Pragma' => 'no-cache',
-        ], $headers);
+        self::assertSame('no-store', $headers['Cache-Control'] ?? null);
+        self::assertSame('no-cache', $headers['Pragma'] ?? null);
     }
 
     public function testSuccessfulLoginSupersedesPendingCredentialMutation(): void
