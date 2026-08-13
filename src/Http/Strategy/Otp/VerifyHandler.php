@@ -40,6 +40,10 @@ final readonly class VerifyHandler implements RequestHandlerInterface
             return $this->json(400, ['error' => 'missing_credentials']);
         }
 
+        // Complete request-derived and response-allocation work before the
+        // one-time challenge can be consumed.
+        $attributes = $this->attributeExtractor->extract($request);
+        $response = $this->successResponse();
         $result = $this->authenticator->attempt($payload, new Context([
             ServerRequestInterface::class => $request,
             ContextInterface::EXTRACTOR => $this->extractor,
@@ -51,18 +55,26 @@ final readonly class VerifyHandler implements RequestHandlerInterface
 
         $session = $this->sessionManager->create(
             $result->subject->uuid,
-            $this->attributeExtractor->extract($request),
-        );
-        $response = $this->storage->store(
-            $request,
-            $this->responseFactory->createResponse(200),
-            new SessionPayload($session->id),
+            $attributes,
         );
 
-        return $response
-            ->withHeader('Content-Type', 'application/json')
-            ->withHeader('Cache-Control', 'no-store')
-            ->withHeader('Pragma', 'no-cache');
+        try {
+            $stored = $this->storage->store(
+                $request,
+                $response,
+                new SessionPayload($session->id),
+            );
+
+            return $stored
+                ->withHeader('Content-Type', 'application/json')
+                ->withHeader('Cache-Control', 'no-store')
+                ->withHeader('Pragma', 'no-cache');
+        } catch (\Throwable $exception) {
+            // OTP is already consumed and must remain single-use, but an
+            // unpublished session is safe to compensate and must not survive.
+            $this->sessionManager->terminate($session->id);
+            throw $exception;
+        }
     }
 
     /** @param array<string, mixed> $payload */
@@ -72,6 +84,15 @@ final readonly class VerifyHandler implements RequestHandlerInterface
         $response->getBody()->write(json_encode($payload, JSON_THROW_ON_ERROR));
 
         return $response
+            ->withHeader('Content-Type', 'application/json')
+            ->withHeader('Cache-Control', 'no-store')
+            ->withHeader('Pragma', 'no-cache');
+    }
+
+    private function successResponse(): ResponseInterface
+    {
+        return $this->responseFactory
+            ->createResponse(200)
             ->withHeader('Content-Type', 'application/json')
             ->withHeader('Cache-Control', 'no-store')
             ->withHeader('Pragma', 'no-cache');
