@@ -9,7 +9,7 @@ use Componenta\Auth\Context;
 use Componenta\Auth\ContextInterface;
 use Componenta\Auth\DeniedReasonInterface;
 use Componenta\Auth\Http\DeniedResponseFactoryInterface;
-use Componenta\Auth\Http\PayloadStorageInterface;
+use Componenta\Auth\Http\ReplacingPayloadStorage;
 use Componenta\Auth\Http\Transport\SessionPayload;
 use Componenta\Auth\Session\SessionAttributeExtractor;
 use Componenta\Auth\Session\SessionAttributeExtractorInterface;
@@ -25,7 +25,7 @@ final readonly class VerifyHandler implements RequestHandlerInterface
         private VerifyExtractor $extractor,
         private AuthenticatorInterface $authenticator,
         private SessionManagerInterface $sessionManager,
-        private PayloadStorageInterface $storage,
+        private ReplacingPayloadStorage $storage,
         private DeniedResponseFactoryInterface $deniedResponseFactory,
         private ResponseFactoryInterface $responseFactory,
         private SessionAttributeExtractorInterface $attributeExtractor = new SessionAttributeExtractor(),
@@ -97,12 +97,13 @@ final readonly class VerifyHandler implements RequestHandlerInterface
 
     private function successResponse(): ResponseInterface
     {
-        return MagicLinkResponseHeaders::apply(
-            $this->responseFactory
-                ->createResponse(200)
-                ->withHeader('Content-Type', 'application/json')
-                ->withHeader('Cache-Control', 'no-store')
-                ->withHeader('Pragma', 'no-cache'),
-        );
+        $response = $this->responseFactory
+            ->createResponse(200)
+            ->withHeader('Content-Type', 'application/json')
+            ->withHeader('Cache-Control', 'no-store')
+            ->withHeader('Pragma', 'no-cache');
+        $response->getBody()->write('{}');
+
+        return MagicLinkResponseHeaders::apply($response);
     }
 }
