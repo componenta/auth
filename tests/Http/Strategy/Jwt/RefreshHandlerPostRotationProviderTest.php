@@ -26,7 +26,7 @@ use Psr\Http\Message\ServerRequestInterface;
 
 final class RefreshHandlerPostRotationProviderTest extends TestCase
 {
-    private const string PRESENTED =
+    public const string PRESENTED =
         'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
     public function testAccountDisappearingAfterPreflightRevokesSuccessor(): void
