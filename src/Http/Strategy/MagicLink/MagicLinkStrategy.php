@@ -36,8 +36,11 @@ final readonly class MagicLinkStrategy implements AuthenticationStrategyInterfac
         return $payload instanceof VerifyPayload;
     }
 
-    public function attempt(object $payload, ContextInterface $context): AuthenticationResult
-    {
+    public function attempt(
+        #[\SensitiveParameter]
+        object $payload,
+        ContextInterface $context,
+    ): AuthenticationResult {
         /** @var VerifyPayload $payload */
         $token = $this->tokenManager->find($payload->token);
 
