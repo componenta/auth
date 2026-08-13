@@ -86,7 +86,7 @@ final class DatabaseMySql84SchemaContractTest extends TestCase
         );
         $plainToken = $tokens->replaceForSubject($subjectId);
         self::assertTrue($tokens->consume($plainToken));
-        self::assertSame(1, $tokens->cleanup(1000, 10));
+        self::assertSame(1, $tokens->cleanup(10));
 
         $refresh = new DatabaseRefreshTokenStore($database);
         $refresh->storeInitial(new RefreshToken(
@@ -149,7 +149,7 @@ final class SchemaSessionIdGenerator implements SessionIdGeneratorInterface
 
     public function __construct(string ...$ids)
     {
-        $this->ids = $ids;
+        $this->ids = array_values($ids);
     }
 
     public function generate(): string
