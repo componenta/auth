@@ -10,6 +10,7 @@ interface RememberMeTokenManagerInterface
 {
     public function create(
         UuidInterface $subjectId,
+        #[\SensitiveParameter]
         string $sessionId,
     ): string;
 
@@ -25,6 +26,7 @@ interface RememberMeTokenManagerInterface
      */
     public function bindRotation(
         RememberMeRotation $rotation,
+        #[\SensitiveParameter]
         string $newSessionId,
     ): bool;
 
