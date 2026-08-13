@@ -19,6 +19,7 @@ interface CodeStoreInterface
 
     public function verifyAndConsume(
         string $destination,
+        #[\SensitiveParameter]
         string $presentedCode,
         int $now,
         int $maxAttempts,
