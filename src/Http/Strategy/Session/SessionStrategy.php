@@ -8,6 +8,7 @@ use Componenta\Auth\AuthenticationResult;
 use Componenta\Auth\AuthenticationStrategyInterface;
 use Componenta\Auth\ContextInterface;
 use Componenta\Auth\Denied\InvalidCredentials;
+use Componenta\Auth\Http\CredentialTransportState;
 use Componenta\Auth\Http\Transport\SessionPayload;
 use Componenta\Auth\Session\ConcurrentRegenerationException;
 use Componenta\Auth\Session\SessionManagerInterface;
@@ -69,6 +70,14 @@ final readonly class SessionStrategy implements AuthenticationStrategyInterface
 
             $session = $regenerated;
             $transportPayload = new SessionPayload($session->id);
+            $transportState = $context->getAttribute(CredentialTransportState::class);
+
+            if ($transportState instanceof CredentialTransportState) {
+                $regeneratedId = $session->id;
+                $transportState->onDiscard(
+                    fn(): void => $this->sessionManager->terminate($regeneratedId),
+                );
+            }
         }
 
         return new AuthenticationResult(
