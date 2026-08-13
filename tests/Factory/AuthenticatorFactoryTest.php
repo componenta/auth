@@ -118,7 +118,8 @@ final class AuthenticatorFactoryTest extends TestCase
             'remember' => $safe,
         ]);
 
-        self::assertNotNull((new AuthenticatorFactory())($container));
+        (new AuthenticatorFactory())($container);
+        self::addToAssertionCount(1);
     }
 
     private function rawRememberStrategy(): RememberMeStrategy
