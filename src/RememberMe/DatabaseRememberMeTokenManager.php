@@ -52,8 +52,10 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
     }
 
     #[\Override]
-    public function rotate(string $plainToken): ?RememberMeRotation
-    {
+    public function rotate(
+        #[\SensitiveParameter]
+        string $plainToken,
+    ): ?RememberMeRotation {
         if (!self::validToken($plainToken)) {
             return null;
         }
@@ -133,8 +135,10 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
     }
 
     #[\Override]
-    public function revoke(string $plainToken): void
-    {
+    public function revoke(
+        #[\SensitiveParameter]
+        string $plainToken,
+    ): void {
         if (!self::validToken($plainToken)) {
             return;
         }
@@ -285,13 +289,17 @@ final readonly class DatabaseRememberMeTokenManager implements RememberMeTokenMa
         return bin2hex(random_bytes(32));
     }
 
-    private static function validToken(string $token): bool
-    {
+    private static function validToken(
+        #[\SensitiveParameter]
+        string $token,
+    ): bool {
         return preg_match('/\A[a-f0-9]{64}\z/D', $token) === 1;
     }
 
-    private static function hash(string $plainToken): string
-    {
+    private static function hash(
+        #[\SensitiveParameter]
+        string $plainToken,
+    ): string {
         return hash('sha256', $plainToken);
     }
 
