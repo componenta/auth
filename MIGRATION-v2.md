@@ -79,6 +79,12 @@ Exact types should match your schema. The security property is that revocation c
 
 Deploy the new manager, strategy and lifecycle listeners together. Do not mix the old delete-on-consume manager with the new strategy.
 
+## Built-in SQL schema contract
+
+The built-in SQL stores now ship a canonical MySQL 8.4/InnoDB schema at `resources/schema/mysql-8.4.sql`. Table and column names remain configurable, but PK/UNIQUE/FK constraints, compatible widths, binary comparison semantics for credential keys, and cleanup indexes are part of the store contract rather than optional tuning.
+
+Existing installations should review `resources/schema/README.md` before deploying the hardened stores. In particular, refresh families need an indexed family-level `expires_at` retention deadline, `family_id` must support the full 64-128 hexadecimal characters accepted by the refresh generator, and case-sensitive session/OTP keys must not be silently folded by a case-insensitive database collation.
+
 ## OTP
 
 `OtpConfig` is a DI/config service. `OtpExtractor` now requires it and accepts exactly `OtpConfig::$length` digits.
@@ -88,6 +94,14 @@ All negative authentication results are public `invalid_code`; store-level `Expi
 `OtpRequest` no longer accepts a separate destination. The built-in flow uses the same identity for provider lookup, challenge key and delivery destination. Custom delivery routing belongs in an application adapter that verifies ownership.
 
 `DatabaseCodeStore` now treats successful consume and failed-attempt accounting as one challenge-version transition. Custom `CodeStoreInterface` implementations must ensure a correct code racing the final failed attempt cannot authenticate after `maxAttempts` has already been reached.
+
+`CodeStoreInterface` additionally exposes bounded retention cleanup:
+
+```php
+cleanup(int $now, int $limit = 1000): int;
+```
+
+Custom stores must recheck expiry before destructive deletion. Queue workers must also preserve enqueue order for the same identity: the built-in model intentionally keeps one current OTP challenge per destination, so out-of-order parallel delivery could otherwise send an already-superseded code last.
 
 ## One-time token purpose
 
@@ -108,7 +122,7 @@ new TokenRequest(
 );
 ```
 
-Magic-link requests enqueue `magic_link`; forgot-password requests enqueue `password_reset`. Queue adapters serving multiple one-time-token flows must preserve and route on `TokenRequest::$purpose`. Construct each `TokenRequestProcessor` with its expected purpose; it rejects misrouted work before provider lookup, token generation or delivery.
+Magic-link requests enqueue `magic_link`; forgot-password requests enqueue `password_reset`. Queue adapters serving multiple one-time-token flows must preserve and route on `TokenRequest::$purpose`. Construct each `TokenRequestProcessor` with its expected purpose; it rejects misrouted work before provider lookup, token generation or delivery. Workers must serialize the same `(purpose, identity)` key in enqueue order because each purpose-specific built-in store keeps one current token per subject.
 
 ## Events
 
@@ -151,9 +165,21 @@ Remove obsolete `auth.session.dateFormat` and `auth.rememberMe.dateFormat` appli
 
 The built-in `DatabaseRefreshTokenStore` remains the default secure implementation of atomic rotation/replay handling.
 
-Use `DatabaseRefreshTokenHousekeeper::cleanup($now, $limit)` for bounded retention cleanup. Final cleanup now serializes through the same family row as rotation/revocation and rechecks expiry while that serialization point is held, so it cannot delete a concurrently created active successor. Do not delete consumed members of still-relevant families because they are replay-detection history.
+`RefreshTokenStoreInterface` now has an additional primary-read preflight:
 
-Custom `RefreshTokenStoreInterface` implementations must provide equivalent family serialization, successor rollback and replay-compromise semantics.
+```php
+findActiveSubject(string $tokenId, int $now): ?UuidInterface;
+```
+
+It is deliberately non-authoritative. It allows provider lookup, access-token signing and response allocation to fail before the presented refresh bearer is irreversibly rotated; `rotateAtomically()` remains the final serialized authorization decision and must repeat every state check. Custom stores must preserve that distinction.
+
+`DatabaseRefreshTokenHousekeeper::cleanup($now, $limit)` now selects candidates from indexed `refresh_token_families.expires_at` instead of aggregating the complete token-history table. Rotation extends that family deadline in the same transaction that consumes the presented token and inserts its successor. Final cleanup still serializes through the family row and rechecks token expiry before destructive writes.
+
+Custom `RefreshTokenStoreInterface` implementations must provide equivalent family serialization, successor rollback, replay-compromise semantics, primary-read preflight, and safe retention cleanup.
+
+## JWT bearer size contract
+
+The package now uses one shared bearer syntax/size contract for `BearerExtractor`, `BearerPayload`, built-in HMAC/RSA signers and built-in token responses. A signer must not emit an access token that the standard HTTP bearer transport would reject; custom signers used with built-in token handlers are checked before any refresh credential is issued or rotated.
 
 ## Denial responses
 
@@ -190,11 +216,12 @@ ListenerFactory
 ## Production rollout
 
 1. Upgrade identity ownership to canonical UUID contracts and move identity normalization into providers/application policy.
-2. Apply remember-me `previous_session_id` migration and make `session_id` non-null.
-3. Configure OTP HMAC secret/profile and update extractors to receive `OtpConfig`.
-4. Assign a distinct one-time-token `purpose` to every flow and preserve `TokenRequest::$purpose` through queue routing/workers.
-5. Deploy primary-pinned credential stores and lifecycle listeners together.
-6. Update custom event listeners to `$events` property subscriptions and pass timestamps explicitly when creating events.
-7. Keep strict handlers behind `InvalidPayloadMiddleware` or an equivalent 400 mapper.
-8. Run the repository's MySQL concurrency tests against the deployment database/dialect.
-9. Verify application-owned `PasswordResetServiceInterface`, queues, CSRF policy and account/endpoint rate limits independently.
+2. Apply the canonical SQL-store migration requirements in `resources/schema/README.md`, including remember-me lineage, binary credential-key comparison, cleanup indexes and refresh family retention state.
+3. Configure OTP HMAC secret/profile and update custom `CodeStoreInterface` implementations for bounded cleanup.
+4. Assign a distinct one-time-token `purpose` to every flow and preserve `TokenRequest::$purpose` through queue routing/workers; serialize issuance workers per identity/purpose key.
+5. Update custom `RefreshTokenStoreInterface` implementations for primary preflight plus family-level indexed retention cleanup.
+6. Deploy primary-pinned credential stores and lifecycle listeners together.
+7. Update custom event listeners to `$events` property subscriptions and pass timestamps explicitly when creating events.
+8. Keep strict handlers behind `InvalidPayloadMiddleware` or an equivalent 400 mapper.
+9. Run the repository's MySQL concurrency tests against the deployment database/dialect.
+10. Verify application-owned `PasswordResetServiceInterface`, queues, CSRF policy and account/endpoint rate limits independently.

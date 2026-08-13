@@ -84,6 +84,7 @@ final class CodeStoreFixture implements CodeStoreInterface
     public function __construct(private CodeVerificationResult $result) {}
     public function store(StoredCode $code): void {}
     public function invalidate(string $destination): void {}
+    public function cleanup(int $now, int $limit = 1000): int { return 0; }
     public function verifyAndConsume(string $destination, string $presentedCode, int $now, int $maxAttempts): CodeVerificationResult
     {
         $this->arguments = [$destination, $presentedCode, $now, $maxAttempts];
