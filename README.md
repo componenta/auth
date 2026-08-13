@@ -177,9 +177,9 @@ Refresh grants use opaque 32-64 byte bearer IDs. The default `DatabaseRefreshTok
 - on replay marks the family compromised and revokes all active descendants;
 - reads security state from the primary/write connection.
 
-`DatabaseRefreshTokenHousekeeper::cleanup($now, $limit)` provides bounded housekeeping. Final deletion serializes through the same family row used by rotation/revocation and rechecks expiry on the primary while that serialization point is held, so cleanup cannot delete a concurrently created active successor.
+`DatabaseRefreshTokenHousekeeper::cleanup($now, $limit)` performs bounded housekeeping in two stages. It first prunes at most `$limit` token-history rows whose own bearer expiry has passed, including expired history belonging to a still-live sliding family; each deletion serializes through that family row. It then considers at most `$limit` terminal family candidates and deletes a family only after its history has drained and expiry is rechecked on the primary under the same serialization point. Cleanup therefore cannot delete a concurrently created active successor.
 
-Token responses use `Cache-Control: no-store` and `Pragma: no-cache`. Empty token responses do not claim a JSON content type when the response stream reports an empty body.
+Token responses use `Cache-Control: no-store` and `Pragma: no-cache`. Semantically empty token responses explicitly remove `Content-Type`; response semantics never depend on PSR-7 stream size, which may legitimately be unknown.
 
 ## Password reset
 
