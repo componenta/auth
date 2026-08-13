@@ -34,12 +34,31 @@ final class SessionCollectionTest extends TestCase
         self::assertNull($session->getAttribute('nullable', 'fallback'));
     }
 
+    public function testNumericStringIdsRemainDistinctStrings(): void
+    {
+        $first = self::session('1');
+        $second = self::session('01');
+        $collection = new SessionCollection([$first, $second]);
+        $subset = $collection->find(['1', '01']);
+
+        self::assertSame($first, $collection->find('1'));
+        self::assertSame($second, $collection->find('01'));
+        self::assertInstanceOf(SessionCollection::class, $subset);
+        self::assertSame(['1', '01'], $subset->pluck());
+    }
+
     public function testUnknownPluckKeyIsRejected(): void
     {
         $this->expectException(\OutOfBoundsException::class);
+        (new SessionCollection([self::session('session-1')]))->pluck('missing');
+    }
+
+    private static function session(string $id): Session
+    {
         $now = new DateTimeImmutable('@1000');
-        (new SessionCollection([new Session(
-            'session-1',
+
+        return new Session(
+            $id,
             Uuid::fromString('018f6d5d-3f7a-7a9b-8c2f-123456789abc'),
             $now->modify('+30 minutes'),
             $now->modify('+8 hours'),
@@ -47,6 +66,6 @@ final class SessionCollectionTest extends TestCase
             null,
             $now,
             $now,
-        )]))->pluck('missing');
+        );
     }
 }
