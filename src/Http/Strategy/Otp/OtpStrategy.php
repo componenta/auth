@@ -28,8 +28,11 @@ final readonly class OtpStrategy implements AuthenticationStrategyInterface
     }
 
     #[\Override]
-    public function attempt(object $payload, ContextInterface $context): AuthenticationResult
-    {
+    public function attempt(
+        #[\SensitiveParameter]
+        object $payload,
+        ContextInterface $context,
+    ): AuthenticationResult {
         /** @var OtpPayload $payload */
         $result = $this->store->verifyAndConsume(
             destination: $payload->destination,
