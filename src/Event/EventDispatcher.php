@@ -13,12 +13,22 @@ final readonly class EventDispatcher
         private ?LoggerInterface $logger = null,
     ) {}
 
+    /**
+     * Runs security-critical participants first. Best-effort observers only see
+     * the event after every critical participant has completed successfully.
+     */
     public function dispatch(EventInterface $event): void
     {
         $this->dispatchCritical($event);
         $this->dispatchBestEffort($event);
     }
 
+    /**
+     * Executes security-critical participants in provider order and stops on
+     * the first failure. Continuing after a failed critical participant could
+     * create irreversible side effects even though the owning transition is
+     * going to fail or roll back.
+     */
     public function dispatchCritical(EventInterface $event): void
     {
         foreach ($this->provider->provideFor($event) as $listener) {
@@ -35,6 +45,10 @@ final readonly class EventDispatcher
         }
     }
 
+    /**
+     * Executes only non-critical observers. Their failures are logged and
+     * isolated from an already committed security transition.
+     */
     public function dispatchBestEffort(EventInterface $event): void
     {
         foreach ($this->provider->provideFor($event) as $listener) {
@@ -50,6 +64,14 @@ final readonly class EventDispatcher
         }
     }
 
+    /**
+     * Executes every listener as an isolated observer.
+     *
+     * Use this only for post-transition audit/notification events where there
+     * is no owning transaction left to roll back. A listener carrying the
+     * critical marker is intentionally not allowed to turn such an observer
+     * notification into a second security commit point.
+     */
     public function dispatchObservers(EventInterface $event): void
     {
         foreach ($this->provider->provideFor($event) as $listener) {
@@ -61,6 +83,7 @@ final readonly class EventDispatcher
         }
     }
 
+    /** Logging itself is observational and must never alter auth control flow. */
     private function logFailure(
         EventInterface $event,
         EventListenerInterface $listener,
@@ -82,6 +105,8 @@ final readonly class EventDispatcher
                 ],
             );
         } catch (\Throwable) {
+            // A broken logger must not turn an isolated observer error into a
+            // second application failure or mask the original critical error.
         }
     }
 }
