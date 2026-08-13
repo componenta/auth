@@ -8,6 +8,7 @@ use Componenta\Auth\AuthenticationResult;
 use Componenta\Auth\AuthenticatorInterface;
 use Componenta\Auth\Http\DeniedResponseFactoryInterface;
 use Componenta\Auth\Http\PayloadStorageInterface;
+use Componenta\Auth\Http\ReplacingPayloadStorage;
 use Componenta\Auth\Http\Strategy\MagicLink\VerifyExtractor;
 use Componenta\Auth\Http\Strategy\MagicLink\VerifyHandler as MagicLinkVerifyHandler;
 use Componenta\Auth\Http\Strategy\Otp\OtpConfig;
@@ -61,7 +62,7 @@ final class OneTimeSessionRollbackTest extends TestCase
             new VerifyExtractor(),
             $this->authenticator(),
             $this->sessionManager(),
-            $this->failingStorage(),
+            new ReplacingPayloadStorage($this->failingStorage()),
             $this->createStub(DeniedResponseFactoryInterface::class),
             $this->responseFactory(),
             $this->attributeExtractor(),
