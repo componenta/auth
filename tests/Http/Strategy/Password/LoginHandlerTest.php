@@ -6,6 +6,7 @@ namespace Componenta\Auth\Tests\Http\Strategy\Password;
 
 use Componenta\Auth\AuthenticationResult;
 use Componenta\Auth\AuthenticatorInterface;
+use Componenta\Auth\Http\CredentialTransportState;
 use Componenta\Auth\Http\DeniedResponseFactoryInterface;
 use Componenta\Auth\Http\PayloadStorageInterface;
 use Componenta\Auth\Http\Strategy\Password\LoginHandler;
@@ -59,11 +60,15 @@ final class LoginHandlerTest extends TestCase
             ->method('createResponse')
             ->with(200)
             ->willReturn($response);
+        $request = $this->request();
         $storage = $this->createMock(PayloadStorageInterface::class);
+        $storage->expects(self::once())->method('remove')
+            ->with($request, $response)
+            ->willReturn($response);
         $storage->expects(self::once())
             ->method('store')
             ->with(
-                self::isInstanceOf(ServerRequestInterface::class),
+                $request,
                 $response,
                 self::callback(static fn(object $payload): bool =>
                     $payload instanceof SessionPayload
@@ -79,12 +84,59 @@ final class LoginHandlerTest extends TestCase
                 $storage,
                 $responses,
                 $attributes,
-            )->handle($this->request()),
+            )->handle($request),
         );
         self::assertSame([
             'Cache-Control' => 'no-store',
             'Pragma' => 'no-cache',
         ], $headers);
+    }
+
+    public function testSuccessfulLoginSupersedesPendingCredentialMutation(): void
+    {
+        $identity = new LoginIdentityFixture();
+        $session = self::session($identity->uuid);
+        $sessions = $this->createMock(SessionManagerInterface::class);
+        $sessions->expects(self::once())->method('create')->willReturn($session);
+        $state = new CredentialTransportState();
+        $oldStorage = $this->createMock(PayloadStorageInterface::class);
+        $oldStorage->expects(self::never())->method('store');
+        $state->queue($oldStorage, new \stdClass());
+        $rolledBack = false;
+        $state->onDiscard(static function () use (&$rolledBack): void {
+            $rolledBack = true;
+        });
+        $request = $this->request(attributes: [
+            CredentialTransportState::class => $state,
+        ]);
+        $response = $this->createStub(ResponseInterface::class);
+        $response->method('withHeader')->willReturnSelf();
+        $responses = $this->createStub(ResponseFactoryInterface::class);
+        $responses->method('createResponse')->willReturn($response);
+        $storage = $this->createMock(PayloadStorageInterface::class);
+        $storage->expects(self::once())->method('remove')
+            ->with($request, $response)
+            ->willReturn($response);
+        $storage->expects(self::once())->method('store')
+            ->with(
+                $request,
+                $response,
+                self::isInstanceOf(SessionPayload::class),
+            )
+            ->willReturn($response);
+
+        self::assertSame(
+            $response,
+            $this->handler(
+                $this->authenticator($identity),
+                $sessions,
+                $storage,
+                $responses,
+                $this->attributes(),
+            )->handle($request),
+        );
+        self::assertTrue($rolledBack);
+        self::assertTrue($state->empty);
     }
 
     public function testResponseAllocationFailureCreatesNoSession(): void
@@ -95,6 +147,7 @@ final class LoginHandlerTest extends TestCase
         $sessions->expects(self::never())->method('terminate');
         $storage = $this->createMock(PayloadStorageInterface::class);
         $storage->expects(self::never())->method('store');
+        $storage->expects(self::never())->method('remove');
         $responses = $this->createStub(ResponseFactoryInterface::class);
         $responses->method('createResponse')->willThrowException(
             new \RuntimeException('response allocation failed'),
@@ -134,7 +187,9 @@ final class LoginHandlerTest extends TestCase
         $response->method('withHeader')->willReturnSelf();
         $responses = $this->createStub(ResponseFactoryInterface::class);
         $responses->method('createResponse')->willReturn($response);
+        $request = $this->request(remember: true);
         $storage = $this->createStub(PayloadStorageInterface::class);
+        $storage->method('remove')->willReturn($response);
         $storage->method('store')->willThrowException(
             new \RuntimeException('transport failed'),
         );
@@ -149,7 +204,7 @@ final class LoginHandlerTest extends TestCase
             $responses,
             $this->attributes(),
             $remember,
-        )->handle($this->request(remember: true));
+        )->handle($request);
     }
 
     private function handler(
@@ -193,13 +248,19 @@ final class LoginHandlerTest extends TestCase
         return $attributes;
     }
 
-    private function request(bool $remember = false): ServerRequestInterface
-    {
-        return new ServerRequestFixture(parsedBody: [
-            'email' => 'user@example.com',
-            'password' => 'secret-password',
-            'remember' => $remember,
-        ]);
+    /** @param array<string, mixed> $attributes */
+    private function request(
+        bool $remember = false,
+        array $attributes = [],
+    ): ServerRequestInterface {
+        return new ServerRequestFixture(
+            parsedBody: [
+                'email' => 'user@example.com',
+                'password' => 'secret-password',
+                'remember' => $remember,
+            ],
+            attributes: $attributes,
+        );
     }
 
     private static function session(UuidInterface $subjectId): SessionInterface
