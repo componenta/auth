@@ -36,7 +36,7 @@ final readonly class RememberMeStrategy implements AuthenticationStrategyInterfa
     }
 
     #[\Override]
-    public function attempt(object $payload, ContextInterface $context): AuthenticationResult
+    public function attempt(#[\SensitiveParameter] object $payload, ContextInterface $context): AuthenticationResult
     {
         /** @var SessionPayload $payload */
         $plainToken = $payload->rememberMeToken;
