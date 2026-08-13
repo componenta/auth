@@ -11,6 +11,7 @@ use Componenta\Auth\ConfigKey;
 use Componenta\Auth\Event\EventDispatcher;
 use Componenta\Auth\EventingAuthenticator;
 use Componenta\Auth\Exception\AuthenticatorConfigurationException;
+use Componenta\Auth\Http\Strategy\RememberMe\CompensatingRememberMeStrategy;
 use Componenta\Auth\Http\Strategy\RememberMe\RememberMeStrategy;
 use Componenta\Config\Config;
 use Componenta\Config\ConfigPath;
@@ -71,10 +72,22 @@ final readonly class AuthenticatorFactory
                 ));
             }
 
-            if ($strategy instanceof RememberMeStrategy && !$rememberMeEnabled) {
+            if (
+                ($strategy instanceof RememberMeStrategy
+                    || $strategy instanceof CompensatingRememberMeStrategy)
+                && !$rememberMeEnabled
+            ) {
                 throw new AuthenticatorConfigurationException(
-                    'The built-in RememberMeStrategy requires auth.rememberMe.enabled=true so its critical lifecycle listeners are active.',
+                    'Remember-me authentication requires auth.rememberMe.enabled=true so its critical lifecycle listeners are active.',
                 );
+            }
+
+            if ($strategy instanceof RememberMeStrategy) {
+                throw new AuthenticatorConfigurationException(sprintf(
+                    'Raw %s cannot be placed directly in the middleware strategy chain; configure %s instead so unpublished rotations are compensated.',
+                    RememberMeStrategy::class,
+                    CompensatingRememberMeStrategy::class,
+                ));
             }
 
             $seen[$id] = true;
