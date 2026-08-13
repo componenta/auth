@@ -40,7 +40,6 @@ final class DatabaseRememberMeTokenManagerIntegrationTest extends TestCase
         $rotation = $manager->rotate($plainToken);
         self::assertNotNull($rotation);
 
-        // Models logout winning after bearer rotation but before session binding.
         $manager->revokeForSession('old-session');
 
         self::assertFalse($manager->bindRotation($rotation, 'new-session'));
@@ -61,6 +60,19 @@ final class DatabaseRememberMeTokenManagerIntegrationTest extends TestCase
         $manager->revokeForSession('old-session');
 
         self::assertNull($manager->rotate($rotation->successorToken));
+    }
+
+    public function testBatchRevokePreservesNumericStringSessionId(): void
+    {
+        self::requireSqlite();
+        $database = SqliteDatabaseFixture::create();
+        self::createSchema($database);
+        $manager = self::manager($database);
+        $manager->create(self::subjectId(), '1');
+
+        $manager->revokeForSessions(['1', '1']);
+
+        self::assertSame(0, $database->select()->from('remember_me_tokens')->count());
     }
 
     public function testRevokeAllExceptKeepsOnlyTheSelectedCurrentSession(): void
