@@ -12,9 +12,12 @@ final class TokenResponseHeaders
 
     public static function apply(ResponseInterface $response): ResponseInterface
     {
-        return $response
-            ->withHeader('Content-Type', 'application/json')
+        $response = $response
             ->withHeader('Cache-Control', 'no-store')
             ->withHeader('Pragma', 'no-cache');
+
+        return $response->getBody()->getSize() === 0
+            ? $response->withoutHeader('Content-Type')
+            : $response->withHeader('Content-Type', 'application/json');
     }
 }
