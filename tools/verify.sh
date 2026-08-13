@@ -77,7 +77,7 @@ if compgen -G '.auth-v2-review.part-*' >/dev/null; then
     exit 1
 fi
 
-for forbidden in .auth-v2-review.ready .github/workflows/apply-auth-v2-review.yml; do
+for forbidden in .auth-v2-review.ready .github/workflows/apply-auth-v2-review.yml .tmp-noop .restore-marker; do
     if [[ -e "$forbidden" ]]; then
         echo "Temporary staging artifact remains: $forbidden" >&2
         exit 1
@@ -101,6 +101,26 @@ done
 
 if ! grep -q --fixed-strings "withHeader('Referrer-Policy', 'no-referrer')" src/Http/Strategy/MagicLink/MagicLinkResponseHeaders.php; then
     echo 'Magic-link response hardening must enforce Referrer-Policy: no-referrer.' >&2
+    exit 1
+fi
+
+if ! grep -q --fixed-strings 'private ReplacingPayloadStorage $storage' src/Http/Strategy/MagicLink/VerifyHandler.php; then
+    echo 'Public magic-link session verification must require replacing credential storage.' >&2
+    exit 1
+fi
+
+if ! grep -q --fixed-strings 'CompensatingRememberMeStrategy::class' src/ConfigProvider.php; then
+    echo 'Discard-safe remember-me strategy must have a Componenta factory binding.' >&2
+    exit 1
+fi
+
+if ! grep -q --fixed-strings 'Raw %s cannot be placed directly in the middleware strategy chain' src/Factory/AuthenticatorFactory.php; then
+    echo 'AuthenticatorFactory must reject raw remember-me strategy composition.' >&2
+    exit 1
+fi
+
+if ! grep -q --fixed-strings 'onDiscard' src/Http/Strategy/RememberMe/CompensatingRememberMeStrategy.php; then
+    echo 'Discard-safe remember-me strategy must compensate unpublished rotations.' >&2
     exit 1
 fi
 
