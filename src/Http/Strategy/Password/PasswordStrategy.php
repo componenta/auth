@@ -32,7 +32,7 @@ final class PasswordStrategy implements AuthenticationStrategyInterface
     }
 
     #[\Override]
-    public function attempt(object $payload, ContextInterface $context): AuthenticationResult
+    public function attempt(#[\SensitiveParameter] object $payload, ContextInterface $context): AuthenticationResult
     {
         /** @var Payload $payload */
         $identity = $this->provider->findByIdentity($payload->identity);
