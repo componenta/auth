@@ -51,7 +51,7 @@ The suite must prove:
 14. remember-me is disabled by default and enabling it activates the critical lifecycle listeners;
 15. remember bearer rotation is single-winner and concurrent logout/revocation leaves no descendant grant;
 16. remember grants always bind to a session and revocation can match current or previous session lineage;
-17. refresh rotation/replay is one family-serialized transition and actual replay leaves zero active descendants;
+17. refresh rotation/replay is one family-serialized transition and actual replay of an unexpired consumed bearer leaves zero active descendants;
 18. ordinary refresh revocation is distinct from replay compromise, revokes the complete family, serializes with rotation and cannot leave an active successor;
 19. failed refresh-successor persistence rolls back the presented-token claim;
 20. OTP verification, attempt accounting and consume are one challenge-version transition; reaching `maxAttempts` concurrently with a correct code cannot still authenticate the challenge;
@@ -60,20 +60,20 @@ The suite must prove:
 23. one-time tokens are domain-separated by purpose;
 24. built-in delivery queue messages cannot look up one identity and deliver the credential to a different arbitrary destination;
 25. password reset success represents the complete recovery transition and password-policy rejection is explicit;
-26. denial attributes and bearer credentials are absent from public/debug serialization, and `CredentialTransportState` does not expose queued bearer payloads;
+26. denial attributes and bearer credentials are absent from public/debug serialization, credential-bearing strategy/session parameters are redacted from exception traces, and `CredentialTransportState` does not expose queued bearer payloads;
 27. every response-side credential store/remove mutation is non-cacheable, token-bearing responses are non-cacheable, and magic-link verification responses use `Referrer-Policy: no-referrer`;
 28. malformed inputs are rejected before provider/hash/storage work;
 29. credential-state reads use the primary/write connection;
 30. UUID providers cannot substitute a different identity;
 31. credential DATETIME values are UTC with fixed internal representation;
-32. cleanup operations are bounded and recheck security predicates before destructive writes;
-33. refresh-family cleanup serializes with rotation/revocation before its final expiry recheck and cannot delete a concurrently created active successor;
+32. cleanup operations bound mutation fan-out and recheck security predicates before destructive writes;
+33. refresh cleanup prunes only expired bearer history in bounded family-serialized batches; final family deletion serializes with rotation/revocation, waits for history to drain, rechecks expiry and cannot delete a concurrently created active successor;
 34. event DTO timestamps come from owning clock services, not hidden global time;
 35. Componenta factory wiring honors the shared PSR-20 clock when the container provides it;
 36. third-party GitHub Actions use immutable 40-character commit SHAs;
 37. built-in `RateLimited` denials validate non-negative retry delay and publish it only as the standard `Retry-After` header, not in the JSON body;
 38. best-effort session cleanup scheduling and its diagnostics cannot replace an already successful application response;
-39. empty token responses remain non-cacheable but do not claim `Content-Type: application/json`, while non-empty token responses do;
+39. semantically empty token responses remain non-cacheable but do not claim `Content-Type: application/json` without relying on PSR-7 stream-size introspection, while JSON token responses do claim it;
 40. the public magic-link session verifier requires replacing credential storage, so direct construction cannot preserve or re-apply an older browser principal;
 41. remember-me authentication used with `CredentialTransportState` is wrapped by `CompensatingRememberMeStrategy`, and discarding an unpublished successful rotation revokes its successor bearer and terminates its session.
 
@@ -93,7 +93,7 @@ One worker rotates a presented refresh bearer while another ordinarily revokes t
 
 ### Refresh rotation versus housekeeping
 
-One worker rotates a token immediately before its expiry boundary while another cleans the family at that boundary. If rotation wins family serialization, cleanup rechecks under the same family lock and must preserve the new active successor. If cleanup wins first, rotation fails closed as invalid and the expired family is removed.
+One worker rotates a token immediately before its expiry boundary while another prunes expired history/cleans the family at that boundary. If rotation wins family serialization, housekeeping rechecks under the same family lock, may remove only the now-expired predecessor and must preserve the new active successor. If housekeeping wins first, rotation fails closed as invalid and the expired family can be removed after its bounded history drain completes.
 
 ### OTP
 
@@ -115,7 +115,7 @@ SQLite provides deterministic rollback and edge-case coverage. MySQL 8.4 indepen
 
 Security-state reads for session, remember-me, one-time, refresh and OTP stores are also tested with separate WRITE and intentionally stale/empty READ drivers. Moving an authoritative read to a replica therefore fails the suite.
 
-`DatabaseRefreshTokenHousekeeper` serializes final cleanup with the same family row used by rotation/revocation, then rechecks expiry on the primary before destructive writes. Cleanup may remove only families whose complete token history is expired; active/replay-relevant history is retained.
+`DatabaseRefreshTokenHousekeeper` prunes token-history rows only after each bearer's own expiry and does so in a bounded batch. Each history deletion serializes through the same family row used by rotation/revocation. Reuse of an unexpired consumed bearer remains replay and compromises the family; once the bearer itself is expired, it is no longer replay-relevant and may be pruned. Terminal family cleanup uses the same serialization point, rechecks expiry on the primary and deletes the family only when no token rows remain.
 
 Session cleanup is tested on both SQLite and MySQL. A replaced row is a lineage tombstone: after its short regeneration grace expires it is no longer an authenticatable credential, but cleanup retains it until absolute expiry so termination by the old presented ID can still traverse `replaced_by` to an active successor.
 
