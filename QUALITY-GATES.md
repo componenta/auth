@@ -70,8 +70,10 @@ The suite must prove:
 33. refresh-family cleanup serializes with rotation/revocation before its final expiry recheck and cannot delete a concurrently created active successor;
 34. event DTO timestamps come from owning clock services, not hidden global time;
 35. Componenta factory wiring honors the shared PSR-20 clock when the container provides it;
-36. third-party GitHub Actions use immutable 40-character commit SHAs.
-37. built-in `RateLimited` denials validate non-negative retry delay and publish it only as the standard `Retry-After` header, not in the JSON body.
+36. third-party GitHub Actions use immutable 40-character commit SHAs;
+37. built-in `RateLimited` denials validate non-negative retry delay and publish it only as the standard `Retry-After` header, not in the JSON body;
+38. best-effort session cleanup scheduling and its diagnostics cannot replace an already successful application response;
+39. empty token responses remain non-cacheable but do not claim `Content-Type: application/json`, while non-empty token responses do.
 
 ## Real MySQL concurrency gate
 
