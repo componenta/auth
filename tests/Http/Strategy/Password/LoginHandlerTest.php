@@ -11,6 +11,7 @@ use Componenta\Auth\Http\PayloadStorageInterface;
 use Componenta\Auth\Http\Strategy\Password\LoginHandler;
 use Componenta\Auth\Http\Strategy\Password\PasswordExtractor;
 use Componenta\Auth\Http\Transport\SessionPayload;
+use Componenta\Auth\RememberMe\RememberMeTokenManagerInterface;
 use Componenta\Auth\Session\Session;
 use Componenta\Auth\Session\SessionAttributeExtractorInterface;
 use Componenta\Auth\Session\SessionInterface;
@@ -30,10 +31,7 @@ final class LoginHandlerTest extends TestCase
     public function testSuccessfulLoginResponseIsNeverCacheable(): void
     {
         $identity = new LoginIdentityFixture();
-        $authenticator = $this->createStub(AuthenticatorInterface::class);
-        $authenticator->method('attempt')->willReturn(
-            new AuthenticationResult($identity),
-        );
+        $authenticator = $this->authenticator($identity);
         $session = self::session($identity->uuid);
         $sessions = $this->createMock(SessionManagerInterface::class);
         $sessions->expects(self::once())
@@ -44,11 +42,7 @@ final class LoginHandlerTest extends TestCase
                 ['ip' => '', 'user_agent' => ''],
             )
             ->willReturn($session);
-        $attributes = $this->createStub(SessionAttributeExtractorInterface::class);
-        $attributes->method('extract')->willReturn([
-            'ip' => '',
-            'user_agent' => '',
-        ]);
+        $attributes = $this->attributes();
         $headers = [];
         $response = $this->createMock(ResponseInterface::class);
         $response->expects(self::exactly(2))
@@ -76,27 +70,136 @@ final class LoginHandlerTest extends TestCase
                     && $payload->sessionId === $session->id),
             )
             ->willReturn($response);
-        $request = new ServerRequestFixture(parsedBody: [
-            'email' => 'user@example.com',
-            'password' => 'secret-password',
-        ]);
 
         self::assertSame(
             $response,
-            (new LoginHandler(
-                new PasswordExtractor(),
+            $this->handler(
                 $authenticator,
                 $sessions,
                 $storage,
-                $this->createStub(DeniedResponseFactoryInterface::class),
                 $responses,
-                attributeExtractor: $attributes,
-            ))->handle($request),
+                $attributes,
+            )->handle($this->request()),
         );
         self::assertSame([
             'Cache-Control' => 'no-store',
             'Pragma' => 'no-cache',
         ], $headers);
+    }
+
+    public function testResponseAllocationFailureCreatesNoSession(): void
+    {
+        $identity = new LoginIdentityFixture();
+        $sessions = $this->createMock(SessionManagerInterface::class);
+        $sessions->expects(self::never())->method('create');
+        $sessions->expects(self::never())->method('terminate');
+        $storage = $this->createMock(PayloadStorageInterface::class);
+        $storage->expects(self::never())->method('store');
+        $responses = $this->createStub(ResponseFactoryInterface::class);
+        $responses->method('createResponse')->willThrowException(
+            new \RuntimeException('response allocation failed'),
+        );
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('response allocation failed');
+
+        $this->handler(
+            $this->authenticator($identity),
+            $sessions,
+            $storage,
+            $responses,
+            $this->attributes(),
+        )->handle($this->request());
+    }
+
+    public function testStorageFailureRevokesRememberGrantAndTerminatesSession(): void
+    {
+        $identity = new LoginIdentityFixture();
+        $session = self::session($identity->uuid);
+        $sessions = $this->createMock(SessionManagerInterface::class);
+        $sessions->expects(self::once())->method('create')->willReturn($session);
+        $sessions->expects(self::once())->method('terminate')
+            ->with($session->id);
+        $remember = $this->createMock(RememberMeTokenManagerInterface::class);
+        $remember->expects(self::once())->method('create')
+            ->with(
+                self::callback(static fn(UuidInterface $uuid): bool =>
+                    $uuid->equals($identity->uuid)),
+                $session->id,
+            )
+            ->willReturn(str_repeat('a', 64));
+        $remember->expects(self::once())->method('revoke')
+            ->with(str_repeat('a', 64));
+        $response = $this->createStub(ResponseInterface::class);
+        $response->method('withHeader')->willReturnSelf();
+        $responses = $this->createStub(ResponseFactoryInterface::class);
+        $responses->method('createResponse')->willReturn($response);
+        $storage = $this->createStub(PayloadStorageInterface::class);
+        $storage->method('store')->willThrowException(
+            new \RuntimeException('transport failed'),
+        );
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('transport failed');
+
+        $this->handler(
+            $this->authenticator($identity),
+            $sessions,
+            $storage,
+            $responses,
+            $this->attributes(),
+            $remember,
+        )->handle($this->request(remember: true));
+    }
+
+    private function handler(
+        AuthenticatorInterface $authenticator,
+        SessionManagerInterface $sessions,
+        PayloadStorageInterface $storage,
+        ResponseFactoryInterface $responses,
+        SessionAttributeExtractorInterface $attributes,
+        ?RememberMeTokenManagerInterface $remember = null,
+    ): LoginHandler {
+        return new LoginHandler(
+            new PasswordExtractor(),
+            $authenticator,
+            $sessions,
+            $storage,
+            $this->createStub(DeniedResponseFactoryInterface::class),
+            $responses,
+            $remember,
+            $attributes,
+        );
+    }
+
+    private function authenticator(IdentityInterface $identity): AuthenticatorInterface
+    {
+        $authenticator = $this->createStub(AuthenticatorInterface::class);
+        $authenticator->method('attempt')->willReturn(
+            new AuthenticationResult($identity),
+        );
+
+        return $authenticator;
+    }
+
+    private function attributes(): SessionAttributeExtractorInterface
+    {
+        $attributes = $this->createStub(SessionAttributeExtractorInterface::class);
+        $attributes->method('extract')->willReturn([
+            'ip' => '',
+            'user_agent' => '',
+        ]);
+
+        return $attributes;
+    }
+
+    private function request(bool $remember = false): ServerRequestInterface
+    {
+        return new ServerRequestFixture(parsedBody: [
+            'email' => 'user@example.com',
+            'password' => 'secret-password',
+            'remember' => $remember,
+        ]);
     }
 
     private static function session(UuidInterface $subjectId): SessionInterface

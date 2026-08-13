@@ -14,6 +14,7 @@ use Componenta\Auth\Http\Transport\SessionPayload;
 use Componenta\Auth\RememberMe\RememberMeTokenManagerInterface;
 use Componenta\Auth\Session\SessionAttributeExtractor;
 use Componenta\Auth\Session\SessionAttributeExtractorInterface;
+use Componenta\Auth\Session\SessionInterface;
 use Componenta\Auth\Session\SessionManagerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -46,22 +47,58 @@ readonly class LoginHandler implements RequestHandlerInterface
             return $this->deniedResponseFactory->create($result->subject);
         }
 
+        // Allocate and harden the response before creating any durable bearer
+        // state. A response-factory/header failure therefore cannot strand an
+        // unknown session or remember-me grant.
+        $response = $this->responseFactory
+            ->createResponse(200)
+            ->withHeader('Cache-Control', 'no-store')
+            ->withHeader('Pragma', 'no-cache');
         $subjectId = $result->subject->uuid;
         $session = $this->sessionManager->create(
             $subjectId,
             $this->attributeExtractor->extract($request),
         );
-        $rememberMeToken = $payload->remember && $this->tokenManager !== null
-            ? $this->tokenManager->create($subjectId, $session->id)
-            : null;
-        $response = $this->responseFactory->createResponse(200);
+        $rememberMeToken = null;
 
-        return $this->storage->store(
-            $request,
-            $response
-                ->withHeader('Cache-Control', 'no-store')
-                ->withHeader('Pragma', 'no-cache'),
-            new SessionPayload($session->id, $rememberMeToken),
-        );
+        try {
+            $rememberMeToken = $payload->remember && $this->tokenManager !== null
+                ? $this->tokenManager->create($subjectId, $session->id)
+                : null;
+
+            return $this->storage->store(
+                $request,
+                $response,
+                new SessionPayload($session->id, $rememberMeToken),
+            );
+        } catch (\Throwable $exception) {
+            $this->rollbackUnpublishedCredentials(
+                $session,
+                $rememberMeToken,
+            );
+            throw $exception;
+        }
+    }
+
+    /**
+     * The response carrying these credentials was not returned. Remove every
+     * durable credential created by this handler. Cleanup failures are not
+     * swallowed because an active unpublished bearer requires operator
+     * attention.
+     */
+    private function rollbackUnpublishedCredentials(
+        SessionInterface $session,
+        ?string $rememberMeToken,
+    ): void {
+        if ($rememberMeToken === null || $this->tokenManager === null) {
+            $this->sessionManager->terminate($session->id);
+            return;
+        }
+
+        try {
+            $this->tokenManager->revoke($rememberMeToken);
+        } finally {
+            $this->sessionManager->terminate($session->id);
+        }
     }
 }

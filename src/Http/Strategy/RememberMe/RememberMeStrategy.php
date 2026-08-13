@@ -51,7 +51,15 @@ final readonly class RememberMeStrategy implements AuthenticationStrategyInterfa
             return $this->denied();
         }
 
-        $identity = $this->provider->findByUuid($rotation->subjectId);
+        try {
+            $identity = $this->provider->findByUuid($rotation->subjectId);
+        } catch (\Throwable $exception) {
+            // The successor is already the only valid bearer but has not been
+            // returned to the client. Do not leave it active after provider
+            // infrastructure fails.
+            $this->tokenManager->revoke($rotation->successorToken);
+            throw $exception;
+        }
 
         if (
             $identity === null
@@ -74,8 +82,18 @@ final readonly class RememberMeStrategy implements AuthenticationStrategyInterfa
             throw $exception;
         }
 
-        if (!$this->tokenManager->bindRotation($rotation, $session->id)) {
-            $this->sessionManager->terminate($session->id);
+        try {
+            $bound = $this->tokenManager->bindRotation(
+                $rotation,
+                $session->id,
+            );
+        } catch (\Throwable $exception) {
+            $this->rollbackUnpublishedRotation($rotation, $session);
+            throw $exception;
+        }
+
+        if (!$bound) {
+            $this->rollbackUnpublishedRotation($rotation, $session);
 
             return $this->denied();
         }
@@ -109,6 +127,23 @@ final readonly class RememberMeStrategy implements AuthenticationStrategyInterfa
             $rotation->subjectId,
             $attributes,
         );
+    }
+
+    /**
+     * The newly created/regenerated session and successor remember bearer have
+     * not been published to the client. Revoke both on a bind failure. A
+     * cleanup failure is intentionally not swallowed because it can leave
+     * credential state active and requires operator attention.
+     */
+    private function rollbackUnpublishedRotation(
+        RememberMeRotation $rotation,
+        SessionInterface $session,
+    ): void {
+        try {
+            $this->tokenManager->revoke($rotation->successorToken);
+        } finally {
+            $this->sessionManager->terminate($session->id);
+        }
     }
 
     private function denied(): AuthenticationResult

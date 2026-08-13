@@ -70,7 +70,7 @@ final class RefreshHandlerTest extends TestCase
     public function testProviderFailureLeavesPresentedRefreshRetryable(): void
     {
         $store = new RefreshHandlerStoreFixture();
-        $provider = $this->createMock(JwtUserProviderInterface::class);
+        $provider = $this->createStub(JwtUserProviderInterface::class);
         $provider->method('findByUuid')->willThrowException(
             new \RuntimeException('provider unavailable'),
         );
@@ -97,7 +97,7 @@ final class RefreshHandlerTest extends TestCase
     {
         $store = new RefreshHandlerStoreFixture();
         $provider = $this->provider(new RefreshHandlerIdentityFixture());
-        $signer = $this->createMock(SignerInterface::class);
+        $signer = $this->createStub(SignerInterface::class);
         $signer->method('sign')->willThrowException(
             new \RuntimeException('signer unavailable'),
         );
@@ -123,7 +123,7 @@ final class RefreshHandlerTest extends TestCase
         $provider = $this->provider(new RefreshHandlerIdentityFixture());
         $signer = $this->createStub(SignerInterface::class);
         $signer->method('sign')->willReturn('signed.access.token');
-        $responseFactory = $this->createMock(ResponseFactoryInterface::class);
+        $responseFactory = $this->createStub(ResponseFactoryInterface::class);
         $responseFactory->method('createResponse')->willThrowException(
             new \RuntimeException('response allocation failed'),
         );
@@ -147,7 +147,7 @@ final class RefreshHandlerTest extends TestCase
         $provider = $this->provider(new RefreshHandlerIdentityFixture());
         $signer = $this->createStub(SignerInterface::class);
         $signer->method('sign')->willReturn('signed.access.token');
-        $body = $this->createMock(StreamInterface::class);
+        $body = $this->createStub(StreamInterface::class);
         $body->method('write')->willThrowException(
             new \RuntimeException('stream failed'),
         );

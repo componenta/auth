@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Componenta\Auth\Tests\Http\Strategy\Jwt;
 
 use Componenta\Auth\Http\BearerCredential;
-use Componenta\Auth\Http\Strategy\Jwt\Claims;
 use Componenta\Auth\Http\Strategy\Jwt\JwtConfig;
 use Componenta\Auth\Http\Strategy\Jwt\RefreshToken;
 use Componenta\Auth\Http\Strategy\Jwt\RefreshTokenGenerator;
@@ -55,7 +54,7 @@ final class TokenPairResponseBearerContractTest extends TestCase
         $clock = new TokenPairBearerClockFixture();
         $signer = $this->createStub(SignerInterface::class);
         $signer->method('sign')->willReturn('signed.access.token');
-        $responseFactory = $this->createMock(ResponseFactoryInterface::class);
+        $responseFactory = $this->createStub(ResponseFactoryInterface::class);
         $responseFactory->method('createResponse')->willThrowException(
             new \RuntimeException('response allocation failed'),
         );
@@ -79,7 +78,7 @@ final class TokenPairResponseBearerContractTest extends TestCase
         $clock = new TokenPairBearerClockFixture();
         $signer = $this->createStub(SignerInterface::class);
         $signer->method('sign')->willReturn('signed.access.token');
-        $body = $this->createMock(StreamInterface::class);
+        $body = $this->createStub(StreamInterface::class);
         $body->method('write')->willThrowException(
             new \RuntimeException('stream failed'),
         );
