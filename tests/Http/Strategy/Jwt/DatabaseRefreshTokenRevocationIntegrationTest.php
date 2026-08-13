@@ -122,6 +122,7 @@ final class DatabaseRefreshTokenRevocationIntegrationTest extends TestCase
             CREATE TABLE refresh_token_families (
                 family_id TEXT PRIMARY KEY,
                 user_id TEXT NOT NULL,
+                expires_at INTEGER NOT NULL,
                 revoked_at INTEGER NULL,
                 compromised_at INTEGER NULL,
                 lock_nonce TEXT NOT NULL
@@ -148,30 +149,37 @@ final class DatabaseRefreshTokenRevocationIntegrationTest extends TestCase
         $database->execute(
             'CREATE INDEX idx_refresh_families_subject ON refresh_token_families(user_id)',
         );
+        $database->execute(
+            'CREATE INDEX idx_refresh_families_expiry ON refresh_token_families(expires_at)',
+        );
     }
 
     private static function createMySqlSchema(DatabaseInterface $database): void
     {
         $database->execute(<<<'SQL'
             CREATE TABLE refresh_token_families (
-                family_id CHAR(64) NOT NULL PRIMARY KEY,
-                user_id CHAR(36) NOT NULL,
+                family_id VARCHAR(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL PRIMARY KEY,
+                user_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+                expires_at BIGINT UNSIGNED NOT NULL,
                 revoked_at BIGINT UNSIGNED NULL,
                 compromised_at BIGINT UNSIGNED NULL,
-                lock_nonce CHAR(32) NOT NULL,
-                INDEX idx_refresh_family_subject (user_id)
+                lock_nonce CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+                INDEX idx_refresh_family_subject (user_id),
+                INDEX idx_refresh_family_expiry (expires_at)
             ) ENGINE=InnoDB
             SQL);
         $database->execute(<<<'SQL'
             CREATE TABLE refresh_tokens (
-                token_hash CHAR(64) NOT NULL PRIMARY KEY,
-                family_id CHAR(64) NOT NULL,
-                user_id CHAR(36) NOT NULL,
+                token_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL PRIMARY KEY,
+                family_id VARCHAR(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+                user_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
                 expires_at BIGINT UNSIGNED NOT NULL,
                 consumed_at BIGINT UNSIGNED NULL,
                 revoked_at BIGINT UNSIGNED NULL,
                 INDEX idx_refresh_token_family (family_id),
                 INDEX idx_refresh_token_subject (user_id),
+                INDEX idx_refresh_token_expiry (expires_at),
+                INDEX idx_refresh_token_family_expiry (family_id, expires_at),
                 CONSTRAINT fk_refresh_family_revocation
                     FOREIGN KEY (family_id)
                     REFERENCES refresh_token_families(family_id)

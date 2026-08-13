@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Http\Strategy\Jwt;
 
+use Componenta\Auth\Http\BearerCredential;
 use DateTimeImmutable;
 use Lcobucci\JWT\Configuration;
 use Lcobucci\JWT\Signer\Hmac;
@@ -83,15 +84,18 @@ final readonly class HmacSigner implements SignerInterface
             $builder = $builder->withClaim($name, $value);
         }
 
-        return $builder
+        $token = $builder
             ->getToken($this->configuration->signer(), $this->configuration->signingKey())
             ->toString();
+        BearerCredential::assertValid($token);
+
+        return $token;
     }
 
     #[\Override]
     public function parse(string $token): ?Claims
     {
-        if ($token === '') {
+        if (!BearerCredential::isValid($token)) {
             return null;
         }
 

@@ -40,6 +40,7 @@ final readonly class DatabaseRefreshTokenStoreConfigFactory
             expiresAtColumn: $config->string(new ConfigPath($prefix . '.columns.expiresAt'), 'expires_at'),
             consumedAtColumn: $config->string(new ConfigPath($prefix . '.columns.consumedAt'), 'consumed_at'),
             revokedAtColumn: $config->string(new ConfigPath($prefix . '.columns.revokedAt'), 'revoked_at'),
+            familyExpiresAtColumn: $config->string(new ConfigPath($prefix . '.columns.familyExpiresAt'), 'expires_at'),
             familyRevokedAtColumn: $config->string(new ConfigPath($prefix . '.columns.familyRevokedAt'), 'revoked_at'),
             compromisedAtColumn: $config->string(new ConfigPath($prefix . '.columns.compromisedAt'), 'compromised_at'),
             lockNonceColumn: $config->string(new ConfigPath($prefix . '.columns.lockNonce'), 'lock_nonce'),

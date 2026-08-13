@@ -7,6 +7,7 @@ namespace Componenta\Auth\Tests\Http\Strategy\Jwt;
 use Componenta\Auth\Http\Strategy\Jwt\DatabaseRefreshTokenHousekeeper;
 use Componenta\Auth\Http\Strategy\Jwt\DatabaseRefreshTokenStore;
 use Componenta\Auth\Http\Strategy\Jwt\RefreshToken;
+use Componenta\Auth\Http\Strategy\Jwt\RefreshTokenRotationStatus;
 use Componenta\Auth\Tests\Support\SqliteDatabaseFixture;
 use Componenta\Identity\Uuid;
 use Cycle\Database\DatabaseInterface;
@@ -48,6 +49,42 @@ final class DatabaseRefreshTokenHousekeeperTest extends TestCase
         );
     }
 
+    public function testRotationExtendsIndexedFamilyRetentionDeadline(): void
+    {
+        if (!extension_loaded('pdo_sqlite')) {
+            self::markTestSkipped('pdo_sqlite is required for storage integration tests.');
+        }
+
+        $database = SqliteDatabaseFixture::create();
+        self::createSchema($database);
+        $store = new DatabaseRefreshTokenStore($database);
+        $subject = Uuid::fromString('018f6d5d-3f7a-7a9b-8c2f-123456789abc');
+        $store->storeInitial(new RefreshToken(self::TOKEN_A, $subject, self::FAMILY_A, 1100));
+
+        self::assertSame(
+            RefreshTokenRotationStatus::Rotated,
+            $store->rotateAtomically(
+                self::TOKEN_A,
+                self::TOKEN_B,
+                3000,
+                1000,
+            )->status,
+        );
+
+        $family = $database
+            ->select('expires_at')
+            ->from('refresh_token_families')
+            ->where('family_id', self::FAMILY_A)
+            ->run()
+            ->fetch();
+        self::assertIsArray($family);
+        self::assertSame(3000, $family['expires_at'] ?? null);
+        self::assertSame(
+            0,
+            (new DatabaseRefreshTokenHousekeeper($database))->cleanup(1200, 10),
+        );
+    }
+
     public function testCleanupIsBoundedByFamilies(): void
     {
         if (!extension_loaded('pdo_sqlite')) {
@@ -74,11 +111,15 @@ final class DatabaseRefreshTokenHousekeeperTest extends TestCase
             CREATE TABLE refresh_token_families (
                 family_id TEXT PRIMARY KEY,
                 user_id TEXT NOT NULL,
+                expires_at INTEGER NOT NULL,
                 revoked_at INTEGER NULL,
                 compromised_at INTEGER NULL,
                 lock_nonce TEXT NOT NULL
             )
             SQL);
+        $database->execute(
+            'CREATE INDEX idx_refresh_family_expiry ON refresh_token_families(expires_at)',
+        );
         $database->execute(<<<'SQL'
             CREATE TABLE refresh_tokens (
                 token_hash TEXT PRIMARY KEY,

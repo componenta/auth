@@ -165,6 +165,39 @@ final class DatabaseCodeStoreIntegrationTest extends TestCase
         );
     }
 
+    public function testCleanupIsBoundedAndRechecksExpiryBeforeDelete(): void
+    {
+        self::requireSqlite();
+        $database = SqliteDatabaseFixture::create();
+        self::createSchema($database);
+        $store = new DatabaseCodeStore($database, self::HMAC_KEY);
+
+        $store->store(new StoredCode(
+            self::subjectId(),
+            '111111',
+            'expired-a@example.com',
+            900,
+        ));
+        $store->store(new StoredCode(
+            self::subjectId(),
+            '222222',
+            'expired-b@example.com',
+            950,
+        ));
+        $store->store(new StoredCode(
+            self::subjectId(),
+            '333333',
+            'active@example.com',
+            2000,
+        ));
+
+        self::assertSame(1, $store->cleanup(1000, 1));
+        self::assertSame(2, $database->select()->from('otp_codes')->count());
+        self::assertSame(1, $store->cleanup(1000, 10));
+        self::assertSame(1, $database->select()->from('otp_codes')->count());
+        self::assertSame(0, $store->cleanup(1000, 10));
+    }
+
     private static function requireSqlite(): void
     {
         if (!extension_loaded('pdo_sqlite')) {
@@ -187,11 +220,14 @@ final class DatabaseCodeStoreIntegrationTest extends TestCase
             CREATE TABLE otp_codes (
                 destination TEXT PRIMARY KEY,
                 user_id TEXT NOT NULL,
-                challenge_id TEXT NOT NULL,
+                challenge_id TEXT NOT NULL UNIQUE,
                 verifier TEXT NOT NULL,
                 expires_at INTEGER NOT NULL,
                 attempts INTEGER NOT NULL
             )
             SQL);
+        $database->execute(
+            'CREATE INDEX idx_otp_expiry ON otp_codes(expires_at)',
+        );
     }
 }

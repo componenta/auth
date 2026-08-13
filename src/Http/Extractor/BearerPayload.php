@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Http\Extractor;
 
+use Componenta\Auth\Http\BearerCredential;
+
 /** Bearer credential payload with redacted serialization. */
 final readonly class BearerPayload implements \JsonSerializable
 {
@@ -11,12 +13,7 @@ final readonly class BearerPayload implements \JsonSerializable
         #[\SensitiveParameter]
         public string $token,
     ) {
-        if (
-            strlen($this->token) > 8192
-            || preg_match('/\A[A-Za-z0-9\-._~+\/]+=*\z/D', $this->token) !== 1
-        ) {
-            throw new \InvalidArgumentException('Bearer token is invalid.');
-        }
+        BearerCredential::assertValid($this->token);
     }
 
     /** @return array{token: string} */

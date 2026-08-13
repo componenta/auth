@@ -107,6 +107,10 @@ final class PrimaryConnectionCredentialStoreTest extends TestCase
             2000,
         ));
 
+        self::assertNotNull($store->findActiveSubject(
+            self::REFRESH_TOKEN,
+            1000,
+        ));
         $result = $store->rotateAtomically(
             self::REFRESH_TOKEN,
             self::REFRESH_SUCCESSOR,
@@ -227,6 +231,7 @@ final class PrimaryConnectionCredentialStoreTest extends TestCase
             CREATE TABLE refresh_token_families (
                 family_id TEXT PRIMARY KEY,
                 user_id TEXT NOT NULL,
+                expires_at INTEGER NOT NULL,
                 revoked_at INTEGER NULL,
                 compromised_at INTEGER NULL,
                 lock_nonce TEXT NOT NULL
@@ -250,7 +255,7 @@ final class PrimaryConnectionCredentialStoreTest extends TestCase
             CREATE TABLE otp_codes (
                 destination TEXT PRIMARY KEY,
                 user_id TEXT NOT NULL,
-                challenge_id TEXT NOT NULL,
+                challenge_id TEXT NOT NULL UNIQUE,
                 verifier TEXT NOT NULL,
                 expires_at INTEGER NOT NULL,
                 attempts INTEGER NOT NULL

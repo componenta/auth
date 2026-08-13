@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Http\Strategy\Jwt;
 
+use Componenta\Auth\Http\BearerCredential;
 use Componenta\Clock\Clock;
 use Componenta\Identity\IdentityInterface;
 use Psr\Clock\ClockInterface;
@@ -32,15 +33,27 @@ final readonly class TokenPairResponse
             audience: $this->config->audience,
             type: $this->config->type,
         ));
-        $refreshToken = $this->refreshManager->issue($identity->uuid);
-        $response = $this->responseFactory->createResponse(200);
-        $response->getBody()->write(json_encode([
-            'access_token' => $accessToken,
-            'refresh_token' => $refreshToken->id,
-            'token_type' => 'Bearer',
-            'expires_in' => $this->config->accessTtl,
-        ], JSON_THROW_ON_ERROR));
+        BearerCredential::assertValid($accessToken);
 
-        return TokenResponseHeaders::apply($response);
+        // Allocate every fallible response object before the durable refresh
+        // issuance. After issue(), any response-side failure is compensated by
+        // ordinary family revocation because the client never learned the
+        // bearer value.
+        $response = $this->responseFactory->createResponse(200);
+        $refreshToken = $this->refreshManager->issue($identity->uuid);
+
+        try {
+            $response->getBody()->write(json_encode([
+                'access_token' => $accessToken,
+                'refresh_token' => $refreshToken->id,
+                'token_type' => 'Bearer',
+                'expires_in' => $this->config->accessTtl,
+            ], JSON_THROW_ON_ERROR));
+
+            return TokenResponseHeaders::apply($response);
+        } catch (\Throwable $exception) {
+            $this->refreshManager->revoke($refreshToken->id);
+            throw $exception;
+        }
     }
 }

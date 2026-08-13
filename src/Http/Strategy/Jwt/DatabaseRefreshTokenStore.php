@@ -41,6 +41,7 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
                 ->values([
                     $this->config->familyIdColumn => $token->familyId,
                     $this->config->subjectIdColumn => $token->subjectId->toString(),
+                    $this->config->familyExpiresAtColumn => $token->expiresAt,
                     $this->config->familyRevokedAtColumn => null,
                     $this->config->compromisedAtColumn => null,
                     $this->config->lockNonceColumn => self::lockNonce(),
@@ -59,6 +60,73 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
                 ])
                 ->run();
         });
+    }
+
+    #[\Override]
+    public function findActiveSubject(
+        string $tokenId,
+        int $now,
+    ): ?UuidInterface {
+        if (!self::validIdentifier($tokenId)) {
+            return null;
+        }
+
+        if ($now < 1) {
+            throw new \InvalidArgumentException(
+                'Refresh lookup time must be positive.',
+            );
+        }
+
+        $token = $this->findToken(
+            $this->database,
+            self::hashToken($tokenId),
+        );
+
+        if ($token === null) {
+            return null;
+        }
+
+        if (
+            self::nullableIntValue($token, $this->config->consumedAtColumn) !== null
+            || self::nullableIntValue($token, $this->config->revokedAtColumn) !== null
+            || self::intValue($token, $this->config->expiresAtColumn) <= $now
+        ) {
+            return null;
+        }
+
+        $familyId = self::stringValue(
+            $token,
+            $this->config->familyIdColumn,
+        );
+        $family = $this->findFamily($this->database, $familyId);
+
+        if ($family === null) {
+            return null;
+        }
+
+        if (
+            self::nullableIntValue($family, $this->config->familyRevokedAtColumn) !== null
+            || self::nullableIntValue($family, $this->config->compromisedAtColumn) !== null
+        ) {
+            return null;
+        }
+
+        $subjectId = self::uuidValue(
+            $family,
+            $this->config->subjectIdColumn,
+        );
+        $tokenSubjectId = self::uuidValue(
+            $token,
+            $this->config->subjectIdColumn,
+        );
+
+        if (!$subjectId->equals($tokenSubjectId)) {
+            throw new \UnexpectedValueException(
+                'Refresh token subject does not match its family.',
+            );
+        }
+
+        return $subjectId;
     }
 
     #[\Override]
@@ -195,6 +263,27 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
                     throw new \UnexpectedValueException(
                         'Refresh token subject does not match its family.',
                     );
+                }
+
+                $familyExpiresAt = self::intValue(
+                    $family,
+                    $this->config->familyExpiresAtColumn,
+                );
+
+                if ($successorExpiresAt > $familyExpiresAt) {
+                    $updatedFamily = $database
+                        ->update($this->config->familyTable)
+                        ->where($this->config->familyIdColumn, $familyId)
+                        ->values([
+                            $this->config->familyExpiresAtColumn => $successorExpiresAt,
+                        ])
+                        ->run();
+
+                    if ($updatedFamily !== 1) {
+                        throw new \UnexpectedValueException(
+                            'Refresh family retention deadline could not be extended.',
+                        );
+                    }
                 }
 
                 $database

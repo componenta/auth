@@ -25,4 +25,7 @@ interface CodeStoreInterface
     ): CodeVerificationResult;
 
     public function invalidate(string $destination): void;
+
+    /** Removes at most $limit challenges that expired at or before $now. */
+    public function cleanup(int $now, int $limit = 1000): int;
 }

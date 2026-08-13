@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Componenta\Auth\Http\Strategy\Jwt;
 
 use Cycle\Database\DatabaseInterface;
-use Cycle\Database\Injection\Expression;
 use Cycle\Database\Query\SelectQuery;
 
 /** Bounded cleanup for refresh families whose complete token history has expired. */
@@ -35,19 +34,27 @@ final readonly class DatabaseRefreshTokenHousekeeper
             ));
         }
 
-        $rows = $this->database
+        $query = $this->database
             ->select($this->config->familyIdColumn)
-            ->from($this->config->tokenTable)
-            ->groupBy($this->config->familyIdColumn)
-            ->having(
-                new Expression('MAX(' . $this->config->expiresAtColumn . ')'),
-                '<=',
-                $now,
-            )
+            ->withDriver(
+                $this->database->getDriver(DatabaseInterface::WRITE),
+                $this->database->getPrefix(),
+            );
+
+        if (!$query instanceof SelectQuery) {
+            throw new \LogicException(
+                'Cycle must preserve SelectQuery when pinning the write driver.',
+            );
+        }
+
+        $rows = $query
+            ->from($this->config->familyTable)
+            ->where($this->config->familyExpiresAtColumn, '<=', $now)
+            ->orderBy($this->config->familyExpiresAtColumn, 'ASC')
             ->limit($limit)
             ->run()
             ->fetchAll();
-        $ids = [];
+        $familyIds = [];
 
         foreach ($rows as $row) {
             if (!is_array($row)) {
@@ -56,28 +63,26 @@ final readonly class DatabaseRefreshTokenHousekeeper
 
             $familyId = $row[$this->config->familyIdColumn] ?? null;
             if (is_string($familyId) && $familyId !== '') {
-                $ids[$familyId] = true;
+                $familyIds[] = $familyId;
             }
         }
 
-        if ($ids === []) {
+        if ($familyIds === []) {
             return 0;
         }
-
-        $familyIds = array_keys($ids);
-        sort($familyIds, SORT_STRING);
 
         return $this->database->transaction(
             function (DatabaseInterface $database) use ($familyIds, $now): int {
                 $deleted = 0;
 
                 foreach ($familyIds as $familyId) {
-                    // The family row is the same serialization point used by
-                    // rotation and revocation. Once claimed, no successor can
-                    // be inserted until the expiry predicate is rechecked.
+                    // The conditional write is the same family serialization
+                    // point used by rotation/revocation and also rechecks the
+                    // indexed retention deadline after any waiter completes.
                     $claimed = $database
                         ->update($this->config->familyTable)
                         ->where($this->config->familyIdColumn, $familyId)
+                        ->where($this->config->familyExpiresAtColumn, '<=', $now)
                         ->values([
                             $this->config->lockNonceColumn => self::lockNonce(),
                         ])
@@ -98,6 +103,9 @@ final readonly class DatabaseRefreshTokenHousekeeper
                         );
                     }
 
+                    // Defense in depth: the family deadline is maintained as
+                    // the maximum token expiry, but recheck token state before
+                    // destructive writes in case persistence was corrupted.
                     $active = $query
                         ->from($this->config->tokenTable)
                         ->where($this->config->familyIdColumn, $familyId)
@@ -107,7 +115,9 @@ final readonly class DatabaseRefreshTokenHousekeeper
                         ->fetch();
 
                     if (is_array($active)) {
-                        continue;
+                        throw new \UnexpectedValueException(
+                            'Refresh family retention deadline precedes an active token expiry.',
+                        );
                     }
 
                     $database
@@ -118,6 +128,7 @@ final readonly class DatabaseRefreshTokenHousekeeper
                     $deleted += $database
                         ->delete($this->config->familyTable)
                         ->where($this->config->familyIdColumn, $familyId)
+                        ->where($this->config->familyExpiresAtColumn, '<=', $now)
                         ->run();
                 }
 

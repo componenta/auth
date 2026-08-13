@@ -5,13 +5,12 @@ declare(strict_types=1);
 namespace Componenta\Auth\Http\Extractor;
 
 use Componenta\Auth\Exception\InvalidPayloadException;
+use Componenta\Auth\Http\BearerCredential;
 use Componenta\Auth\Http\PayloadExtractorInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 final readonly class BearerExtractor implements PayloadExtractorInterface
 {
-    private const int MAX_TOKEN_LENGTH = 8192;
-
     public function __construct(
         public string $header = 'Authorization',
     ) {
@@ -45,12 +44,7 @@ final readonly class BearerExtractor implements PayloadExtractorInterface
 
         $token = substr($value, $offset);
 
-        if (
-            $token === ''
-            || strlen($token) > self::MAX_TOKEN_LENGTH
-            || trim($token) !== $token
-            || preg_match('/\A[A-Za-z0-9\-._~+\/]+=*\z/D', $token) !== 1
-        ) {
+        if (!BearerCredential::isValid($token)) {
             throw InvalidPayloadException::invalidField($this->header);
         }
 

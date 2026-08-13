@@ -27,6 +27,29 @@ final class DatabaseRefreshTokenStoreIntegrationTest extends TestCase
     private const string FAMILY_B =
         'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
 
+    public function testActiveSubjectPreflightReadsOnlyActiveGrantState(): void
+    {
+        self::requireSqlite();
+        $database = SqliteDatabaseFixture::create();
+        self::createSchema($database);
+        $store = new DatabaseRefreshTokenStore($database);
+        $subjectId = self::subjectId();
+        $store->storeInitial(new RefreshToken(
+            self::TOKEN_A,
+            $subjectId,
+            self::FAMILY_A,
+            2000,
+        ));
+
+        $resolved = $store->findActiveSubject(self::TOKEN_A, 1000);
+        self::assertNotNull($resolved);
+        self::assertTrue($subjectId->equals($resolved));
+        self::assertNull($store->findActiveSubject(self::TOKEN_A, 2000));
+
+        $store->revoke(self::TOKEN_A, 1001);
+        self::assertNull($store->findActiveSubject(self::TOKEN_A, 1002));
+    }
+
     public function testReplayCompromisesFamilyAndRevokesSuccessor(): void
     {
         self::requireSqlite();
@@ -135,8 +158,17 @@ final class DatabaseRefreshTokenStoreIntegrationTest extends TestCase
             self::fail('Duplicate successor token must fail.');
         } catch (\Throwable) {
             // The important invariant is that the transaction rolls the
-            // presented-token claim back together with the failed insert.
+            // presented-token claim and family deadline back with the failed insert.
         }
+
+        $family = $database
+            ->select('expires_at')
+            ->from('refresh_token_families')
+            ->where('family_id', self::FAMILY_A)
+            ->run()
+            ->fetch();
+        self::assertIsArray($family);
+        self::assertSame(2000, $family['expires_at'] ?? null);
 
         $retry = $store->rotateAtomically(
             self::TOKEN_A,
@@ -257,6 +289,7 @@ final class DatabaseRefreshTokenStoreIntegrationTest extends TestCase
             CREATE TABLE refresh_token_families (
                 family_id TEXT PRIMARY KEY,
                 user_id TEXT NOT NULL,
+                expires_at INTEGER NOT NULL,
                 revoked_at INTEGER NULL,
                 compromised_at INTEGER NULL,
                 lock_nonce TEXT NOT NULL
@@ -282,6 +315,9 @@ final class DatabaseRefreshTokenStoreIntegrationTest extends TestCase
         );
         $database->execute(
             'CREATE INDEX idx_refresh_families_subject ON refresh_token_families(user_id)',
+        );
+        $database->execute(
+            'CREATE INDEX idx_refresh_families_expiry ON refresh_token_families(expires_at)',
         );
     }
 }

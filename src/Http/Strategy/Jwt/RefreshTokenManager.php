@@ -34,6 +34,20 @@ final readonly class RefreshTokenManager
         return $token;
     }
 
+    /**
+     * Non-authoritative preflight used to complete fallible provider/signing
+     * work before rotating the presented bearer. rotate() remains the final
+     * serialized authorization decision.
+     */
+    public function findActiveSubject(string $tokenId): ?UuidInterface
+    {
+        if (!self::validTokenId($tokenId)) {
+            return null;
+        }
+
+        return $this->store->findActiveSubject($tokenId, $this->now());
+    }
+
     public function rotate(string $tokenId): RefreshToken|DeniedReasonInterface
     {
         if (!self::validTokenId($tokenId)) {

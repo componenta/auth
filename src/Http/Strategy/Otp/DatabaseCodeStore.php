@@ -23,6 +23,8 @@ final readonly class DatabaseCodeStore implements CodeStoreInterface
     private const int MAX_CAS_RETRIES = 16;
     private const int MIN_HMAC_KEY_BYTES = 32;
     private const int MAX_HMAC_KEY_BYTES = 4096;
+    private const int MAX_CLEANUP_LIMIT = 10000;
+    private const int DELETE_CHUNK_SIZE = 500;
 
     private string $dummyVerifier;
 
@@ -253,6 +255,66 @@ final readonly class DatabaseCodeStore implements CodeStoreInterface
             ->delete($this->config->table)
             ->where($this->config->destinationColumn, $destination)
             ->run();
+    }
+
+    #[\Override]
+    public function cleanup(int $now, int $limit = 1000): int
+    {
+        if ($now < 1) {
+            throw new \InvalidArgumentException(
+                'OTP cleanup time must be positive.',
+            );
+        }
+
+        if ($limit < 1 || $limit > self::MAX_CLEANUP_LIMIT) {
+            throw new \InvalidArgumentException(sprintf(
+                'OTP cleanup limit must be between 1 and %d.',
+                self::MAX_CLEANUP_LIMIT,
+            ));
+        }
+
+        $query = $this->database
+            ->select($this->config->challengeIdColumn)
+            ->withDriver(
+                $this->database->getDriver(DatabaseInterface::WRITE),
+                $this->database->getPrefix(),
+            );
+
+        if (!$query instanceof SelectQuery) {
+            throw new \LogicException(
+                'Cycle must preserve SelectQuery when pinning the write driver.',
+            );
+        }
+
+        $rows = $query
+            ->from($this->config->table)
+            ->where($this->config->expiresAtColumn, '<=', $now)
+            ->orderBy($this->config->expiresAtColumn, 'ASC')
+            ->limit($limit)
+            ->run()
+            ->fetchAll();
+        $challengeIds = [];
+
+        foreach ($rows as $row) {
+            if (is_array($row)) {
+                $challengeIds[] = self::stringValue(
+                    $row,
+                    $this->config->challengeIdColumn,
+                );
+            }
+        }
+
+        $deleted = 0;
+
+        foreach (array_chunk($challengeIds, self::DELETE_CHUNK_SIZE) as $chunk) {
+            $deleted += $this->database
+                ->delete($this->config->table)
+                ->where($this->config->challengeIdColumn, 'IN', $chunk)
+                ->where($this->config->expiresAtColumn, '<=', $now)
+                ->run();
+        }
+
+        return $deleted;
     }
 
     /** @return array<array-key, mixed>|null */

@@ -201,6 +201,7 @@ class ConfigProvider extends \Componenta\Config\ConfigProvider
                             'expiresAt' => 'expires_at',
                             'consumedAt' => 'consumed_at',
                             'revokedAt' => 'revoked_at',
+                            'familyExpiresAt' => 'expires_at',
                             'familyRevokedAt' => 'revoked_at',
                             'compromisedAt' => 'compromised_at',
                             'lockNonce' => 'lock_nonce',

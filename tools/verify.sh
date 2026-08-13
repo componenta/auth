@@ -114,6 +114,39 @@ do
     fi
 done
 
+if [[ ! -f resources/schema/mysql-8.4.sql ]]; then
+    echo 'Canonical MySQL 8.4 auth schema is missing.' >&2
+    exit 1
+fi
+
+for required in \
+    'COLLATE utf8mb4_bin' \
+    'family_id VARCHAR(128)' \
+    'idx_otp_expiry' \
+    'idx_refresh_family_expiry' \
+    'idx_sessions_cleanup_absolute'
+do
+    if ! grep -q --fixed-strings "$required" resources/schema/mysql-8.4.sql; then
+        echo "Canonical MySQL schema is missing required invariant: $required" >&2
+        exit 1
+    fi
+done
+
+if grep -q --fixed-strings 'MAX(' src/Http/Strategy/Jwt/DatabaseRefreshTokenHousekeeper.php; then
+    echo 'Refresh cleanup must select candidates from indexed family retention state, not aggregate token history.' >&2
+    exit 1
+fi
+
+for signer in \
+    src/Http/Strategy/Jwt/HmacSigner.php \
+    src/Http/Strategy/Jwt/RsaSigner.php
+do
+    if ! grep -q --fixed-strings 'BearerCredential::' "$signer"; then
+        echo "JWT signer does not enforce the shared bearer transport contract: $signer" >&2
+        exit 1
+    fi
+done
+
 while IFS= read -r action; do
     [[ -z "$action" ]] && continue
 
@@ -131,6 +164,18 @@ while IFS= read -r action; do
 done < <(
     { grep -R -h -E '^[[:space:]]*-?[[:space:]]*uses:[[:space:]]+' .github/workflows || true; } \
         | sed -E 's/^[[:space:]]*-?[[:space:]]*uses:[[:space:]]+([^[:space:]#]+).*/\1/'
+)
+
+while IFS= read -r image; do
+    [[ -z "$image" ]] && continue
+
+    if [[ ! "$image" =~ @sha256:[0-9a-f]{64}$ ]]; then
+        echo "Workflow container image must be pinned to an immutable digest: $image" >&2
+        exit 1
+    fi
+done < <(
+    { grep -R -h -E '^[[:space:]]*image:[[:space:]]+' .github/workflows || true; } \
+        | sed -E 's/^[[:space:]]*image:[[:space:]]+([^[:space:]#]+).*/\1/'
 )
 
 composer test

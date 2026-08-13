@@ -43,11 +43,13 @@ final class DatabaseMySql84IntegrationTest extends TestCase
         $database->execute(<<<'SQL'
             CREATE TABLE one_time_tokens (
                 id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-                user_id CHAR(36) NOT NULL UNIQUE,
-                token CHAR(64) NOT NULL UNIQUE,
+                user_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL UNIQUE,
+                token CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL UNIQUE,
                 expires_at DATETIME NOT NULL,
                 used_at DATETIME NULL,
-                created_at DATETIME NOT NULL
+                created_at DATETIME NOT NULL,
+                INDEX idx_one_time_expiry (expires_at),
+                INDEX idx_one_time_used (used_at)
             ) ENGINE=InnoDB
             SQL);
         $manager = new TokenManager(
@@ -73,12 +75,13 @@ final class DatabaseMySql84IntegrationTest extends TestCase
         self::resetSchema($database);
         $database->execute(<<<'SQL'
             CREATE TABLE otp_codes (
-                destination VARCHAR(320) NOT NULL PRIMARY KEY,
-                user_id CHAR(36) NOT NULL,
-                challenge_id CHAR(32) NOT NULL,
-                verifier CHAR(64) NOT NULL,
+                destination VARCHAR(320) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL PRIMARY KEY,
+                user_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+                challenge_id CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL UNIQUE,
+                verifier CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
                 expires_at BIGINT UNSIGNED NOT NULL,
-                attempts INT UNSIGNED NOT NULL
+                attempts INT UNSIGNED NOT NULL,
+                INDEX idx_otp_expiry (expires_at)
             ) ENGINE=InnoDB
             SQL);
         $store = new DatabaseCodeStore($database, self::OTP_HMAC_KEY);
@@ -130,31 +133,7 @@ final class DatabaseMySql84IntegrationTest extends TestCase
     {
         $database = self::database();
         self::resetSchema($database);
-        $database->execute(<<<'SQL'
-            CREATE TABLE refresh_token_families (
-                family_id CHAR(64) NOT NULL PRIMARY KEY,
-                user_id CHAR(36) NOT NULL,
-                revoked_at BIGINT UNSIGNED NULL,
-                compromised_at BIGINT UNSIGNED NULL,
-                lock_nonce CHAR(32) NOT NULL,
-                INDEX idx_refresh_family_subject (user_id)
-            ) ENGINE=InnoDB
-            SQL);
-        $database->execute(<<<'SQL'
-            CREATE TABLE refresh_tokens (
-                token_hash CHAR(64) NOT NULL PRIMARY KEY,
-                family_id CHAR(64) NOT NULL,
-                user_id CHAR(36) NOT NULL,
-                expires_at BIGINT UNSIGNED NOT NULL,
-                consumed_at BIGINT UNSIGNED NULL,
-                revoked_at BIGINT UNSIGNED NULL,
-                INDEX idx_refresh_token_family (family_id),
-                INDEX idx_refresh_token_subject (user_id),
-                CONSTRAINT fk_refresh_family
-                    FOREIGN KEY (family_id)
-                    REFERENCES refresh_token_families(family_id)
-            ) ENGINE=InnoDB
-            SQL);
+        self::createRefreshSchema($database);
         $store = new DatabaseRefreshTokenStore($database);
         $subjectId = self::subjectId();
         $store->storeInitial(new RefreshToken(
@@ -199,19 +178,21 @@ final class DatabaseMySql84IntegrationTest extends TestCase
         self::resetSchema($database);
         $database->execute(<<<'SQL'
             CREATE TABLE sessions (
-                id VARCHAR(512) NOT NULL PRIMARY KEY,
-                user_id CHAR(36) NOT NULL,
+                id VARCHAR(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL PRIMARY KEY,
+                user_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
                 ip VARCHAR(45) NOT NULL,
                 user_agent VARCHAR(1024) NOT NULL,
                 expires_at DATETIME NOT NULL,
                 absolute_expires_at DATETIME NOT NULL,
                 regenerate_at DATETIME NOT NULL,
-                replaced_by VARCHAR(512) NULL,
+                replaced_by VARCHAR(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NULL,
                 created_at DATETIME NOT NULL,
                 last_active_at DATETIME NOT NULL,
                 attributes TEXT NOT NULL,
                 INDEX idx_session_subject (user_id),
-                INDEX idx_session_replaced (replaced_by)
+                INDEX idx_session_replaced (replaced_by),
+                INDEX idx_session_cleanup_idle (replaced_by, expires_at),
+                INDEX idx_session_cleanup_absolute (absolute_expires_at)
             ) ENGINE=InnoDB
             SQL);
         $manager = self::sessionManager($database, 1000);
@@ -253,6 +234,39 @@ final class DatabaseMySql84IntegrationTest extends TestCase
             new EventDispatcher(new PriorityListenerProvider()),
             new DatabaseSessionManagerConfig(),
         );
+    }
+
+    private static function createRefreshSchema(DatabaseInterface $database): void
+    {
+        $database->execute(<<<'SQL'
+            CREATE TABLE refresh_token_families (
+                family_id VARCHAR(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL PRIMARY KEY,
+                user_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+                expires_at BIGINT UNSIGNED NOT NULL,
+                revoked_at BIGINT UNSIGNED NULL,
+                compromised_at BIGINT UNSIGNED NULL,
+                lock_nonce CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+                INDEX idx_refresh_family_subject (user_id),
+                INDEX idx_refresh_family_expiry (expires_at)
+            ) ENGINE=InnoDB
+            SQL);
+        $database->execute(<<<'SQL'
+            CREATE TABLE refresh_tokens (
+                token_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL PRIMARY KEY,
+                family_id VARCHAR(128) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+                user_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+                expires_at BIGINT UNSIGNED NOT NULL,
+                consumed_at BIGINT UNSIGNED NULL,
+                revoked_at BIGINT UNSIGNED NULL,
+                INDEX idx_refresh_token_family (family_id),
+                INDEX idx_refresh_token_subject (user_id),
+                INDEX idx_refresh_token_expiry (expires_at),
+                INDEX idx_refresh_token_family_expiry (family_id, expires_at),
+                CONSTRAINT fk_refresh_family
+                    FOREIGN KEY (family_id)
+                    REFERENCES refresh_token_families(family_id)
+            ) ENGINE=InnoDB
+            SQL);
     }
 
     private static function subjectId(): \Componenta\Identity\UuidInterface

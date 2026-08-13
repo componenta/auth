@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Componenta\Auth\Http\Strategy\Jwt;
 
 use Componenta\Auth\DeniedReasonInterface;
+use Componenta\Auth\Http\BearerCredential;
 use Componenta\Auth\Http\DeniedResponseFactoryInterface;
 use Componenta\Auth\Http\Strategy\Jwt\Denied\InvalidRefreshToken;
 use Componenta\Clock\Clock;
@@ -38,19 +39,35 @@ final readonly class RefreshHandler implements RequestHandlerInterface
             return $this->invalidRequest();
         }
 
-        $result = $this->refreshManager->rotate($tokenId);
+        // Preflight is deliberately non-authoritative. It lets provider lookup,
+        // access-token signing and response allocation fail before the bearer
+        // is irreversibly rotated; rotate() below still repeats all store state
+        // checks under family serialization.
+        $subjectId = $this->refreshManager->findActiveSubject($tokenId);
 
-        if ($result instanceof DeniedReasonInterface) {
-            return TokenResponseHeaders::apply($this->deniedResponseFactory->create($result));
+        if ($subjectId === null) {
+            $result = $this->refreshManager->rotate($tokenId);
+
+            if ($result instanceof DeniedReasonInterface) {
+                return TokenResponseHeaders::apply(
+                    $this->deniedResponseFactory->create($result),
+                );
+            }
+
+            // A custom store that rotates after claiming the same token was not
+            // active during preflight is internally inconsistent. Revoke the
+            // unexpected successor rather than issuing credentials for it.
+            $this->refreshManager->revoke($result->id);
+
+            return TokenResponseHeaders::apply(
+                $this->deniedResponseFactory->create(new InvalidRefreshToken()),
+            );
         }
 
-        $identity = $this->provider->findByUuid($result->subjectId);
+        $identity = $this->provider->findByUuid($subjectId);
 
-        if (
-            $identity === null
-            || !$result->subjectId->equals($identity->uuid)
-        ) {
-            $this->refreshManager->revoke($result->id);
+        if ($identity === null || !$subjectId->equals($identity->uuid)) {
+            $this->refreshManager->revoke($tokenId);
 
             return TokenResponseHeaders::apply(
                 $this->deniedResponseFactory->create(new InvalidRefreshToken()),
@@ -66,15 +83,39 @@ final readonly class RefreshHandler implements RequestHandlerInterface
             audience: $this->config->audience,
             type: $this->config->type,
         ));
+        BearerCredential::assertValid($accessToken);
         $response = $this->responseFactory->createResponse(200);
-        $response->getBody()->write(json_encode([
-            'access_token' => $accessToken,
-            'refresh_token' => $result->id,
-            'token_type' => 'Bearer',
-            'expires_in' => $this->config->accessTtl,
-        ], JSON_THROW_ON_ERROR));
+        $result = $this->refreshManager->rotate($tokenId);
 
-        return TokenResponseHeaders::apply($response);
+        if ($result instanceof DeniedReasonInterface) {
+            return TokenResponseHeaders::apply(
+                $this->deniedResponseFactory->create($result),
+            );
+        }
+
+        if (!$subjectId->equals($result->subjectId)) {
+            $this->refreshManager->revoke($result->id);
+
+            return TokenResponseHeaders::apply(
+                $this->deniedResponseFactory->create(new InvalidRefreshToken()),
+            );
+        }
+
+        try {
+            $response->getBody()->write(json_encode([
+                'access_token' => $accessToken,
+                'refresh_token' => $result->id,
+                'token_type' => 'Bearer',
+                'expires_in' => $this->config->accessTtl,
+            ], JSON_THROW_ON_ERROR));
+
+            return TokenResponseHeaders::apply($response);
+        } catch (\Throwable $exception) {
+            // The client never received the successor. Revoke its family so an
+            // undisclosed active bearer cannot survive a response failure.
+            $this->refreshManager->revoke($result->id);
+            throw $exception;
+        }
     }
 
     private function invalidRequest(): ResponseInterface

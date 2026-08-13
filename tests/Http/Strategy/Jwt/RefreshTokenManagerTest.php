@@ -23,6 +23,34 @@ final class RefreshTokenManagerTest extends TestCase
     private const string TOKEN = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
     private const string FAMILY = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
 
+    public function testActiveSubjectPreflightUsesStoreAndSharedClock(): void
+    {
+        $subjectId = Uuid::fromString(
+            '018f6d5d-3f7a-7a9b-8c2f-123456789abc',
+        );
+        $store = new RefreshStoreFixture(
+            static fn(): RefreshTokenRotationResult => RefreshTokenRotationResult::invalid(),
+            $subjectId,
+        );
+
+        $result = $this->manager($store)->findActiveSubject(self::TOKEN);
+
+        self::assertNotNull($result);
+        self::assertTrue($subjectId->equals($result));
+        self::assertSame(self::TOKEN, $store->preflightToken);
+        self::assertSame(1000, $store->preflightNow);
+    }
+
+    public function testMalformedPreflightTokenDoesNotReachStore(): void
+    {
+        $store = new RefreshStoreFixture(
+            static fn(): RefreshTokenRotationResult => RefreshTokenRotationResult::invalid(),
+        );
+
+        self::assertNull($this->manager($store)->findActiveSubject('invalid'));
+        self::assertNull($store->preflightToken);
+    }
+
     public function testRotationIsOneStoreOperationAndMapsReuseToCompromise(): void
     {
         $store = new RefreshStoreFixture(static fn(): RefreshTokenRotationResult => RefreshTokenRotationResult::reused());
@@ -78,10 +106,24 @@ final class RefreshStoreFixture implements RefreshTokenStoreInterface
     public ?string $presented = null;
     public ?string $successor = null;
     public ?int $now = null;
+    public ?string $preflightToken = null;
+    public ?int $preflightNow = null;
 
     /** @param \Closure(string, int): RefreshTokenRotationResult $rotation */
-    public function __construct(private \Closure $rotation) {}
+    public function __construct(
+        private \Closure $rotation,
+        private ?UuidInterface $activeSubject = null,
+    ) {}
+
     public function storeInitial(RefreshToken $token): void {}
+
+    public function findActiveSubject(string $tokenId, int $now): ?UuidInterface
+    {
+        $this->preflightToken = $tokenId;
+        $this->preflightNow = $now;
+
+        return $this->activeSubject;
+    }
 
     public function rotateAtomically(
         string $presentedTokenId,

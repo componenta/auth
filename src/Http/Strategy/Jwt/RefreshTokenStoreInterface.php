@@ -14,6 +14,17 @@ interface RefreshTokenStoreInterface
     public function storeInitial(RefreshToken $token): void;
 
     /**
+     * Returns the subject of a currently active presented grant for preflight
+     * work. This read is not an authorization decision: rotateAtomically()
+     * remains the final serialized transition and must repeat all state checks.
+     * Implementations must read this security state from the primary store.
+     */
+    public function findActiveSubject(
+        string $tokenId,
+        int $now,
+    ): ?UuidInterface;
+
+    /**
      * Rotation, replay detection, family compromise and successor creation are
      * one serialized transition. Replay must leave no active descendant.
      */

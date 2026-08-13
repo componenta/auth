@@ -12,7 +12,10 @@ namespace Componenta\Auth\Token;
  * reject a request routed to the wrong processor.
  *
  * Production adapters should enqueue without running provider lookup or
- * credential delivery inline when account-existence timing matters.
+ * credential delivery inline when account-existence timing matters. Workers
+ * must serialize requests sharing the same purpose and identity in enqueue
+ * order because the built-in manager deliberately keeps one current token per
+ * subject for each purpose-specific store.
  */
 interface TokenRequestQueueInterface
 {
