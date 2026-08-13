@@ -277,9 +277,6 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
                     throw new \LogicException('Cycle must provide a SelectQuery to the predicate.');
                 }
 
-                // Replaced rows are lineage tombstones. Keep them until
-                // absolute expiry so a logout holding an older authenticated
-                // credential can still reach and terminate its successor.
                 $query
                     ->where($this->config->replacedByColumn, null)
                     ->where($this->config->expiresAtColumn, '<=', $now)
@@ -439,7 +436,7 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
         array $ids,
         \DateTimeImmutable $now,
     ): array {
-        /** @var array<string, true> $expanded */
+        /** @var array<string, string> $expanded */
         $expanded = [];
         $formattedNow = $now->format($this->config->dateFormat);
 
@@ -449,23 +446,21 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
             $path = [];
 
             while (true) {
-                if (isset($path[$currentId])) {
+                $key = self::idKey($currentId);
+
+                if (isset($path[$key])) {
                     throw new \UnexpectedValueException(
                         'Session replacement lineage contains a cycle.',
                     );
                 }
 
-                if (isset($expanded[$currentId])) {
+                if (isset($expanded[$key])) {
                     break;
                 }
 
-                $path[$currentId] = true;
-                $expanded[$currentId] = true;
+                $path[$key] = true;
+                $expanded[$key] = $currentId;
 
-                // This conditional write is the serialization point with
-                // regenerate(). If termination wins, expiry makes the later
-                // regeneration CAS fail. If regeneration wins, the write waits
-                // and then the primary read below observes replaced_by.
                 $database
                     ->update($this->config->table)
                     ->where($this->config->idColumn, $currentId)
@@ -495,7 +490,7 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
             }
         }
 
-        return array_keys($expanded);
+        return array_values($expanded);
     }
 
     /** @return array<array-key, mixed>|null */
@@ -579,6 +574,7 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
         $source = $sessionId instanceof SessionCollectionInterface
             ? $sessionId->pluck()
             : $sessionId;
+        /** @var array<string, string> $ids */
         $ids = [];
 
         foreach ($source as $id) {
@@ -589,10 +585,15 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
             }
 
             self::assertSessionId($id);
-            $ids[$id] = true;
+            $ids[self::idKey($id)] = $id;
         }
 
-        return array_keys($ids);
+        return array_values($ids);
+    }
+
+    private static function idKey(string $sessionId): string
+    {
+        return 's:' . $sessionId;
     }
 
     private static function assertSessionId(string $sessionId): void
