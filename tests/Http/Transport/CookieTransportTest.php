@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Componenta\Auth\Tests\Http\Transport;
 
 use Componenta\Auth\Exception\InvalidPayloadException;
+use Componenta\Auth\Exception\TransportException;
 use Componenta\Auth\Http\Transport\CookieTransport;
 use Componenta\Auth\Http\Transport\SessionPayload;
 use Componenta\Clock\FrozenClock;
@@ -38,6 +39,19 @@ final class CookieTransportTest extends TestCase
 
         $this->expectException(InvalidPayloadException::class);
         (new CookieTransport())->extract($request);
+    }
+
+    public function testRememberCredentialRequiresConfiguredCookieName(): void
+    {
+        $request = $this->createStub(ServerRequestInterface::class);
+        $response = $this->createStub(ResponseInterface::class);
+
+        $this->expectException(TransportException::class);
+        (new CookieTransport())->store(
+            $request,
+            $response,
+            new SessionPayload('session-id', str_repeat('a', 64)),
+        );
     }
 
     public function testCookieExpiryUsesInjectedClock(): void
