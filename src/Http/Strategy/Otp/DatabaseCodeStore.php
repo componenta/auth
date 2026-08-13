@@ -87,6 +87,7 @@ final readonly class DatabaseCodeStore implements CodeStoreInterface
     #[\Override]
     public function verifyAndConsume(
         string $destination,
+        #[\SensitiveParameter]
         string $presentedCode,
         int $now,
         int $maxAttempts,
