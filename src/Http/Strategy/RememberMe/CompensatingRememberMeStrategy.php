@@ -7,9 +7,11 @@ namespace Componenta\Auth\Http\Strategy\RememberMe;
 use Componenta\Auth\AuthenticationResult;
 use Componenta\Auth\AuthenticationStrategyInterface;
 use Componenta\Auth\ContextInterface;
+use Componenta\Auth\Denied\InvalidCredentials;
 use Componenta\Auth\Http\CredentialTransportState;
 use Componenta\Auth\Http\Transport\SessionPayload;
 use Componenta\Auth\RememberMe\RememberMeTokenManagerInterface;
+use Componenta\Auth\Session\SessionInterface;
 use Componenta\Auth\Session\SessionManagerInterface;
 
 /**
@@ -50,14 +52,29 @@ final readonly class CompensatingRememberMeStrategy implements AuthenticationStr
         }
 
         $successorToken = $transportPayload->rememberMeToken;
-        $state->onDiscard(function () use ($successorToken, $session): void {
-            try {
-                $this->tokenManager->revoke($successorToken);
-            } finally {
-                $this->sessionManager->terminate($session->id);
-            }
-        });
+
+        if ($state->cleared) {
+            $this->rollback($successorToken, $session);
+
+            return new AuthenticationResult(new InvalidCredentials());
+        }
+
+        $state->onDiscard(
+            fn() => $this->rollback($successorToken, $session),
+        );
 
         return $result;
+    }
+
+    private function rollback(
+        #[\SensitiveParameter]
+        string $successorToken,
+        SessionInterface $session,
+    ): void {
+        try {
+            $this->tokenManager->revoke($successorToken);
+        } finally {
+            $this->sessionManager->terminate($session->id);
+        }
     }
 }
