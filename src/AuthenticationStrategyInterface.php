@@ -28,5 +28,9 @@ interface AuthenticationStrategyInterface
      *
      * @param object $payload The authentication payload
      */
-    public function attempt(object $payload, ContextInterface $context): AuthenticationResult;
+    public function attempt(
+        #[\SensitiveParameter]
+        object $payload,
+        ContextInterface $context,
+    ): AuthenticationResult;
 }
