@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Componenta\Auth\Http\Transport;
 
 use Componenta\Auth\Exception\InvalidPayloadException;
+use Componenta\Auth\Exception\TransportException;
 use Componenta\Auth\Http\TransportInterface;
 use Componenta\Clock\Clock;
 use Psr\Clock\ClockInterface;
@@ -132,6 +133,12 @@ final readonly class CookieTransport implements TransportInterface
             return $response;
         }
 
+        if ($payload->rememberMeToken !== null && $this->rememberMeName === '') {
+            throw new TransportException(
+                'Remember-me credential cannot be stored because rememberMeName is not configured.',
+            );
+        }
+
         if ($payload->sessionId !== null) {
             self::assertCredential(
                 $payload->sessionId,
@@ -145,7 +152,7 @@ final readonly class CookieTransport implements TransportInterface
             );
         }
 
-        if ($payload->rememberMeToken !== null && $this->rememberMeName !== '') {
+        if ($payload->rememberMeToken !== null) {
             self::assertCredential(
                 $payload->rememberMeToken,
                 $this->rememberMeName,
