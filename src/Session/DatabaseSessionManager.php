@@ -91,14 +91,18 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
     }
 
     #[\Override]
-    public function exists(string $sessionId): bool
-    {
+    public function exists(
+        #[\SensitiveParameter]
+        string $sessionId,
+    ): bool {
         return $this->find($sessionId) !== null;
     }
 
     #[\Override]
-    public function find(string $sessionId): ?SessionInterface
-    {
+    public function find(
+        #[\SensitiveParameter]
+        string $sessionId,
+    ): ?SessionInterface {
         self::assertSessionId($sessionId);
         $query = $this->database->select()->withDriver(
             $this->database->getDriver(DatabaseInterface::WRITE),
@@ -152,8 +156,11 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
     }
 
     #[\Override]
-    public function touch(string $sessionId, ?\DateTimeImmutable $lastActiveAt = null): void
-    {
+    public function touch(
+        #[\SensitiveParameter]
+        string $sessionId,
+        ?\DateTimeImmutable $lastActiveAt = null,
+    ): void {
         self::assertSessionId($sessionId);
         $now = $this->dateTimeFactory->now();
         $formattedNow = $now->format($this->config->dateFormat);
@@ -189,8 +196,10 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
     }
 
     #[\Override]
-    public function terminate(string|iterable|SessionCollectionInterface $sessionId): void
-    {
+    public function terminate(
+        #[\SensitiveParameter]
+        string|iterable|SessionCollectionInterface $sessionId,
+    ): void {
         $ids = $this->normalizeIds($sessionId);
 
         if ($ids === []) {
@@ -230,8 +239,11 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
     }
 
     #[\Override]
-    public function terminateAll(UuidInterface $subjectId, ?string $exceptSessionId = null): void
-    {
+    public function terminateAll(
+        UuidInterface $subjectId,
+        #[\SensitiveParameter]
+        ?string $exceptSessionId = null,
+    ): void {
         if ($exceptSessionId !== null) {
             self::assertSessionId($exceptSessionId);
         }
@@ -325,8 +337,10 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
     }
 
     #[\Override]
-    public function regenerate(string $sessionId): SessionInterface
-    {
+    public function regenerate(
+        #[\SensitiveParameter]
+        string $sessionId,
+    ): SessionInterface {
         self::assertSessionId($sessionId);
         $query = $this->database->select()->withDriver(
             $this->database->getDriver(DatabaseInterface::WRITE),
@@ -433,6 +447,7 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
      */
     private function terminationLineageIds(
         DatabaseInterface $database,
+        #[\SensitiveParameter]
         array $ids,
         \DateTimeImmutable $now,
     ): array {
@@ -496,6 +511,7 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
     /** @return array<array-key, mixed>|null */
     private function findRow(
         DatabaseInterface $database,
+        #[\SensitiveParameter]
         string $sessionId,
     ): ?array {
         $query = $database->select()->withDriver(
@@ -518,7 +534,12 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
         return is_array($row) ? $row : null;
     }
 
-    private function insert(SessionInterface $session, string $ip, string $userAgent): void
+    private function insert(
+        #[\SensitiveParameter]
+        SessionInterface $session,
+        string $ip,
+        string $userAgent,
+    ): void
     {
         $attributes = $session->attributes;
         unset(
@@ -563,6 +584,7 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
      * @return list<string>
      */
     private function normalizeIds(
+        #[\SensitiveParameter]
         string|iterable|SessionCollectionInterface $sessionId,
     ): array {
         if (is_string($sessionId)) {
@@ -591,12 +613,18 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
         return array_values($ids);
     }
 
-    private static function idKey(string $sessionId): string
+    private static function idKey(
+        #[\SensitiveParameter]
+        string $sessionId,
+    ): string
     {
         return 's:' . $sessionId;
     }
 
-    private static function assertSessionId(string $sessionId): void
+    private static function assertSessionId(
+        #[\SensitiveParameter]
+        string $sessionId,
+    ): void
     {
         if (
             $sessionId === ''
