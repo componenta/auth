@@ -80,6 +80,41 @@ final class DatabaseRefreshTokenHousekeeperTest extends TestCase
         self::assertSame(1, $database->select()->from('refresh_tokens')->count());
     }
 
+    public function testExpiredHistoryPruningHonorsLimitForLiveFamily(): void
+    {
+        if (!extension_loaded('pdo_sqlite')) {
+            self::markTestSkipped('pdo_sqlite is required for storage integration tests.');
+        }
+
+        $database = SqliteDatabaseFixture::create();
+        self::createSchema($database);
+        $store = new DatabaseRefreshTokenStore($database);
+        $subject = Uuid::fromString('018f6d5d-3f7a-7a9b-8c2f-123456789abc');
+        $store->storeInitial(new RefreshToken(self::TOKEN_B, $subject, self::FAMILY_A, 5000));
+
+        for ($i = 0; $i < 25; ++$i) {
+            $database
+                ->insert('refresh_tokens')
+                ->values([
+                    'token_hash' => hash('sha256', 'expired-' . $i),
+                    'family_id' => self::FAMILY_A,
+                    'user_id' => $subject->toString(),
+                    'expires_at' => 900,
+                    'consumed_at' => 800,
+                    'revoked_at' => 800,
+                ])
+                ->run();
+        }
+
+        self::assertSame(26, $database->select()->from('refresh_tokens')->count());
+        self::assertSame(
+            0,
+            (new DatabaseRefreshTokenHousekeeper($database))->cleanup(1000, 7),
+        );
+        self::assertSame(19, $database->select()->from('refresh_tokens')->count());
+        self::assertNotNull($store->findActiveSubject(self::TOKEN_B, 1001));
+    }
+
     public function testRotationExtendsIndexedFamilyRetentionDeadline(): void
     {
         if (!extension_loaded('pdo_sqlite')) {
