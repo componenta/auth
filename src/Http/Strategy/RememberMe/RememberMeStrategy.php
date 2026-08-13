@@ -8,7 +8,6 @@ use Componenta\Auth\AuthenticationResult;
 use Componenta\Auth\AuthenticationStrategyInterface;
 use Componenta\Auth\ContextInterface;
 use Componenta\Auth\Denied\InvalidCredentials;
-use Componenta\Auth\Http\CredentialTransportState;
 use Componenta\Auth\Http\Strategy\Session\UserProviderInterface;
 use Componenta\Auth\Http\Transport\SessionPayload;
 use Componenta\Auth\RememberMe\RememberMeRotation;
@@ -55,6 +54,9 @@ final readonly class RememberMeStrategy implements AuthenticationStrategyInterfa
         try {
             $identity = $this->provider->findByUuid($rotation->subjectId);
         } catch (\Throwable $exception) {
+            // The successor is already the only valid bearer but has not been
+            // returned to the client. Do not leave it active after provider
+            // infrastructure fails.
             $this->tokenManager->revoke($rotation->successorToken);
             throw $exception;
         }
@@ -96,13 +98,6 @@ final readonly class RememberMeStrategy implements AuthenticationStrategyInterfa
             return $this->denied();
         }
 
-        $transportState = $context->getAttribute(CredentialTransportState::class);
-        if ($transportState instanceof CredentialTransportState) {
-            $transportState->onDiscard(
-                fn(): void => $this->rollbackUnpublishedRotation($rotation, $session),
-            );
-        }
-
         return new AuthenticationResult(
             subject: $identity,
             transportPayload: new SessionPayload(
@@ -134,6 +129,12 @@ final readonly class RememberMeStrategy implements AuthenticationStrategyInterfa
         );
     }
 
+    /**
+     * The newly created/regenerated session and successor remember bearer have
+     * not been published to the client. Revoke both on a bind failure. A
+     * cleanup failure is intentionally not swallowed because it can leave
+     * credential state active and requires operator attention.
+     */
     private function rollbackUnpublishedRotation(
         RememberMeRotation $rotation,
         SessionInterface $session,
