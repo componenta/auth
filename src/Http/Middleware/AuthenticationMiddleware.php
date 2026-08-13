@@ -88,6 +88,9 @@ final readonly class AuthenticationMiddleware implements MiddlewareInterface
             $transportState->discardQueued();
         } elseif ($result->transportPayload !== null) {
             if ($this->storage === null) {
+                // The strategy may already have committed a server-side
+                // replacement. Compensate before surfacing configuration error.
+                $transportState->discardQueued();
                 throw new \LogicException(
                     'Authentication credential mutation requires a PayloadStorageInterface before downstream execution.',
                 );
@@ -132,7 +135,16 @@ final readonly class AuthenticationMiddleware implements MiddlewareInterface
             );
         }
 
-        $response = $handler->handle($request);
+        try {
+            $response = $handler->handle($request);
+        } catch (\Throwable $exception) {
+            if ($ownsTransportState) {
+                // No response can publish the queued replacement credential.
+                $transportState->discardQueued();
+            }
+
+            throw $exception;
+        }
 
         if (!$ownsTransportState || $transportState->empty) {
             return $response;
