@@ -20,6 +20,7 @@ interface RefreshTokenStoreInterface
      * Implementations must read this security state from the primary store.
      */
     public function findActiveSubject(
+        #[\SensitiveParameter]
         string $tokenId,
         int $now,
     ): ?UuidInterface;
@@ -29,7 +30,9 @@ interface RefreshTokenStoreInterface
      * one serialized transition. Replay must leave no active descendant.
      */
     public function rotateAtomically(
+        #[\SensitiveParameter]
         string $presentedTokenId,
+        #[\SensitiveParameter]
         string $successorTokenId,
         int $successorExpiresAt,
         int $now,
@@ -41,7 +44,11 @@ interface RefreshTokenStoreInterface
      * cannot escape revocation. Ordinary revocation is terminal but must not
      * mark the family as replay-compromised.
      */
-    public function revoke(string $tokenId, int $revokedAt): void;
+    public function revoke(
+        #[\SensitiveParameter]
+        string $tokenId,
+        int $revokedAt,
+    ): void;
 
     /**
      * Revokes every existing refresh family for the subject. Implementations
