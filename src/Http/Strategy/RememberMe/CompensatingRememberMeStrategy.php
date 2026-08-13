@@ -35,8 +35,11 @@ final readonly class CompensatingRememberMeStrategy implements AuthenticationStr
     }
 
     #[\Override]
-    public function attempt(object $payload, ContextInterface $context): AuthenticationResult
-    {
+    public function attempt(
+        #[\SensitiveParameter]
+        object $payload,
+        ContextInterface $context,
+    ): AuthenticationResult {
         $result = $this->strategy->attempt($payload, $context);
         $transportPayload = $result->transportPayload;
         $session = $result->session;
