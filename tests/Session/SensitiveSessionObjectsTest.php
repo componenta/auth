@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Componenta\Auth\Tests\Session;
 
 use Componenta\Auth\AuthenticationStrategyInterface;
+use Componenta\Auth\ContextInterface;
 use Componenta\Auth\Event\AllSessionsTerminated;
 use Componenta\Auth\Event\SessionRegenerated;
 use Componenta\Auth\Event\SessionsTerminated;
@@ -12,7 +13,10 @@ use Componenta\Auth\Exception\NoStrategyFoundException;
 use Componenta\Auth\Http\Strategy\Jwt\JwtStrategy;
 use Componenta\Auth\Http\Strategy\MagicLink\MagicLinkStrategy;
 use Componenta\Auth\Http\Strategy\Otp\OtpStrategy;
+use Componenta\Auth\Http\Strategy\Password\PasswordAwareInterface;
 use Componenta\Auth\Http\Strategy\Password\PasswordStrategy;
+use Componenta\Auth\Http\Strategy\Password\Payload;
+use Componenta\Auth\Http\Strategy\Password\UserProviderInterface;
 use Componenta\Auth\Http\Strategy\RememberMe\CompensatingRememberMeStrategy;
 use Componenta\Auth\Http\Strategy\RememberMe\RememberMeStrategy;
 use Componenta\Auth\Http\Strategy\Session\SessionStrategy;
@@ -20,6 +24,7 @@ use Componenta\Auth\RememberMe\RememberMeRotation;
 use Componenta\Auth\Session\DatabaseSessionManager;
 use Componenta\Auth\Session\Session;
 use Componenta\Auth\Session\SessionCollection;
+use Componenta\Identity\IdentityInterface;
 use Componenta\Identity\Uuid;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
@@ -117,35 +122,48 @@ final class SensitiveSessionObjectsTest extends TestCase
         }
     }
 
-    public function testSensitivePayloadIsRedactedFromActualExceptionTrace(): void
+    public function testConcreteStrategyTraceRedactsPayloadArguments(): void
     {
         $previous = ini_get('zend.exception_ignore_args');
         self::assertIsString($previous);
         self::assertNotFalse(ini_set('zend.exception_ignore_args', '0'));
 
         try {
-            $payload = new class {
-                public string $secret = 'trace-secret';
-            };
-            $exception = new NoStrategyFoundException($payload);
-            $frame = null;
-
-            foreach ($exception->getTrace() as $candidate) {
-                if (
-                    ($candidate['class'] ?? null) === NoStrategyFoundException::class
-                    && ($candidate['function'] ?? null) === '__construct'
-                ) {
-                    $frame = $candidate;
-                    break;
+            $provider = new class implements UserProviderInterface {
+                #[\Override]
+                public function findByIdentity(
+                    string $identity,
+                ): null|(IdentityInterface&PasswordAwareInterface) {
+                    throw new \RuntimeException('provider failure');
                 }
-            }
+            };
+            $strategy = new PasswordStrategy($provider);
+            $context = $this->createStub(ContextInterface::class);
+            $payload = new Payload('person@example.test', 'trace-secret');
 
-            self::assertIsArray($frame);
-            self::assertArrayHasKey('args', $frame);
-            self::assertInstanceOf(
-                SensitiveParameterValue::class,
-                $frame['args'][0] ?? null,
-            );
+            try {
+                $strategy->attempt($payload, $context);
+                self::fail('Provider exception was expected.');
+            } catch (\RuntimeException $exception) {
+                $frame = null;
+
+                foreach ($exception->getTrace() as $candidate) {
+                    if (
+                        ($candidate['class'] ?? null) === PasswordStrategy::class
+                        && ($candidate['function'] ?? null) === 'attempt'
+                    ) {
+                        $frame = $candidate;
+                        break;
+                    }
+                }
+
+                self::assertIsArray($frame);
+                self::assertArrayHasKey('args', $frame);
+                self::assertInstanceOf(
+                    SensitiveParameterValue::class,
+                    $frame['args'][0] ?? null,
+                );
+            }
         } finally {
             ini_set('zend.exception_ignore_args', $previous);
         }
