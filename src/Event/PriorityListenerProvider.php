@@ -11,6 +11,7 @@ final class PriorityListenerProvider implements EventListenerProviderInterface
     private bool $sorted = false;
 
     public function addListener(
+        #[\SensitiveParameter]
         EventListenerInterface $listener,
         int $priority = 0,
     ): void {
@@ -38,8 +39,10 @@ final class PriorityListenerProvider implements EventListenerProviderInterface
         }
     }
 
-    private static function assertEvents(EventListenerInterface $listener): void
-    {
+    private static function assertEvents(
+        #[\SensitiveParameter]
+        EventListenerInterface $listener,
+    ): void {
         $events = $listener->events;
 
         if ($events === []) {

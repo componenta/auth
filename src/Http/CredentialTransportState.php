@@ -82,8 +82,10 @@ final class CredentialTransportState
         }
     }
 
-    public function clear(PayloadStorageInterface $storage): void
-    {
+    public function clear(
+        #[\SensitiveParameter]
+        PayloadStorageInterface $storage,
+    ): void {
         $this->register($storage);
         $this->clear = true;
         $this->discardQueued();
