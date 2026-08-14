@@ -237,6 +237,7 @@ The repository release gate runs SQLite tests and real MySQL 8.4/InnoDB integrat
 - concurrent session regeneration and `terminateAll(subject)` cannot leave any session for that subject, regardless of which transition linearizes first.
 
 ## Verification
+
 Every supported matrix job runs:
 
 ```text
