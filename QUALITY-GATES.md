@@ -60,7 +60,7 @@ The suite must prove:
 23. one-time tokens are domain-separated by purpose;
 24. built-in delivery queue messages cannot look up one identity and deliver the credential to a different arbitrary destination;
 25. password reset success represents the complete recovery transition and password-policy rejection is explicit;
-26. denial attributes and bearer credentials are absent from public/debug serialization, and credential-bearing request/context/storage/event/session parameters, generated credential helper values, downstream PSR request-handler objects, application listener/storage objects, DI factory containers, SQL database/connection objects and SQL credential-state rows are redacted from package-owned exception frames when PHP exception arguments are enabled;
+26. denial attributes and bearer credentials are absent from public/debug serialization, and credential-bearing request/context/storage/event/session parameters, generated credential helper values, downstream PSR request-handler objects, application listener/storage/callback/custom-session objects, DI factory containers, SQL database/connection objects and SQL credential-state rows are redacted from package-owned exception frames when PHP exception arguments are enabled;
 27. every response-side credential store/remove mutation is non-cacheable, token-bearing responses are non-cacheable, and magic-link verification responses use `Referrer-Policy: no-referrer`;
 28. malformed inputs are rejected before provider/hash/storage work;
 29. credential-state reads use the primary/write connection;
@@ -79,7 +79,8 @@ The suite must prove:
 42. OTP and magic-link session verification complete fallible request-derived attribute extraction and success-response allocation before the one-time credential can be consumed;
 43. remember-me bind is idempotent when the critical session-regeneration listener has already rebound the same grant to the intended successor session;
 44. discarding queued credential state attempts every registered compensation before rethrowing the first failure actually encountered;
-45. logger failures cannot mask a critical auth-event failure or prevent later best-effort observers from running.
+45. logger failures cannot mask a critical auth-event failure or prevent later best-effort observers from running;
+46. password-reset, magic-link-request and OTP-request handlers fully construct their local success response before invoking the complete password-reset transition or enqueueing durable credential work, so a local response-construction failure cannot consume a reset credential or enqueue a retry-inducing credential request.
 
 ## Real MySQL concurrency gate
 
