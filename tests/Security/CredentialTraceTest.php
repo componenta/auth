@@ -147,6 +147,9 @@ final class CredentialTraceTest extends TestCase
     {
         $collection = new SessionCollection();
         $exception = $this->capture(static function () use ($collection): void {
+            // Deliberately crosses the static contract to exercise the public
+            // runtime validation path for untyped/external PHP callers.
+            // @phpstan-ignore-next-line
             $collection->find(['collection-session-secret', 42]);
         });
 
