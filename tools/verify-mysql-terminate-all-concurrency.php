@@ -200,12 +200,13 @@ function resetTerminateAllSchema(DatabaseInterface $database): void
         SQL);
 }
 
+/** @param list<int> $pids */
 function terminateAllCleanupRaceDir(string $dir, array $pids, string $releasePath): void
 {
     @file_put_contents($releasePath, '1');
 
     foreach ($pids as $pid) {
-        pcntl_waitpid($pid, $status, WNOHANG);
+        pcntl_waitpid($pid, $status);
     }
 
     foreach (glob($dir . '/*') ?: [] as $path) {
