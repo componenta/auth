@@ -38,7 +38,7 @@ Explicit password и OTP session login полностью заменяют ст�
 
 ## Sessions
 
-`DatabaseSessionManager` читает security state только с primary/write connection, проверяет idle/absolute expiry, throttles touch, регенерирует session транзакционно и сразу инвалидирует старый ID. Старый ID никогда не разрешается в successor. Termination сериализуется с regeneration и удаляет уже созданную replacement lineage, поэтому конкурентный logout не оставляет активный successor. Critical lifecycle listeners выполняются внутри owning transition, observers — после commit.
+`DatabaseSessionManager` читает security state только с primary/write connection, проверяет idle/absolute expiry, throttles touch, регенерирует session транзакционно и сразу инвалидирует старый ID. Старый ID никогда не разрешается в successor. Termination сериализуется с regeneration и удаляет уже созданную replacement lineage, поэтому конкурентный logout не оставляет активный successor. Subject-wide `terminateAll()` также сериализуется с regeneration: конкурентная ротация session не может пережить массовое завершение sessions пользователя. Critical lifecycle listeners выполняются внутри owning transition, observers — после commit.
 
 Session timestamps всегда UTC и используют внутренний фиксированный формат `Y-m-d H:i:s`; это больше не пользовательская настройка.
 
@@ -104,7 +104,7 @@ SHA-256(purpose || NUL || bearer)
 
 Поэтому token одного flow не принимается другим manager даже при ошибочно общей таблице.
 
-`TokenRequest` содержит lookup/delivery identity, обязательный machine-readable `purpose` и optional non-sensitive context; отдельного untrusted destination нет. `TokenRequestQueueInterface` — durable multi-purpose queue boundary: adapter обязан сохранить и маршрутизировать `purpose`, а purpose-bound `TokenRequestProcessor` отклоняет ошибочно маршрутизированное сообщение до provider lookup, token generation и delivery. Production adapter не должен выполнять provider lookup/delivery inline, если важна uniform account-existence request latency.
+`TokenRequest` содержит lookup/delivery identity, обязательный machine-readable `purpose` и optional non-sensitive context; отдельного untrusted destination нет. Context keys ограничены machine-readable identifiers, значения ограничены 4096 bytes и не допускают control characters до передачи queue adapter или sender, который строит URL. `TokenRequestQueueInterface` — durable multi-purpose queue boundary: adapter обязан сохранить и маршрутизировать `purpose`, а purpose-bound `TokenRequestProcessor` отклоняет ошибочно маршрутизированное сообщение до provider lookup, token generation и delivery. Production adapter не должен выполнять provider lookup/delivery inline, если важна uniform account-existence request latency.
 
 Magic-link verification responses получают `Referrer-Policy: no-referrer` и на success, и на denial path, поэтому bearer из URL не передаётся дальше как referrer. При этом query-string credential всё ещё может попасть в browser history и upstream reverse-proxy/access logs **до** применения response headers; deployment должен редактировать query credentials в логах и не подключать third-party resources на verify endpoint. Сам bearer остаётся one-time независимо от transport.
 
@@ -132,7 +132,11 @@ Credential responses получают `Cache-Control: no-store` и `Pragma: no-c
 interface EventListenerInterface
 {
     public array $events { get; }
-    public function handleEvent(EventInterface $event): void;
+
+    public function handleEvent(
+        #[\SensitiveParameter]
+        EventInterface $event,
+    ): void;
 }
 ```
 
@@ -142,7 +146,7 @@ Event DTO не создают `Clock` самостоятельно: timestamp о
 
 Componenta factories также используют общий PSR-20 `ClockInterface` для event timestamps, JWT access/refresh issuance/validation и logout observer time. Constructor defaults остаются только fallback для прямого создания объектов вне стандартного Componenta container.
 
-Credential-bearing DTO скрывают bearer material в debug/JSON. Package-owned bearer-facing manager methods используют `#[SensitiveParameter]` там, где raw bearer пересекает exception-prone boundary; custom adapters должны соблюдать тот же контракт и не публиковать stack traces внешним клиентам.
+Credential-bearing DTO скрывают bearer material в debug/JSON. Package-owned exception-prone boundaries редактируют credential-bearing request/context/storage/event/session arguments, generated credential helper values и DI container objects, которые могут содержать configuration secrets. PHP parameter attributes не наследуются concrete implementations, поэтому custom strategies, stores, listeners, senders и factories должны повторять эквивалентные `#[SensitiveParameter]` annotations на собственных credential/config-bearing frames. Third-party implementations отвечают за свои stack frames; application не должна публиковать stack traces внешним клиентам.
 
 ## Denials и malformed input
 
@@ -156,7 +160,7 @@ Cookie-authenticated state-changing endpoints, включая logout там, г�
 
 Credential-state reads session/remember/one-time/refresh/OTP pinned к Cycle WRITE driver: replica lag не может воскресить revoked credential.
 
-Release gate использует SQLite и реальный MySQL 8.4/InnoDB. Дополнительный `pcntl` gate запускает независимые процессы/connections и проверяет реальные race:
+Release gate использует SQLite и реальный MySQL 8.4/InnoDB. Отдельные `pcntl` gates запускают независимые процессы/connections и проверяют реальные race:
 
 - два concurrent refresh rotate: один `rotated`, второй `reused`, после compromise active descendants = 0;
 - concurrent refresh rotate и ordinary revoke: family revoked, `compromised_at` остаётся `NULL`, active successors = 0;
@@ -164,7 +168,8 @@ Release gate использует SQLite и реальный MySQL 8.4/InnoDB. �
 - два concurrent verify одного OTP: только один `verified`;
 - correct OTP против final wrong attempt: после достижения `maxAttempts` успешная authentication невозможна;
 - concurrent remember rotate и logout: descendant remember grant отсутствует;
-- concurrent session regenerate и logout: active replacement session отсутствует.
+- concurrent session regenerate и logout: active replacement session отсутствует;
+- concurrent session regenerate и `terminateAll(subject)` не оставляет ни одной session этого subject независимо от того, какой transition linearizes first.
 
 Матрица: PHP 8.4/8.5 × DI 2/3, PHPStan max, Composer audit, PHPUnit, MySQL 8.4 и `git diff --check`.
 

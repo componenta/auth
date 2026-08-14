@@ -45,7 +45,7 @@ The suite must prove:
 8. missing credential storage fails before downstream business code executes;
 9. request-local session state never lives on a reusable identity;
 10. a replaced session ID becomes invalid immediately and never resolves to its successor;
-11. terminating a presented session serializes with regeneration and cannot leave an already-created replacement descendant;
+11. terminating a presented session or all sessions for a subject serializes with regeneration and cannot leave an active replacement descendant;
 12. cleanup retains replaced-session lineage tombstones until absolute expiry, so a logout holding an older authenticated ID can still terminate its active successor after regeneration grace has elapsed;
 13. session critical listeners are fail-fast inside the owning transition while observers run after commit;
 14. remember-me is disabled by default and enabling it activates the critical lifecycle listeners;
@@ -60,7 +60,7 @@ The suite must prove:
 23. one-time tokens are domain-separated by purpose;
 24. built-in delivery queue messages cannot look up one identity and deliver the credential to a different arbitrary destination;
 25. password reset success represents the complete recovery transition and password-policy rejection is explicit;
-26. denial attributes and bearer credentials are absent from public/debug serialization, and credential-bearing request/context/storage/event/session parameters and SQL credential-state rows are redacted from exception traces when PHP exception arguments are enabled;
+26. denial attributes and bearer credentials are absent from public/debug serialization, and credential-bearing request/context/storage/event/session parameters, generated credential helper values, DI factory containers and SQL credential-state rows are redacted from package-owned exception frames when PHP exception arguments are enabled;
 27. every response-side credential store/remove mutation is non-cacheable, token-bearing responses are non-cacheable, and magic-link verification responses use `Referrer-Policy: no-referrer`;
 28. malformed inputs are rejected before provider/hash/storage work;
 29. credential-state reads use the primary/write connection;
@@ -83,9 +83,9 @@ The suite must prove:
 
 ## Real MySQL concurrency gate
 
-`tools/verify-mysql-concurrency.php` uses `pcntl_fork`, a barrier and independent MySQL connections. It is deliberately separate from ordinary unit tests so races are not simulated as sequential calls.
+`tools/verify-mysql-concurrency.php` and `tools/verify-mysql-terminate-all-concurrency.php` use `pcntl_fork`, barriers and independent MySQL connections. They are deliberately separate from ordinary unit tests so races are not simulated as sequential calls.
 
-It asserts:
+They assert:
 
 ### Refresh rotation versus replay
 
@@ -113,6 +113,10 @@ One worker rotates the remember bearer while another revokes the originating ses
 
 One worker regenerates the authenticated session while another logout path terminates the presented old session. Regardless of ordering, termination cannot leave an active replacement session.
 
+### Session regeneration versus subject-wide termination
+
+Directed races exercise both orderings between `regenerate()` and `terminateAll(subject)`. If regeneration linearizes first, subject-wide termination must delete the replacement as well. If subject-wide termination linearizes first, the later regeneration must fail. After both workers complete, the subject has zero session rows.
+
 ## Database-store conformance
 
 SQLite provides deterministic rollback and edge-case coverage. MySQL 8.4 independently exercises dialect-sensitive UPSERT, CAS, FK and transaction behavior.
@@ -138,10 +142,11 @@ The package does not own the application's password repository, message broker, 
 - magic-link query credentials are redacted from reverse-proxy/access logs and verification pages do not load untrusted third-party resources;
 - access to credential-bearing session persistence and database logs is restricted;
 - custom credential stores pass equivalent concurrency and primary-read tests and honor the strengthened family/session-lineage contracts;
-- custom authentication strategies, authenticators, payload extractors/storages, senders, event listeners and credential stores repeat `#[SensitiveParameter]` on concrete credential-bearing parameters because PHP parameter attributes are not inherited from interfaces.
+- custom authentication strategies, authenticators, payload extractors/storages, senders, event listeners and credential stores repeat `#[SensitiveParameter]` on concrete credential-bearing parameters because PHP parameter attributes are not inherited from interfaces;
+- custom DI factories should likewise redact secret-bearing container/config arguments on concrete package/application frames.
 
 Third-party PSR/database/provider implementations remain responsible for redacting their own stack frames; Componenta can only mask arguments on frames it owns.
 
 ## Release decision
 
-Green PHPUnit alone is insufficient. The **exact final HEAD** must have all four matrix jobs successful, including MySQL 8.4 integration, PHPStan max, Composer audit and the real concurrency gate.
+Green PHPUnit alone is insufficient. The **exact final HEAD** must have all four matrix jobs successful, including MySQL 8.4 integration, PHPStan max, Composer audit and both real concurrency gates.

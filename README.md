@@ -74,6 +74,7 @@ The built-in `DatabaseSessionManager`:
 - invalidates the presented old session ID immediately after successful regeneration;
 - never resolves an old ID to its successor;
 - serializes termination with regeneration and terminates any already-created replacement lineage;
+- serializes subject-wide `terminateAll()` with regeneration so a concurrent rotation cannot escape global session termination;
 - executes critical lifecycle participants inside the owning transaction and observers after commit;
 - performs bounded cleanup with an expiry recheck before delete.
 
@@ -158,7 +159,7 @@ SHA-256(purpose || NUL || bearer)
 
 Therefore a magic-link token cannot be consumed by a password-reset manager even if an application accidentally points both managers at the same table.
 
-`TokenRequest` contains the lookup/delivery identity, an explicit machine-readable `purpose`, and optional non-sensitive context; it does not accept a separate untrusted destination. `TokenRequestQueueInterface` is a durable multi-purpose queue boundary: adapters must preserve and route on `purpose`, while a purpose-bound `TokenRequestProcessor` rejects misrouted work before provider lookup, token generation or delivery. Production adapters should not perform provider lookup or delivery inline when uniform account-existence request timing matters.
+`TokenRequest` contains the lookup/delivery identity, an explicit machine-readable `purpose`, and optional non-sensitive context; it does not accept a separate untrusted destination. Context keys are bounded machine-readable identifiers and context values are bounded to 4096 bytes and reject control characters before they can reach a queue adapter or URL-building sender. `TokenRequestQueueInterface` is a durable multi-purpose queue boundary: adapters must preserve and route on `purpose`, while a purpose-bound `TokenRequestProcessor` rejects misrouted work before provider lookup, token generation or delivery. Production adapters should not perform provider lookup or delivery inline when uniform account-existence request timing matters.
 
 Magic-link verification responses set `Referrer-Policy: no-referrer`, including success and denial paths, so a URL-borne bearer is not propagated as a downstream referrer. Query-string credentials can still reach browser history and upstream reverse-proxy/access logs **before** application response headers are applied; deployments should redact query credentials from logs and avoid third-party resources on verification endpoints. The bearer remains one-time regardless of transport.
 
@@ -197,7 +198,10 @@ interface EventListenerInterface
     /** @var non-empty-list<class-string<EventInterface>> */
     public array $events { get; }
 
-    public function handleEvent(EventInterface $event): void;
+    public function handleEvent(
+        #[\SensitiveParameter]
+        EventInterface $event,
+    ): void;
 }
 ```
 
@@ -207,7 +211,7 @@ Event DTOs do not create clocks. Their timestamp is mandatory and is supplied by
 
 Componenta factories also honor the shared PSR-20 `ClockInterface` for event timestamps, JWT access/refresh issuance/validation and logout observer time. Constructor defaults remain only as a direct-construction fallback for non-Componenta containers.
 
-Credential-bearing DTOs and audit containers use redacted debug/JSON representations. Generic authentication events contain payload type/subject UUID metadata, never raw credentials. Package-owned bearer-facing manager methods use `#[SensitiveParameter]` where raw bearer strings cross exception-prone boundaries; applications should apply the same rule to custom adapters and should not expose exception traces to untrusted clients.
+Credential-bearing DTOs and audit containers use redacted debug/JSON representations. Generic authentication events contain payload type/subject UUID metadata, never raw credentials. Package-owned exception-prone boundaries redact credential-bearing request/context/storage/event/session arguments, generated credential helper values, and DI container objects that may carry configuration secrets. PHP parameter attributes are not inherited by concrete implementations, so custom strategies, stores, listeners, senders and factories must apply equivalent `#[SensitiveParameter]` annotations on their own credential/config-bearing frames. Third-party implementations remain responsible for their own stack frames, and applications should not expose exception traces to untrusted clients.
 
 ## Denial responses and malformed input
 
@@ -221,7 +225,7 @@ Cookie-authenticated state-changing endpoints, including logout where appropriat
 
 Authentication-state reads in the built-in session, remember-me, one-time, refresh and OTP stores are pinned to the Cycle `WRITE` driver. A lagging read replica must never resurrect revoked credentials.
 
-The repository release gate runs SQLite tests and real MySQL 8.4/InnoDB integration. A separate `pcntl` concurrency gate starts independent processes/connections and proves:
+The repository release gate runs SQLite tests and real MySQL 8.4/InnoDB integration. Separate `pcntl` concurrency gates start independent processes/connections and prove:
 
 - concurrent refresh rotation results in one rotation plus replay compromise and leaves zero active descendants;
 - concurrent refresh rotation versus ordinary revocation leaves the family revoked, uncompromised, and with zero active successors;
@@ -229,7 +233,8 @@ The repository release gate runs SQLite tests and real MySQL 8.4/InnoDB integrat
 - concurrent verification of one OTP is single-winner;
 - a correct OTP racing the final wrong attempt cannot authenticate after the challenge has reached `maxAttempts`;
 - concurrent remember-me rotation and logout cannot leave a descendant grant;
-- concurrent session regeneration and logout cannot leave an active replacement session.
+- concurrent session regeneration and logout cannot leave an active replacement session;
+- concurrent session regeneration and `terminateAll(subject)` cannot leave any session for that subject, regardless of which transition linearizes first.
 
 ## Verification
 
@@ -242,7 +247,7 @@ PHP 8.5 / DI 2.x
 PHP 8.5 / DI 3.x
 ```
 
-and executes syntax checks, PHPUnit, PHPStan level max, Composer audit, MySQL 8.4 integration, the real concurrency gate and repository invariants from `tools/verify.sh`.
+and executes syntax checks, PHPUnit, PHPStan level max, Composer audit, MySQL 8.4 integration, the real concurrency gates and repository invariants from `tools/verify.sh`.
 
 Third-party GitHub Actions are pinned to immutable 40-character commit SHAs. `tools/verify.sh` rejects floating action refs so a future tag move cannot silently change the release gate.
 
