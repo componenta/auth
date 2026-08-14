@@ -368,8 +368,8 @@ final class CredentialTraceTest extends TestCase
         string ...$secrets,
     ): void {
         foreach ($secrets as $secret) {
-            /** @var \SplObjectStorage<object, null> $seen */
-            $seen = new \SplObjectStorage();
+            /** @var array<int, true> $seen */
+            $seen = [];
 
             foreach ($exception->getTrace() as $frame) {
                 foreach ($frame['args'] ?? [] as $argument) {
@@ -382,11 +382,11 @@ final class CredentialTraceTest extends TestCase
         }
     }
 
-    /** @param \SplObjectStorage<object, null> $seen */
+    /** @param array<int, true> $seen */
     private static function traceValueContains(
         mixed $value,
         string $secret,
-        \SplObjectStorage $seen,
+        array &$seen,
         int $depth = 0,
     ): bool {
         if ($depth > 16 || $value instanceof \SensitiveParameterValue) {
@@ -411,11 +411,13 @@ final class CredentialTraceTest extends TestCase
             return false;
         }
 
-        if ($seen->contains($value)) {
+        $objectId = spl_object_id($value);
+
+        if (isset($seen[$objectId])) {
             return false;
         }
 
-        $seen->attach($value);
+        $seen[$objectId] = true;
 
         foreach ((array) $value as $item) {
             if (self::traceValueContains($item, $secret, $seen, $depth + 1)) {
