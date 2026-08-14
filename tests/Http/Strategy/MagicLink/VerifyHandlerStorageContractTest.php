@@ -14,8 +14,17 @@ final class VerifyHandlerStorageContractTest extends TestCase
     {
         $constructor = (new \ReflectionClass(VerifyHandler::class))->getConstructor();
         self::assertNotNull($constructor);
-        $parameters = $constructor->getParameters();
-        $type = $parameters[3]->getType();
+
+        $storage = null;
+        foreach ($constructor->getParameters() as $parameter) {
+            if ($parameter->getName() === 'storage') {
+                $storage = $parameter;
+                break;
+            }
+        }
+
+        self::assertInstanceOf(\ReflectionParameter::class, $storage);
+        $type = $storage->getType();
 
         self::assertInstanceOf(\ReflectionNamedType::class, $type);
         self::assertSame(ReplacingPayloadStorage::class, $type->getName());
