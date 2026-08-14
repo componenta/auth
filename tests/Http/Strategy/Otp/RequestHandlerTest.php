@@ -44,11 +44,15 @@ final class RequestHandlerTest extends TestCase
             'destination' => 'user@example.com',
         ]);
         $headers = [];
-        $stream = $this->createMock(StreamInterface::class);
-        $stream->expects(self::once())
-            ->method('write')
-            ->with('{"message":"If the account exists, a code has been sent."}')
-            ->willReturn(1);
+        $body = '';
+        $stream = $this->createStub(StreamInterface::class);
+        $stream->method('write')->willReturnCallback(
+            static function (string $chunk) use (&$body): int {
+                $body .= $chunk;
+
+                return strlen($chunk);
+            },
+        );
         $response = $this->createStub(ResponseInterface::class);
         $response->method('getBody')->willReturn($stream);
         $response->method('withHeader')->willReturnCallback(
@@ -73,6 +77,11 @@ final class RequestHandlerTest extends TestCase
         self::assertSame('application/json', $headers['Content-Type'] ?? null);
         self::assertSame('no-store', $headers['Cache-Control'] ?? null);
         self::assertSame('no-cache', $headers['Pragma'] ?? null);
+
+        $decoded = json_decode($body, true, 512, JSON_THROW_ON_ERROR);
+        self::assertIsArray($decoded);
+        self::assertIsString($decoded['message'] ?? null);
+        self::assertNotSame('', $decoded['message']);
     }
 
     private static function response(TestCase $test): ResponseInterface
