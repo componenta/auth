@@ -148,6 +148,8 @@ final class DatabaseRefreshTokenStoreIntegrationTest extends TestCase
             2000,
         ));
 
+        $insertFailed = false;
+
         try {
             $store->rotateAtomically(
                 self::TOKEN_A,
@@ -155,11 +157,11 @@ final class DatabaseRefreshTokenStoreIntegrationTest extends TestCase
                 3000,
                 1000,
             );
-            self::fail('Duplicate successor token must fail.');
         } catch (\Throwable) {
-            // The important invariant is that the transaction rolls the
-            // presented-token claim and family deadline back with the failed insert.
+            $insertFailed = true;
         }
+
+        self::assertTrue($insertFailed, 'Duplicate successor token must fail.');
 
         $family = $database
             ->select('expires_at')
