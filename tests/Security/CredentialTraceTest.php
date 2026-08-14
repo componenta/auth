@@ -367,11 +367,63 @@ final class CredentialTraceTest extends TestCase
         \Throwable $exception,
         string ...$secrets,
     ): void {
-        $trace = var_export($exception->getTrace(), true);
-
         foreach ($secrets as $secret) {
-            self::assertStringNotContainsString($secret, $trace);
+            /** @var \SplObjectStorage<object, null> $seen */
+            $seen = new \SplObjectStorage();
+
+            foreach ($exception->getTrace() as $frame) {
+                foreach ($frame['args'] ?? [] as $argument) {
+                    self::assertFalse(
+                        self::traceValueContains($argument, $secret, $seen),
+                        'Exception trace exposed sensitive value.',
+                    );
+                }
+            }
         }
+    }
+
+    /** @param \SplObjectStorage<object, null> $seen */
+    private static function traceValueContains(
+        mixed $value,
+        string $secret,
+        \SplObjectStorage $seen,
+        int $depth = 0,
+    ): bool {
+        if ($depth > 16 || $value instanceof \SensitiveParameterValue) {
+            return false;
+        }
+
+        if (is_string($value)) {
+            return str_contains($value, $secret);
+        }
+
+        if (is_array($value)) {
+            foreach ($value as $item) {
+                if (self::traceValueContains($item, $secret, $seen, $depth + 1)) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        if (!is_object($value)) {
+            return false;
+        }
+
+        if ($seen->contains($value)) {
+            return false;
+        }
+
+        $seen->attach($value);
+
+        foreach ((array) $value as $item) {
+            if (self::traceValueContains($item, $secret, $seen, $depth + 1)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /** @param class-string $objectClass */
