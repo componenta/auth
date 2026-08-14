@@ -36,6 +36,45 @@ final class RequestHandlerTest extends TestCase
         );
     }
 
+    public function testValidIdentityQueuesRequestAndReturnsNonCacheableJson(): void
+    {
+        $queue = new OtpRequestQueueFixture();
+        $request = $this->createStub(ServerRequestInterface::class);
+        $request->method('getParsedBody')->willReturn([
+            'destination' => 'user@example.com',
+        ]);
+        $headers = [];
+        $stream = $this->createMock(StreamInterface::class);
+        $stream->expects(self::once())
+            ->method('write')
+            ->with('{"message":"If the account exists, a code has been sent."}')
+            ->willReturn(1);
+        $response = $this->createStub(ResponseInterface::class);
+        $response->method('getBody')->willReturn($stream);
+        $response->method('withHeader')->willReturnCallback(
+            static function (string $name, string $value) use (&$headers, $response): ResponseInterface {
+                $headers[$name] = $value;
+
+                return $response;
+            },
+        );
+        $factory = $this->createMock(ResponseFactoryInterface::class);
+        $factory->expects(self::once())
+            ->method('createResponse')
+            ->with(200)
+            ->willReturn($response);
+
+        self::assertSame(
+            $response,
+            (new RequestHandler($queue, $factory))->handle($request),
+        );
+        self::assertInstanceOf(OtpRequest::class, $queue->request);
+        self::assertSame('user@example.com', $queue->request->identity);
+        self::assertSame('application/json', $headers['Content-Type'] ?? null);
+        self::assertSame('no-store', $headers['Cache-Control'] ?? null);
+        self::assertSame('no-cache', $headers['Pragma'] ?? null);
+    }
+
     private static function response(TestCase $test): ResponseInterface
     {
         $stream = $test->createStub(StreamInterface::class);
@@ -45,5 +84,15 @@ final class RequestHandlerTest extends TestCase
         $response->method('withHeader')->willReturnSelf();
 
         return $response;
+    }
+}
+
+final class OtpRequestQueueFixture implements OtpRequestQueueInterface
+{
+    public ?OtpRequest $request = null;
+
+    public function enqueue(OtpRequest $request): void
+    {
+        $this->request = $request;
     }
 }
