@@ -19,11 +19,11 @@ final class SessionCollectionTraceTest extends TestCase
         ]);
         $secret = 'filter-callback-secret';
         $callback = static function (SessionInterface $session) use ($secret): bool {
-            if ($secret !== '' && $session->id !== '') {
-                throw new SessionCollectionTraceFailure('filter failed');
-            }
-
-            return true;
+            throw new SessionCollectionTraceFailure(sprintf(
+                'filter failed for %s with %d captured bytes',
+                $session->id,
+                strlen($secret),
+            ));
         };
         $exception = $this->capture(
             static fn() => $collection->filter($callback),

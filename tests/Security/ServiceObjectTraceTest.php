@@ -51,11 +51,10 @@ final class ServiceObjectTraceTest extends TestCase
         $state->clear($storage);
         $secret = 'discard-callback-secret';
         $callback = static function () use ($secret): void {
-            if ($secret === '') {
-                return;
-            }
-
-            throw new ServiceObjectTraceFailure('discard callback failed');
+            throw new ServiceObjectTraceFailure(sprintf(
+                'discard callback failed with %d captured bytes',
+                strlen($secret),
+            ));
         };
         $exception = $this->capture(
             static fn() => $state->onDiscard($callback),
