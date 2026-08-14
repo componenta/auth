@@ -22,6 +22,7 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
     private const int LOCK_NONCE_BYTES = 16;
 
     public function __construct(
+        #[\SensitiveParameter]
         private DatabaseInterface $database,
         private DatabaseRefreshTokenStoreConfig $config = new DatabaseRefreshTokenStoreConfig(),
     ) {}
@@ -37,7 +38,10 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
             );
         }
 
-        $this->database->transaction(function (DatabaseInterface $database) use ($token): void {
+        $this->database->transaction(function (
+            #[\SensitiveParameter]
+            DatabaseInterface $database,
+        ) use ($token): void {
             $database
                 ->insert($this->config->familyTable)
                 ->values([
@@ -170,7 +174,10 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
         );
 
         return $this->database->transaction(
-            function (DatabaseInterface $database) use (
+            function (
+                #[\SensitiveParameter]
+                DatabaseInterface $database,
+            ) use (
                 $presentedHash,
                 $successorTokenId,
                 $successorExpiresAt,
@@ -345,7 +352,10 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
         );
 
         $this->database->transaction(
-            function (DatabaseInterface $database) use (
+            function (
+                #[\SensitiveParameter]
+                DatabaseInterface $database,
+            ) use (
                 $familyId,
                 $revokedAt,
             ): void {
@@ -398,7 +408,10 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
         $subject = $subjectId->toString();
 
         $this->database->transaction(
-            function (DatabaseInterface $database) use (
+            function (
+                #[\SensitiveParameter]
+                DatabaseInterface $database,
+            ) use (
                 $subject,
                 $revokedAt,
             ): void {
@@ -429,6 +442,7 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
      * terminal status that blocked the claim.
      */
     private function claimActiveFamily(
+        #[\SensitiveParameter]
         DatabaseInterface $database,
         #[\SensitiveParameter]
         string $familyId,
@@ -475,6 +489,7 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
     }
 
     private function compromiseFamily(
+        #[\SensitiveParameter]
         DatabaseInterface $database,
         #[\SensitiveParameter]
         string $familyId,
@@ -502,6 +517,7 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
 
     /** @return array<array-key, mixed>|null */
     private function findToken(
+        #[\SensitiveParameter]
         DatabaseInterface $database,
         #[\SensitiveParameter]
         string $tokenHash,
@@ -528,6 +544,7 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
 
     /** @return array<array-key, mixed>|null */
     private function findFamily(
+        #[\SensitiveParameter]
         DatabaseInterface $database,
         #[\SensitiveParameter]
         string $familyId,

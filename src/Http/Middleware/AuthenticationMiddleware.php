@@ -33,6 +33,7 @@ final readonly class AuthenticationMiddleware implements MiddlewareInterface
     public function process(
         #[\SensitiveParameter]
         ServerRequestInterface $request,
+        #[\SensitiveParameter]
         RequestHandlerInterface $handler,
     ): ResponseInterface {
         // A denial produced by an earlier authentication layer is terminal.

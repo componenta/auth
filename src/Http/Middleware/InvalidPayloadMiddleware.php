@@ -20,6 +20,7 @@ final readonly class InvalidPayloadMiddleware implements MiddlewareInterface
     public function process(
         #[\SensitiveParameter]
         ServerRequestInterface $request,
+        #[\SensitiveParameter]
         RequestHandlerInterface $handler,
     ): ResponseInterface {
         try {

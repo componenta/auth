@@ -22,6 +22,7 @@ final readonly class TouchSessionMiddleware implements MiddlewareInterface
     public function process(
         #[\SensitiveParameter]
         ServerRequestInterface $request,
+        #[\SensitiveParameter]
         RequestHandlerInterface $handler,
     ): ResponseInterface {
         $session = $request->getAttribute(SessionInterface::class);

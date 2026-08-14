@@ -31,6 +31,7 @@ final readonly class SessionGarbageCollectionMiddleware implements MiddlewareInt
     public function process(
         #[\SensitiveParameter]
         ServerRequestInterface $request,
+        #[\SensitiveParameter]
         RequestHandlerInterface $handler,
     ): ResponseInterface {
         $response = $handler->handle($request);

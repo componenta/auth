@@ -30,6 +30,7 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
     private DateTimeFactoryInterface $dateTimeFactory;
 
     public function __construct(
+        #[\SensitiveParameter]
         private DatabaseInterface $database,
         private SessionIdGeneratorInterface $idGenerator,
         DateTimeFactoryInterface $dateTimeFactory,
@@ -212,7 +213,10 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
         $now = $this->dateTimeFactory->now();
         $event = null;
 
-        $this->database->transaction(function (DatabaseInterface $database) use (
+        $this->database->transaction(function (
+            #[\SensitiveParameter]
+            DatabaseInterface $database,
+        ) use (
             $ids,
             $now,
             &$event,
@@ -448,6 +452,7 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
      * @return list<string>
      */
     private function terminationLineageIds(
+        #[\SensitiveParameter]
         DatabaseInterface $database,
         #[\SensitiveParameter]
         array $ids,
@@ -512,6 +517,7 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
 
     /** @return array<array-key, mixed>|null */
     private function findRow(
+        #[\SensitiveParameter]
         DatabaseInterface $database,
         #[\SensitiveParameter]
         string $sessionId,

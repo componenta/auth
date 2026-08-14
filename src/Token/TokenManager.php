@@ -19,6 +19,7 @@ final readonly class TokenManager implements TokenManagerInterface
     private DateTimeFactoryInterface $dateTimeFactory;
 
     public function __construct(
+        #[\SensitiveParameter]
         private DatabaseInterface $database,
         DateTimeFactoryInterface $dateTimeFactory,
         private TokenConfig $config,

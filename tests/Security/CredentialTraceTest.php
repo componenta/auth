@@ -31,6 +31,7 @@ use Componenta\Auth\Session\Session;
 use Componenta\Auth\Session\SessionCollection;
 use Componenta\Auth\Session\SessionIdGeneratorInterface;
 use Componenta\Auth\Tests\Support\ServerRequestFixture;
+use Componenta\Auth\Tests\Support\SqliteDatabaseFixture;
 use Componenta\Clock\FrozenClock;
 use Componenta\Identity\Uuid;
 use Componenta\Identity\UuidInterface;
@@ -83,10 +84,9 @@ final class CredentialTraceTest extends TestCase
 
     public function testPasswordRequestAndContextDoNotAppearInTrace(): void
     {
-        $failure = new \RuntimeException('strategy failed');
         $handler = new LoginHandler(
             new PasswordExtractor(),
-            new Authenticator(new CredentialTraceThrowingStrategy($failure)),
+            new Authenticator(new CredentialTraceThrowingStrategy()),
             $this->createStub(\Componenta\Auth\Session\SessionManagerInterface::class),
             $this->createStub(PayloadStorageInterface::class),
             $this->createStub(DeniedResponseFactoryInterface::class),
@@ -101,15 +101,18 @@ final class CredentialTraceTest extends TestCase
             static fn() => $handler->handle($request),
         );
 
-        self::assertSame($failure, $exception);
+        self::assertInstanceOf(CredentialTraceFailure::class, $exception);
         self::assertTraceHides($exception, 'request-password-secret');
     }
 
     public function testSessionCreationDoesNotExposeArbitraryAttributes(): void
     {
-        $failure = new \RuntimeException('session persistence failed');
         $database = $this->createStub(DatabaseInterface::class);
-        $database->method('insert')->willThrowException($failure);
+        $database->method('insert')->willReturnCallback(
+            static fn() => throw new CredentialTraceFailure(
+                'session persistence failed',
+            ),
+        );
         $idGenerator = $this->createStub(SessionIdGeneratorInterface::class);
         $idGenerator->method('generate')->willReturn('generated-session-id');
         $manager = new DatabaseSessionManager(
@@ -127,7 +130,7 @@ final class CredentialTraceTest extends TestCase
             ]);
         });
 
-        self::assertSame($failure, $exception);
+        self::assertInstanceOf(CredentialTraceFailure::class, $exception);
         self::assertTraceHides($exception, 'session-attribute-secret');
     }
 
@@ -166,9 +169,10 @@ final class CredentialTraceTest extends TestCase
 
     public function testOtpStoreFailureDoesNotExposePlainCode(): void
     {
-        $failure = new \RuntimeException('database failed');
         $database = $this->createStub(DatabaseInterface::class);
-        $database->method('insert')->willThrowException($failure);
+        $database->method('insert')->willReturnCallback(
+            static fn() => throw new CredentialTraceFailure('database failed'),
+        );
         $store = new DatabaseCodeStore($database, str_repeat('k', 32));
         $code = new StoredCode(
             self::subjectId(),
@@ -181,8 +185,76 @@ final class CredentialTraceTest extends TestCase
             static fn() => $store->store($code),
         );
 
-        self::assertSame($failure, $exception);
+        self::assertInstanceOf(CredentialTraceFailure::class, $exception);
         self::assertTraceHides($exception, '654321');
+    }
+
+    public function testDatabaseConstructorDoesNotExposeDatabaseObject(): void
+    {
+        $database = $this->createStub(DatabaseInterface::class);
+        $exception = $this->capture(
+            static fn() => new DatabaseCodeStore($database, 'short'),
+        );
+
+        self::assertInstanceOf(\InvalidArgumentException::class, $exception);
+        self::assertPackageTraceDoesNotExposeObject(
+            $exception,
+            DatabaseInterface::class,
+        );
+    }
+
+    public function testDatabaseHelperDoesNotExposeDatabaseObject(): void
+    {
+        $database = $this->createStub(DatabaseInterface::class);
+        $database->method('select')->willReturnCallback(
+            static fn() => throw new CredentialTraceFailure('select failed'),
+        );
+        $store = new DatabaseCodeStore($database, str_repeat('k', 32));
+
+        $exception = $this->capture(
+            static fn() => $store->verifyAndConsume(
+                'user@example.com',
+                '123456',
+                1000,
+                5,
+            ),
+        );
+
+        self::assertInstanceOf(CredentialTraceFailure::class, $exception);
+        self::assertPackageTraceDoesNotExposeObject(
+            $exception,
+            DatabaseInterface::class,
+        );
+    }
+
+    public function testDatabaseTransactionCallbackDoesNotExposeDatabaseObject(): void
+    {
+        if (!extension_loaded('pdo_sqlite')) {
+            self::markTestSkipped(
+                'pdo_sqlite is required for storage integration tests.',
+            );
+        }
+
+        $database = SqliteDatabaseFixture::create();
+        $store = new DatabaseRefreshTokenStore($database);
+        $token = new RefreshToken(
+            str_repeat('a', 64),
+            self::subjectId(),
+            str_repeat('b', 64),
+            2000,
+        );
+
+        // Deliberately omit the refresh schema so the exception is created
+        // inside the transaction callback while the DatabaseInterface argument
+        // is present on the package-owned closure frame.
+        $exception = $this->capture(
+            static fn() => $store->storeInitial($token),
+        );
+
+        self::assertPackageTraceDoesNotExposeObject(
+            $exception,
+            DatabaseInterface::class,
+        );
     }
 
     public function testRefreshStoreValidationDoesNotExposeBearerObject(): void
@@ -225,9 +297,12 @@ final class CredentialTraceTest extends TestCase
 
     public function testDeniedResponseFailureDoesNotExposePrivateAttributes(): void
     {
-        $failure = new \RuntimeException('response allocation failed');
         $responses = $this->createStub(ResponseFactoryInterface::class);
-        $responses->method('createResponse')->willThrowException($failure);
+        $responses->method('createResponse')->willReturnCallback(
+            static fn() => throw new CredentialTraceFailure(
+                'response allocation failed',
+            ),
+        );
         $factory = new DeniedResponseFactory($responses);
         $reason = new DeniedReason('authentication_denied', [
             'private' => 'denied-factory-secret',
@@ -237,16 +312,15 @@ final class CredentialTraceTest extends TestCase
             static fn() => $factory->create($reason),
         );
 
-        self::assertSame($failure, $exception);
+        self::assertInstanceOf(CredentialTraceFailure::class, $exception);
         self::assertTraceHides($exception, 'denied-factory-secret');
     }
 
     public function testCriticalSessionEventFailureDoesNotExposeSessionIds(): void
     {
-        $failure = new \RuntimeException('remember listener failed');
         $provider = new PriorityListenerProvider();
         $provider->addListener(new RememberMeRegenerationListener(
-            new CredentialTraceRememberManager($failure),
+            new CredentialTraceRememberManager(),
         ));
         $dispatcher = new EventDispatcher($provider);
         $event = new SessionRegenerated(
@@ -259,7 +333,7 @@ final class CredentialTraceTest extends TestCase
             static fn() => $dispatcher->dispatchCritical($event),
         );
 
-        self::assertSame($failure, $exception);
+        self::assertInstanceOf(CredentialTraceFailure::class, $exception);
         self::assertTraceHides(
             $exception,
             'event-old-session-secret',
@@ -300,6 +374,34 @@ final class CredentialTraceTest extends TestCase
         }
     }
 
+    /** @param class-string $objectClass */
+    private static function assertPackageTraceDoesNotExposeObject(
+        \Throwable $exception,
+        string $objectClass,
+    ): void {
+        $checkedFrames = 0;
+
+        foreach ($exception->getTrace() as $frame) {
+            $class = $frame['class'] ?? null;
+
+            if (
+                !is_string($class)
+                || !str_starts_with($class, 'Componenta\\Auth\\')
+                || str_starts_with($class, 'Componenta\\Auth\\Tests\\')
+            ) {
+                continue;
+            }
+
+            ++$checkedFrames;
+
+            foreach ($frame['args'] ?? [] as $argument) {
+                self::assertNotInstanceOf($objectClass, $argument);
+            }
+        }
+
+        self::assertGreaterThan(0, $checkedFrames);
+    }
+
     private static function subjectId(): UuidInterface
     {
         return Uuid::fromString(
@@ -308,10 +410,12 @@ final class CredentialTraceTest extends TestCase
     }
 }
 
+final class CredentialTraceFailure extends \RuntimeException
+{
+}
+
 final readonly class CredentialTraceThrowingStrategy implements AuthenticationStrategyInterface
 {
-    public function __construct(private \RuntimeException $failure) {}
-
     public function supports(
         #[\SensitiveParameter]
         object $payload,
@@ -327,14 +431,12 @@ final readonly class CredentialTraceThrowingStrategy implements AuthenticationSt
         #[\SensitiveParameter]
         ContextInterface $context,
     ): AuthenticationResult {
-        throw $this->failure;
+        throw new CredentialTraceFailure('strategy failed');
     }
 }
 
 final readonly class CredentialTraceRememberManager implements RememberMeTokenManagerInterface
 {
-    public function __construct(private \RuntimeException $failure) {}
-
     public function create(
         UuidInterface $subjectId,
         #[\SensitiveParameter]
@@ -386,7 +488,7 @@ final readonly class CredentialTraceRememberManager implements RememberMeTokenMa
         #[\SensitiveParameter]
         string $newSessionId,
     ): void {
-        throw $this->failure;
+        throw new CredentialTraceFailure('remember listener failed');
     }
 
     public function cleanup(int $limit = 1000): int

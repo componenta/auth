@@ -14,6 +14,7 @@ final readonly class DatabaseRefreshTokenHousekeeper
     private const int MAX_CLEANUP_LIMIT = 10000;
 
     public function __construct(
+        #[\SensitiveParameter]
         private DatabaseInterface $database,
         private DatabaseRefreshTokenStoreConfig $config = new DatabaseRefreshTokenStoreConfig(),
     ) {}
@@ -75,7 +76,10 @@ final readonly class DatabaseRefreshTokenHousekeeper
         }
 
         return $this->database->transaction(
-            function (DatabaseInterface $database) use ($familyIds, $now): int {
+            function (
+                #[\SensitiveParameter]
+                DatabaseInterface $database,
+            ) use ($familyIds, $now): int {
                 $deleted = 0;
 
                 foreach ($familyIds as $familyId) {
@@ -170,7 +174,10 @@ final readonly class DatabaseRefreshTokenHousekeeper
             $familyId = self::stringValue($row, $this->config->familyIdColumn);
 
             $this->database->transaction(
-                function (DatabaseInterface $database) use ($tokenHash, $familyId, $now): void {
+                function (
+                    #[\SensitiveParameter]
+                    DatabaseInterface $database,
+                ) use ($tokenHash, $familyId, $now): void {
                     $claimed = $database
                         ->update($this->config->familyTable)
                         ->where($this->config->familyIdColumn, $familyId)
@@ -195,6 +202,7 @@ final readonly class DatabaseRefreshTokenHousekeeper
     }
 
     private function familyHasTokenRows(
+        #[\SensitiveParameter]
         DatabaseInterface $database,
         #[\SensitiveParameter]
         string $familyId,

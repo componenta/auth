@@ -15,6 +15,7 @@ final readonly class Payload implements \JsonSerializable
         if (
             $this->identity === ''
             || strlen($this->identity) > 320
+            || trim($this->identity) !== $this->identity
             || preg_match('/[\x00-\x1F\x7F]/', $this->identity) === 1
         ) {
             throw new \InvalidArgumentException('Password identity is invalid.');

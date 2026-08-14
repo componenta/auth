@@ -29,6 +29,7 @@ final readonly class DatabaseCodeStore implements CodeStoreInterface
     private string $dummyVerifier;
 
     public function __construct(
+        #[\SensitiveParameter]
         private DatabaseInterface $database,
         #[\SensitiveParameter]
         private string $hmacKey,
@@ -322,6 +323,7 @@ final readonly class DatabaseCodeStore implements CodeStoreInterface
 
     /** @return array<array-key, mixed>|null */
     private function find(
+        #[\SensitiveParameter]
         DatabaseInterface $database,
         string $destination,
     ): ?array {

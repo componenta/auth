@@ -28,6 +28,7 @@ final readonly class RequireAuthenticationMiddleware implements MiddlewareInterf
     public function process(
         #[\SensitiveParameter]
         ServerRequestInterface $request,
+        #[\SensitiveParameter]
         RequestHandlerInterface $handler,
     ): ResponseInterface {
         $user = $request->getAttribute(IdentityInterface::class);
