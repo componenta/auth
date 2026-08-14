@@ -98,7 +98,7 @@ final class ServiceObjectTraceFailure extends \RuntimeException
 {
 }
 
-final readonly class TraceSensitiveListener implements EventListenerInterface
+final class TraceSensitiveListener implements EventListenerInterface
 {
     public function __construct(public string $secret) {}
 
