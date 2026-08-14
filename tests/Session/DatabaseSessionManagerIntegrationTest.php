@@ -15,6 +15,7 @@ use Componenta\Auth\Session\DatabaseSessionManager;
 use Componenta\Auth\Session\DatabaseSessionManagerConfig;
 use Componenta\Auth\Session\SessionIdGenerator;
 use Componenta\Auth\Session\SessionIdGeneratorInterface;
+use Componenta\Auth\Session\SessionInterface;
 use Componenta\Auth\Tests\Support\SqliteDatabaseFixture;
 use Componenta\Clock\FrozenClock;
 use Componenta\Identity\Uuid;
@@ -98,6 +99,36 @@ final class DatabaseSessionManagerIntegrationTest extends TestCase
         self::assertSame(0, self::sessionCount($database));
     }
 
+    public function testAllReturnsActiveSessionsInLazyAndEagerModes(): void
+    {
+        self::requireSqlite();
+
+        foreach ([true, false] as $lazyLoad) {
+            $database = SqliteDatabaseFixture::create();
+            self::createSchema($database);
+            $clock = new FrozenClock(1000, 'UTC');
+            $manager = self::manager(
+                $database,
+                $clock,
+                new EventDispatcher(new PriorityListenerProvider()),
+                lazyLoad: $lazyLoad,
+            );
+            $first = $manager->create(self::subjectId(), self::attributes());
+            $clock->advance('+1 second');
+            $second = $manager->create(self::subjectId(), self::attributes());
+
+            $sessions = $manager->all(self::subjectId());
+            self::assertCount(2, $sessions);
+
+            $foundFirst = $sessions->find($first->id);
+            $foundSecond = $sessions->find($second->id);
+            self::assertInstanceOf(SessionInterface::class, $foundFirst);
+            self::assertInstanceOf(SessionInterface::class, $foundSecond);
+            self::assertSame($first->id, $foundFirst->id);
+            self::assertSame($second->id, $foundSecond->id);
+        }
+    }
+
     public function testCriticalTerminationFailureRollsBackDeletedSession(): void
     {
         self::requireSqlite();
@@ -162,13 +193,17 @@ final class DatabaseSessionManagerIntegrationTest extends TestCase
         FrozenClock $clock,
         EventDispatcher $dispatcher,
         ?SessionIdGeneratorInterface $idGenerator = null,
+        bool $lazyLoad = true,
     ): DatabaseSessionManager {
         return new DatabaseSessionManager(
             $database,
             $idGenerator ?? new SessionIdGenerator(),
             $clock,
             $dispatcher,
-            new DatabaseSessionManagerConfig(touchInterval: 60),
+            new DatabaseSessionManagerConfig(
+                lazyLoad: $lazyLoad,
+                touchInterval: 60,
+            ),
         );
     }
 

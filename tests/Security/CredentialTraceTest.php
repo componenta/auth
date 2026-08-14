@@ -107,19 +107,27 @@ final class CredentialTraceTest extends TestCase
 
     public function testSessionCreationDoesNotExposeArbitraryAttributes(): void
     {
+        $failure = new \RuntimeException('session persistence failed');
+        $database = $this->createStub(DatabaseInterface::class);
+        $database->method('insert')->willThrowException($failure);
+        $idGenerator = $this->createStub(SessionIdGeneratorInterface::class);
+        $idGenerator->method('generate')->willReturn('generated-session-id');
         $manager = new DatabaseSessionManager(
-            $this->createStub(DatabaseInterface::class),
-            $this->createStub(SessionIdGeneratorInterface::class),
+            $database,
+            $idGenerator,
             new FrozenClock(1000, 'UTC'),
             new EventDispatcher(new PriorityListenerProvider()),
         );
 
         $exception = $this->capture(static function () use ($manager): void {
             $manager->create(self::subjectId(), [
+                DatabaseSessionManager::ATTR_IP => '127.0.0.1',
+                DatabaseSessionManager::ATTR_USER_AGENT => 'trace-test',
                 'private' => 'session-attribute-secret',
             ]);
         });
 
+        self::assertSame($failure, $exception);
         self::assertTraceHides($exception, 'session-attribute-secret');
     }
 
@@ -158,10 +166,9 @@ final class CredentialTraceTest extends TestCase
 
     public function testOtpStoreFailureDoesNotExposePlainCode(): void
     {
+        $failure = new \RuntimeException('database failed');
         $database = $this->createStub(DatabaseInterface::class);
-        $database->method('insert')->willThrowException(
-            new \RuntimeException('database failed'),
-        );
+        $database->method('insert')->willThrowException($failure);
         $store = new DatabaseCodeStore($database, str_repeat('k', 32));
         $code = new StoredCode(
             self::subjectId(),
@@ -174,6 +181,7 @@ final class CredentialTraceTest extends TestCase
             static fn() => $store->store($code),
         );
 
+        self::assertSame($failure, $exception);
         self::assertTraceHides($exception, '654321');
     }
 
@@ -217,10 +225,9 @@ final class CredentialTraceTest extends TestCase
 
     public function testDeniedResponseFailureDoesNotExposePrivateAttributes(): void
     {
+        $failure = new \RuntimeException('response allocation failed');
         $responses = $this->createStub(ResponseFactoryInterface::class);
-        $responses->method('createResponse')->willThrowException(
-            new \RuntimeException('response allocation failed'),
-        );
+        $responses->method('createResponse')->willThrowException($failure);
         $factory = new DeniedResponseFactory($responses);
         $reason = new DeniedReason('authentication_denied', [
             'private' => 'denied-factory-secret',
@@ -230,6 +237,7 @@ final class CredentialTraceTest extends TestCase
             static fn() => $factory->create($reason),
         );
 
+        self::assertSame($failure, $exception);
         self::assertTraceHides($exception, 'denied-factory-secret');
     }
 
