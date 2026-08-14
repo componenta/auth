@@ -16,30 +16,56 @@ use Componenta\Identity\IdentityInterface;
 use Componenta\Identity\Uuid;
 use Componenta\Identity\UuidInterface;
 use DateTimeImmutable;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Clock\ClockInterface;
 
 final class JwtStrategyTest extends TestCase
 {
-    public function testExactIssuerAudienceAndTypeAreRequired(): void
-    {
+    #[DataProvider('invalidProfiles')]
+    public function testIssuerAudienceAndTypeMustMatchConfiguredProfile(
+        string $issuer,
+        string $audience,
+        string $type,
+    ): void {
         $identity = new JwtIdentityFixture();
         $strategy = new JwtStrategy(
             new JwtSignerFixture(new Claims(
                 subject: $identity->uuid->toString(),
                 issuedAt: 900,
                 expiresAt: 1100,
-                issuer: 'https://wrong.example',
-                audience: 'componenta-api',
-                type: 'at+jwt',
+                issuer: $issuer,
+                audience: $audience,
+                type: $type,
             )),
             new JwtProviderFixture($identity),
             new JwtConfig('https://issuer.example', 'componenta-api'),
             new JwtClockFixture(),
         );
+
         $result = $strategy->attempt(new BearerPayload('token'), new Context());
 
         self::assertInstanceOf(InvalidAccessToken::class, $result->subject);
+    }
+
+    /** @return iterable<string, array{string, string, string}> */
+    public static function invalidProfiles(): iterable
+    {
+        yield 'issuer mismatch' => [
+            'https://wrong.example',
+            'componenta-api',
+            'at+jwt',
+        ];
+        yield 'audience mismatch' => [
+            'https://issuer.example',
+            'other-api',
+            'at+jwt',
+        ];
+        yield 'type mismatch' => [
+            'https://issuer.example',
+            'componenta-api',
+            'JWT',
+        ];
     }
 
     public function testValidProfileResolvesIdentity(): void
