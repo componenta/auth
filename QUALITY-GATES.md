@@ -29,7 +29,7 @@ composer audit
 git diff --check
 ```
 
-`tools/verify.sh` also prevents the return of removed identity/session capability APIs, event marker interfaces, `PublicDeniedReasonInterface`, `RememberMeToken`, delete-on-consume remember rotation, hidden clocks in event DTOs, raw queued credential exposure, missing credential-response cache hardening, missing magic-link referrer hardening and floating GitHub Action refs.
+`tools/verify.sh` guards repository-shape invariants that are appropriate for static inspection: removed identity/session capability APIs and files must stay removed, event DTOs must not regain hidden clocks, raw queued credential exposure and delete-on-consume remember rotation must not return, the canonical MySQL schema must retain its required credential widths/indexes, temporary review artifacts must be absent, and GitHub Actions/container dependencies must remain immutably pinned. Runtime, HTTP, lifecycle and compensation semantics are proved by PHPUnit/integration/concurrency tests rather than grep patterns tied to a particular implementation.
 
 ## Release-blocking invariants
 
