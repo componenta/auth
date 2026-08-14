@@ -43,11 +43,32 @@ function terminateAllInvariant(bool $condition, string $message, mixed $actual =
     throw new RuntimeException($message);
 }
 
-function terminateAllWaitForFile(string $path, string $label): void
-{
+function terminateAllWaitForFile(
+    string $path,
+    string $label,
+    ?string $workerResultPath = null,
+): void {
     $deadline = microtime(true) + 10.0;
 
     while (!is_file($path)) {
+        if ($workerResultPath !== null && is_file($workerResultPath)) {
+            $payload = json_decode(
+                (string) file_get_contents($workerResultPath),
+                true,
+                512,
+                JSON_THROW_ON_ERROR,
+            );
+            $detail = is_array($payload)
+                ? (($payload['ok'] ?? false) === true
+                    ? 'worker completed before the expected gate: '
+                        . (string) ($payload['value'] ?? '')
+                    : 'worker failed before the expected gate: '
+                        . (string) ($payload['error'] ?? 'unknown'))
+                : 'worker produced an unreadable result before the expected gate';
+
+            throw new RuntimeException($label . ': ' . $detail);
+        }
+
         if (microtime(true) >= $deadline) {
             throw new RuntimeException($label . ' timed out.');
         }
@@ -236,6 +257,8 @@ function verifySessionTerminateAllOrdering(bool $regenerationFirst): void
     $readyPath = $dir . '/first-precommit';
     $releasePath = $dir . '/release-first';
     $secondStartedPath = $dir . '/second-started';
+    $result0Path = $dir . '/result-0';
+    $result1Path = $dir . '/result-1';
     $pids = [];
 
     try {
@@ -243,7 +266,7 @@ function verifySessionTerminateAllOrdering(bool $regenerationFirst): void
             ? SessionRegenerated::class
             : AllSessionsTerminated::class;
         $pids[] = terminateAllFork(
-            $dir . '/result-0',
+            $result0Path,
             static function () use (
                 $old,
                 $eventClass,
@@ -273,10 +296,11 @@ function verifySessionTerminateAllOrdering(bool $regenerationFirst): void
         terminateAllWaitForFile(
             $readyPath,
             'First ' . $label . ' transition did not reach its pre-commit gate',
+            $result0Path,
         );
 
         $pids[] = terminateAllFork(
-            $dir . '/result-1',
+            $result1Path,
             static function () use (
                 $old,
                 $secondStartedPath,
@@ -304,6 +328,7 @@ function verifySessionTerminateAllOrdering(bool $regenerationFirst): void
         terminateAllWaitForFile(
             $secondStartedPath,
             'Second ' . $label . ' transition did not start',
+            $result1Path,
         );
         terminateAllWaitForLockWait();
         file_put_contents($releasePath, '1');
