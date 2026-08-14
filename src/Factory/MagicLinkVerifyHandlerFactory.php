@@ -17,8 +17,10 @@ use Psr\Http\Message\ResponseFactoryInterface;
 
 final readonly class MagicLinkVerifyHandlerFactory
 {
-    public function __invoke(ContainerInterface $container): VerifyHandler
-    {
+    public function __invoke(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): VerifyHandler {
         /** @var VerifyExtractor $extractor */
         $extractor = $container->get(VerifyExtractor::class);
         /** @var AuthenticatorInterface $authenticator */

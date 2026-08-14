@@ -11,8 +11,10 @@ use Psr\Log\LoggerInterface;
 
 final readonly class EventDispatcherFactory
 {
-    public function __invoke(ContainerInterface $container): EventDispatcher
-    {
+    public function __invoke(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): EventDispatcher {
         $provider = $container->get(EventListenerProviderInterface::class);
 
         if (!$provider instanceof EventListenerProviderInterface) {

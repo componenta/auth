@@ -15,8 +15,10 @@ use Psr\Container\ContainerInterface;
 
 final readonly class PriorityListenerProviderFactory
 {
-    public function __invoke(ContainerInterface $container): PriorityListenerProvider
-    {
+    public function __invoke(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): PriorityListenerProvider {
         $config = $container->get(ConfigKey::CONFIG);
 
         if (!$config instanceof Config) {

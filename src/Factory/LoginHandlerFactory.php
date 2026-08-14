@@ -20,8 +20,10 @@ use Psr\Http\Message\ResponseFactoryInterface;
 
 final readonly class LoginHandlerFactory
 {
-    public function __invoke(ContainerInterface $container): LoginHandler
-    {
+    public function __invoke(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): LoginHandler {
         /** @var PasswordExtractor $extractor */
         $extractor = $container->get(PasswordExtractor::class);
         /** @var AuthenticatorInterface $authenticator */

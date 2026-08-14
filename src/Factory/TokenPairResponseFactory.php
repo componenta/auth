@@ -14,8 +14,10 @@ use Psr\Http\Message\ResponseFactoryInterface;
 
 final readonly class TokenPairResponseFactory
 {
-    public function __invoke(ContainerInterface $container): TokenPairResponse
-    {
+    public function __invoke(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): TokenPairResponse {
         /** @var SignerInterface $signer */
         $signer = $container->get(SignerInterface::class);
         /** @var RefreshTokenManager $refreshManager */

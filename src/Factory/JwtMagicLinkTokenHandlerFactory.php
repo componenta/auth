@@ -14,8 +14,10 @@ use Psr\Http\Message\ResponseFactoryInterface;
 
 final readonly class JwtMagicLinkTokenHandlerFactory
 {
-    public function __invoke(ContainerInterface $container): TokenHandler
-    {
+    public function __invoke(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): TokenHandler {
         /** @var VerifyExtractor $extractor */
         $extractor = $container->get(VerifyExtractor::class);
         /** @var AuthenticatorInterface $authenticator */

@@ -14,8 +14,10 @@ use Psr\Http\Message\ResponseFactoryInterface;
 
 final readonly class LogoutHandlerFactory
 {
-    public function __invoke(ContainerInterface $container): LogoutHandler
-    {
+    public function __invoke(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): LogoutHandler {
         /** @var PayloadStorageInterface $storage */
         $storage = $container->get(PayloadStorageInterface::class);
         /** @var SessionManagerInterface $sessionManager */

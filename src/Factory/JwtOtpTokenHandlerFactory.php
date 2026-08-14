@@ -14,8 +14,10 @@ use Psr\Http\Message\ResponseFactoryInterface;
 
 final readonly class JwtOtpTokenHandlerFactory
 {
-    public function __invoke(ContainerInterface $container): TokenHandler
-    {
+    public function __invoke(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): TokenHandler {
         /** @var OtpExtractor $extractor */
         $extractor = $container->get(OtpExtractor::class);
         /** @var AuthenticatorInterface $authenticator */

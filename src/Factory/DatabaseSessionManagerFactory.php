@@ -16,8 +16,10 @@ use Psr\Container\ContainerInterface;
 
 final readonly class DatabaseSessionManagerFactory implements LazyServiceFactoryInterface
 {
-    public function __invoke(ContainerInterface $container): DatabaseSessionManager
-    {
+    public function __invoke(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): DatabaseSessionManager {
         return new DatabaseSessionManager(
             database: self::database($container),
             idGenerator: self::idGenerator($container),
@@ -29,6 +31,7 @@ final readonly class DatabaseSessionManagerFactory implements LazyServiceFactory
 
     #[\Override]
     public function lazy(
+        #[\SensitiveParameter]
         ContainerInterface $container,
         ProxyFactoryInterface $proxyFactory,
         array $context = [],
@@ -54,8 +57,10 @@ final readonly class DatabaseSessionManagerFactory implements LazyServiceFactory
         );
     }
 
-    private static function database(ContainerInterface $container): DatabaseInterface
-    {
+    private static function database(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): DatabaseInterface {
         $service = $container->get(DatabaseInterface::class);
 
         return $service instanceof DatabaseInterface
@@ -63,8 +68,10 @@ final readonly class DatabaseSessionManagerFactory implements LazyServiceFactory
             : throw new \LogicException(sprintf('%s must resolve to %s.', DatabaseInterface::class, DatabaseInterface::class));
     }
 
-    private static function idGenerator(ContainerInterface $container): SessionIdGeneratorInterface
-    {
+    private static function idGenerator(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): SessionIdGeneratorInterface {
         $service = $container->get(SessionIdGeneratorInterface::class);
 
         return $service instanceof SessionIdGeneratorInterface
@@ -72,8 +79,10 @@ final readonly class DatabaseSessionManagerFactory implements LazyServiceFactory
             : throw new \LogicException(sprintf('%s must resolve to %s.', SessionIdGeneratorInterface::class, SessionIdGeneratorInterface::class));
     }
 
-    private static function dateTimeFactory(ContainerInterface $container): DateTimeFactoryInterface
-    {
+    private static function dateTimeFactory(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): DateTimeFactoryInterface {
         $service = $container->get(DateTimeFactoryInterface::class);
 
         return $service instanceof DateTimeFactoryInterface
@@ -81,8 +90,10 @@ final readonly class DatabaseSessionManagerFactory implements LazyServiceFactory
             : throw new \LogicException(sprintf('%s must resolve to %s.', DateTimeFactoryInterface::class, DateTimeFactoryInterface::class));
     }
 
-    private static function dispatcher(ContainerInterface $container): EventDispatcher
-    {
+    private static function dispatcher(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): EventDispatcher {
         $service = $container->get(EventDispatcher::class);
 
         return $service instanceof EventDispatcher
@@ -90,8 +101,10 @@ final readonly class DatabaseSessionManagerFactory implements LazyServiceFactory
             : throw new \LogicException(sprintf('%s must resolve to %s.', EventDispatcher::class, EventDispatcher::class));
     }
 
-    private static function config(ContainerInterface $container): DatabaseSessionManagerConfig
-    {
+    private static function config(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): DatabaseSessionManagerConfig {
         $service = $container->get(DatabaseSessionManagerConfig::class);
 
         return $service instanceof DatabaseSessionManagerConfig

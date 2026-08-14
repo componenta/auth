@@ -11,8 +11,10 @@ use Psr\Http\Message\ResponseFactoryInterface;
 
 final readonly class MagicLinkRequestHandlerFactory
 {
-    public function __invoke(ContainerInterface $container): RequestHandler
-    {
+    public function __invoke(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): RequestHandler {
         /** @var TokenRequestQueueInterface $queue */
         $queue = $container->get('auth.magicLink.queue');
         /** @var ResponseFactoryInterface $responseFactory */

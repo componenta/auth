@@ -12,8 +12,10 @@ use Psr\Container\ContainerInterface;
 
 final readonly class OtpConfigFactory
 {
-    public function __invoke(ContainerInterface $container): OtpConfig
-    {
+    public function __invoke(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): OtpConfig {
         $config = $container->get(ConfigKey::CONFIG);
 
         if (!$config instanceof Config) {

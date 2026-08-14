@@ -14,8 +14,10 @@ use Psr\Container\ContainerInterface;
 
 final readonly class DatabaseRememberMeTokenManagerFactory implements LazyServiceFactoryInterface
 {
-    public function __invoke(ContainerInterface $container): DatabaseRememberMeTokenManager
-    {
+    public function __invoke(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): DatabaseRememberMeTokenManager {
         return new DatabaseRememberMeTokenManager(
             database: self::database($container),
             dateTimeFactory: self::dateTimeFactory($container),
@@ -25,6 +27,7 @@ final readonly class DatabaseRememberMeTokenManagerFactory implements LazyServic
 
     #[\Override]
     public function lazy(
+        #[\SensitiveParameter]
         ContainerInterface $container,
         ProxyFactoryInterface $proxyFactory,
         array $context = [],
@@ -48,8 +51,10 @@ final readonly class DatabaseRememberMeTokenManagerFactory implements LazyServic
         );
     }
 
-    private static function database(ContainerInterface $container): DatabaseInterface
-    {
+    private static function database(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): DatabaseInterface {
         $service = $container->get(DatabaseInterface::class);
 
         return $service instanceof DatabaseInterface
@@ -57,8 +62,10 @@ final readonly class DatabaseRememberMeTokenManagerFactory implements LazyServic
             : throw new \LogicException(sprintf('%s must resolve to %s.', DatabaseInterface::class, DatabaseInterface::class));
     }
 
-    private static function dateTimeFactory(ContainerInterface $container): DateTimeFactoryInterface
-    {
+    private static function dateTimeFactory(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): DateTimeFactoryInterface {
         $service = $container->get(DateTimeFactoryInterface::class);
 
         return $service instanceof DateTimeFactoryInterface
@@ -66,8 +73,10 @@ final readonly class DatabaseRememberMeTokenManagerFactory implements LazyServic
             : throw new \LogicException(sprintf('%s must resolve to %s.', DateTimeFactoryInterface::class, DateTimeFactoryInterface::class));
     }
 
-    private static function config(ContainerInterface $container): DatabaseRememberMeTokenManagerConfig
-    {
+    private static function config(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): DatabaseRememberMeTokenManagerConfig {
         $service = $container->get(DatabaseRememberMeTokenManagerConfig::class);
 
         return $service instanceof DatabaseRememberMeTokenManagerConfig

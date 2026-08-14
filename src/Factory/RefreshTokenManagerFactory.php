@@ -13,8 +13,10 @@ use Psr\Container\ContainerInterface;
 
 final readonly class RefreshTokenManagerFactory
 {
-    public function __invoke(ContainerInterface $container): RefreshTokenManager
-    {
+    public function __invoke(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): RefreshTokenManager {
         /** @var RefreshTokenStoreInterface $store */
         $store = $container->get(RefreshTokenStoreInterface::class);
         /** @var RefreshTokenGenerator $generator */

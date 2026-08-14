@@ -81,6 +81,48 @@ final class RefreshTokenManagerTest extends TestCase
         self::assertSame($store->successor, $result->id);
     }
 
+    public function testMalformedRotatedResultDoesNotExposeSuccessorInManagerTrace(): void
+    {
+        $unexpectedToken = str_repeat('c', 64);
+        $store = new RefreshStoreFixture(
+            static fn(string $successor, int $expiresAt): RefreshTokenRotationResult =>
+                RefreshTokenRotationResult::rotated(new RefreshToken(
+                    $unexpectedToken,
+                    Uuid::fromString('018f6d5d-3f7a-7a9b-8c2f-123456789abc'),
+                    self::FAMILY,
+                    $expiresAt,
+                )),
+        );
+        $previous = ini_get('zend.exception_ignore_args');
+        self::assertIsString($previous);
+        self::assertNotFalse(ini_set('zend.exception_ignore_args', '0'));
+        $thrown = null;
+
+        try {
+            try {
+                $this->manager($store)->rotate(self::TOKEN);
+            } catch (\Throwable $exception) {
+                $thrown = $exception;
+            }
+        } finally {
+            ini_set('zend.exception_ignore_args', $previous);
+        }
+
+        self::assertInstanceOf(\LogicException::class, $thrown);
+        self::assertNotNull($store->successor);
+        $frames = array_values(array_filter(
+            $thrown->getTrace(),
+            static fn(array $frame): bool =>
+                ($frame['class'] ?? null) === RefreshTokenManager::class,
+        ));
+
+        self::assertNotEmpty($frames);
+        $trace = var_export($frames, true);
+        self::assertStringNotContainsString($store->successor, $trace);
+        self::assertStringNotContainsString($unexpectedToken, $trace);
+        self::assertStringNotContainsString(self::FAMILY, $trace);
+    }
+
     public function testMalformedTokenDoesNotReachStore(): void
     {
         $store = new RefreshStoreFixture(static fn(): never => throw new \LogicException('must not run'));

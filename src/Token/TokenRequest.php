@@ -27,7 +27,7 @@ final readonly class TokenRequest
                 || strlen($key) > 128
                 || preg_match('/\A[A-Za-z0-9][A-Za-z0-9._-]*\z/D', $key) !== 1
                 || strlen($value) > 4096
-                || preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', $value) === 1
+                || preg_match('/[\x00-\x1F\x7F]/', $value) === 1
             ) {
                 throw new \InvalidArgumentException('Token request context is invalid.');
             }

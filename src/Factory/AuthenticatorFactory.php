@@ -21,8 +21,10 @@ use Psr\Container\ContainerInterface;
 /** Builds the security-sensitive strategy chain in explicit configured order. */
 final readonly class AuthenticatorFactory
 {
-    public function __invoke(ContainerInterface $container): AuthenticatorInterface
-    {
+    public function __invoke(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): AuthenticatorInterface {
         $config = $container->get(ConfigKey::CONFIG);
         if (!$config instanceof Config) {
             throw new AuthenticatorConfigurationException('The config service must be an instance of Componenta\\Config\\Config.');

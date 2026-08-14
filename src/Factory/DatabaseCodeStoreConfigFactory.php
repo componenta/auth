@@ -13,6 +13,7 @@ use Psr\Container\ContainerInterface;
 final readonly class DatabaseCodeStoreConfigFactory
 {
     public function __invoke(
+        #[\SensitiveParameter]
         ContainerInterface $container,
     ): DatabaseCodeStoreConfig {
         $config = $container->get(ConfigKey::CONFIG);

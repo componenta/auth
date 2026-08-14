@@ -11,8 +11,10 @@ use Psr\Http\Message\ResponseFactoryInterface;
 
 final readonly class ResetPasswordHandlerFactory
 {
-    public function __invoke(ContainerInterface $container): ResetPasswordHandler
-    {
+    public function __invoke(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): ResetPasswordHandler {
         $resetService = $container->get(PasswordResetServiceInterface::class);
         $responseFactory = $container->get(ResponseFactoryInterface::class);
 

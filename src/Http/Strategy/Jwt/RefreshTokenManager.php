@@ -95,7 +95,9 @@ final readonly class RefreshTokenManager
     }
 
     private function validatedSuccessor(
+        #[\SensitiveParameter]
         RefreshTokenRotationResult $result,
+        #[\SensitiveParameter]
         string $successorId,
         int $successorExpiresAt,
     ): RefreshToken {

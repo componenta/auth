@@ -16,8 +16,10 @@ use Psr\Http\Message\ResponseFactoryInterface;
 
 final readonly class OtpVerifyHandlerFactory
 {
-    public function __invoke(ContainerInterface $container): VerifyHandler
-    {
+    public function __invoke(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): VerifyHandler {
         /** @var OtpExtractor $extractor */
         $extractor = $container->get(OtpExtractor::class);
         /** @var AuthenticatorInterface $authenticator */

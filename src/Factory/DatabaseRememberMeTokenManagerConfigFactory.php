@@ -16,6 +16,7 @@ final readonly class DatabaseRememberMeTokenManagerConfigFactory implements Lazy
 {
     #[\Override]
     public function lazy(
+        #[\SensitiveParameter]
         ContainerInterface $container,
         ProxyFactoryInterface $proxyFactory,
         array $context = [],
@@ -26,8 +27,10 @@ final readonly class DatabaseRememberMeTokenManagerConfigFactory implements Lazy
         );
     }
 
-    public function __invoke(ContainerInterface $container): DatabaseRememberMeTokenManagerConfig
-    {
+    public function __invoke(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): DatabaseRememberMeTokenManagerConfig {
         $config = $container->get(ConfigKey::CONFIG);
 
         if (!$config instanceof Config) {

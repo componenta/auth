@@ -13,6 +13,7 @@ use Psr\Container\ContainerInterface;
 final readonly class DatabaseRefreshTokenStoreConfigFactory
 {
     public function __invoke(
+        #[\SensitiveParameter]
         ContainerInterface $container,
     ): DatabaseRefreshTokenStoreConfig {
         $config = $container->get(ConfigKey::CONFIG);

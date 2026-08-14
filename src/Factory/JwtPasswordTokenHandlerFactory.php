@@ -13,8 +13,10 @@ use Psr\Container\ContainerInterface;
 
 final readonly class JwtPasswordTokenHandlerFactory
 {
-    public function __invoke(ContainerInterface $container): TokenHandler
-    {
+    public function __invoke(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): TokenHandler {
         /** @var PasswordExtractor $extractor */
         $extractor = $container->get(PasswordExtractor::class);
         /** @var AuthenticatorInterface $authenticator */

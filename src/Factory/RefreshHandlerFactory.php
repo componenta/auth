@@ -16,8 +16,10 @@ use Psr\Http\Message\ResponseFactoryInterface;
 
 final readonly class RefreshHandlerFactory
 {
-    public function __invoke(ContainerInterface $container): RefreshHandler
-    {
+    public function __invoke(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): RefreshHandler {
         /** @var RefreshTokenManager $refreshManager */
         $refreshManager = $container->get(RefreshTokenManager::class);
         /** @var JwtUserProviderInterface $provider */

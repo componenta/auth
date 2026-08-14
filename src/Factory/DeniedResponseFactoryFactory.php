@@ -13,8 +13,10 @@ use Psr\Http\Message\ResponseFactoryInterface;
 
 final readonly class DeniedResponseFactoryFactory
 {
-    public function __invoke(ContainerInterface $container): DeniedResponseFactory
-    {
+    public function __invoke(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): DeniedResponseFactory {
         $config = $container->get(ConfigKey::CONFIG);
         $responseFactory = $container->get(ResponseFactoryInterface::class);
 

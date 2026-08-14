@@ -16,6 +16,7 @@ final readonly class DatabaseSessionManagerConfigFactory implements LazyServiceF
 {
     #[\Override]
     public function lazy(
+        #[\SensitiveParameter]
         ContainerInterface $container,
         ProxyFactoryInterface $proxyFactory,
         array $context = [],
@@ -26,8 +27,10 @@ final readonly class DatabaseSessionManagerConfigFactory implements LazyServiceF
         );
     }
 
-    public function __invoke(ContainerInterface $container): DatabaseSessionManagerConfig
-    {
+    public function __invoke(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): DatabaseSessionManagerConfig {
         $config = $container->get(ConfigKey::CONFIG);
 
         if (!$config instanceof Config) {

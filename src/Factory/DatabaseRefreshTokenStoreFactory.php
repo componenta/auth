@@ -12,6 +12,7 @@ use Psr\Container\ContainerInterface;
 final readonly class DatabaseRefreshTokenStoreFactory
 {
     public function __invoke(
+        #[\SensitiveParameter]
         ContainerInterface $container,
     ): DatabaseRefreshTokenStore {
         $database = $container->get(DatabaseInterface::class);

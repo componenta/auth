@@ -16,8 +16,10 @@ use Psr\Container\ContainerInterface;
 
 final readonly class CompensatingRememberMeStrategyFactory
 {
-    public function __invoke(ContainerInterface $container): CompensatingRememberMeStrategy
-    {
+    public function __invoke(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): CompensatingRememberMeStrategy {
         $config = $container->get(ConfigKey::CONFIG);
         if (!$config instanceof Config) {
             throw new AuthenticatorConfigurationException(

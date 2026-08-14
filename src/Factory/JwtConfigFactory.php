@@ -12,8 +12,10 @@ use Psr\Container\ContainerInterface;
 
 final readonly class JwtConfigFactory
 {
-    public function __invoke(ContainerInterface $container): JwtConfig
-    {
+    public function __invoke(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): JwtConfig {
         $config = $container->get(ConfigKey::CONFIG);
 
         if (!$config instanceof Config) {

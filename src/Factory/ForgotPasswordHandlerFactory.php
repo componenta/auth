@@ -11,8 +11,10 @@ use Psr\Http\Message\ResponseFactoryInterface;
 
 final readonly class ForgotPasswordHandlerFactory
 {
-    public function __invoke(ContainerInterface $container): ForgotPasswordHandler
-    {
+    public function __invoke(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): ForgotPasswordHandler {
         /** @var TokenRequestQueueInterface $queue */
         $queue = $container->get('auth.passwordReset.queue');
         /** @var ResponseFactoryInterface $responseFactory */

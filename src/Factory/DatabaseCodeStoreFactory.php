@@ -14,8 +14,10 @@ use Psr\Container\ContainerInterface;
 
 final readonly class DatabaseCodeStoreFactory
 {
-    public function __invoke(ContainerInterface $container): DatabaseCodeStore
-    {
+    public function __invoke(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): DatabaseCodeStore {
         $database = $container->get(DatabaseInterface::class);
         $storeConfig = $container->get(DatabaseCodeStoreConfig::class);
         $config = $container->get(ConfigKey::CONFIG);
