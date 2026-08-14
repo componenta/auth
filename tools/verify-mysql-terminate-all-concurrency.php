@@ -30,6 +30,37 @@ if (!MySqlDatabaseFixture::available()) {
     exit(1);
 }
 
+final readonly class TerminateAllGateListener implements CriticalEventListenerInterface
+{
+    /** @var non-empty-list<class-string<EventInterface>> */
+    public array $events;
+
+    /** @param class-string<EventInterface> $eventClass */
+    public function __construct(
+        string $eventClass,
+        private string $readyPath,
+        private string $releasePath,
+    ) {
+        $this->events = [$eventClass];
+    }
+
+    public function handleEvent(
+        #[\SensitiveParameter]
+        EventInterface $event,
+    ): void {
+        file_put_contents($this->readyPath, '1');
+        $deadline = microtime(true) + 10.0;
+
+        while (!is_file($this->releasePath)) {
+            if (microtime(true) >= $deadline) {
+                throw new RuntimeException('Pre-commit concurrency gate timed out.');
+            }
+
+            usleep(1000);
+        }
+    }
+}
+
 function terminateAllInvariant(bool $condition, string $message, mixed $actual = null): void
 {
     if ($condition) {
@@ -368,35 +399,4 @@ try {
 } catch (Throwable $exception) {
     fwrite(STDERR, $exception::class . ': ' . $exception->getMessage() . "\n");
     exit(1);
-}
-
-final readonly class TerminateAllGateListener implements CriticalEventListenerInterface
-{
-    /** @var non-empty-list<class-string<EventInterface>> */
-    public array $events;
-
-    /** @param class-string<EventInterface> $eventClass */
-    public function __construct(
-        string $eventClass,
-        private string $readyPath,
-        private string $releasePath,
-    ) {
-        $this->events = [$eventClass];
-    }
-
-    public function handleEvent(
-        #[\SensitiveParameter]
-        EventInterface $event,
-    ): void {
-        file_put_contents($this->readyPath, '1');
-        $deadline = microtime(true) + 10.0;
-
-        while (!is_file($this->releasePath)) {
-            if (microtime(true) >= $deadline) {
-                throw new RuntimeException('Pre-commit concurrency gate timed out.');
-            }
-
-            usleep(1000);
-        }
-    }
 }
