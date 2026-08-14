@@ -211,7 +211,7 @@ Event DTOs do not create clocks. Their timestamp is mandatory and is supplied by
 
 Componenta factories also honor the shared PSR-20 `ClockInterface` for event timestamps, JWT access/refresh issuance/validation and logout observer time. Constructor defaults remain only as a direct-construction fallback for non-Componenta containers.
 
-Credential-bearing DTOs and audit containers use redacted debug/JSON representations. Generic authentication events contain payload type/subject UUID metadata, never raw credentials. Package-owned exception-prone boundaries redact credential-bearing request/context/storage/event/session arguments, generated credential helper values, and DI container objects that may carry configuration secrets. PHP parameter attributes are not inherited by concrete implementations, so custom strategies, stores, listeners, senders and factories must apply equivalent `#[SensitiveParameter]` annotations on their own credential/config-bearing frames. Third-party implementations remain responsible for their own stack frames, and applications should not expose exception traces to untrusted clients.
+Credential-bearing DTOs and audit containers use redacted debug/JSON representations. Generic authentication events contain payload type/subject UUID metadata, never raw credentials. Package-owned exception-prone boundaries redact credential-bearing request/context/storage/event/session arguments, generated credential helper values, downstream PSR request-handler objects, application listener/storage objects, DI container objects and SQL database/connection objects that may carry configuration secrets. PHP parameter attributes are not inherited by concrete implementations, so custom strategies, stores, listeners, senders, middleware and factories must apply equivalent `#[SensitiveParameter]` annotations on their own credential/config-bearing frames. Third-party implementations remain responsible for their own stack frames, and applications should not expose exception traces to untrusted clients.
 
 ## Denial responses and malformed input
 
@@ -237,7 +237,6 @@ The repository release gate runs SQLite tests and real MySQL 8.4/InnoDB integrat
 - concurrent session regeneration and `terminateAll(subject)` cannot leave any session for that subject, regardless of which transition linearizes first.
 
 ## Verification
-
 Every supported matrix job runs:
 
 ```text
