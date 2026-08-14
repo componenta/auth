@@ -10,9 +10,6 @@ use Componenta\Auth\AuthenticatorInterface;
 use Componenta\Auth\ConfigProvider;
 use Componenta\Auth\ContextInterface;
 use Componenta\Auth\Denied\DeniedReason;
-use Componenta\Auth\Factory\AuthenticatorFactory;
-use Componenta\Auth\Factory\EventDispatcherFactory;
-use Componenta\Auth\Factory\PriorityListenerProviderFactory;
 use Componenta\Config\Config;
 use Componenta\DI\ConfigKey as DiConfigKey;
 use Componenta\DI\ContainerBuilder;
@@ -30,121 +27,21 @@ final class AuthenticatorDiCompilationTest extends TestCase
         );
     }
 
-    public function testCompiledCompositionResolvesThroughSupportedDiGenerationModel(): void
+    public function testCachedCompositionResolvesThroughPublicDiContract(): void
     {
-        if (self::builderHasMethod('compileGeneratedEntryResolver')) {
-            self::assertDi2GeneratedResolverComposition();
-
-            return;
-        }
-
-        self::assertDi3CompiledCacheComposition();
-    }
-
-    private static function assertDi2GeneratedResolverComposition(): void
-    {
-        $file = sys_get_temp_dir()
-            . '/componenta-auth-di-'
-            . bin2hex(random_bytes(8))
-            . '.php';
-        $fingerprint = 'componenta-auth-v2-test';
-
-        try {
-            $builder = self::builder();
-            $compile = new \ReflectionMethod(
-                ContainerBuilder::class,
-                'compileGeneratedEntryResolver',
-            );
-            $compile->invoke(
-                $builder,
-                [
-                    AuthenticatorFactory::class,
-                    EventDispatcherFactory::class,
-                    PriorityListenerProviderFactory::class,
-                ],
-                $file,
-                null,
-                'Componenta\\Auth\\Tests\\GeneratedDi',
-                $fingerprint,
-            );
-
-            $compiledBuilder = self::builder();
-            $install = new \ReflectionMethod(
-                ContainerBuilder::class,
-                'useGeneratedEntryResolver',
-            );
-            $install->invoke($compiledBuilder, $file, $fingerprint);
-            $container = $compiledBuilder->build();
-
-            self::assertInstanceOf(
-                AuthenticatorInterface::class,
-                $container->get(AuthenticatorInterface::class),
-            );
-        } finally {
-            @unlink($file);
-        }
-    }
-
-    private static function assertDi3CompiledCacheComposition(): void
-    {
-        if (
-            !self::builderHasMethod('compileFactories')
-            || !self::builderHasMethod('normalizeDependencies')
-            || !defined(ContainerBuilder::class . '::CACHE_VERSION')
-            || !defined(ContainerBuilder::class . '::CACHE_VALIDATED_KEY')
-        ) {
-            throw new \LogicException(
-                'The installed Componenta DI version exposes no supported compilation model.',
-            );
-        }
-
         $configuration = self::configuration();
         $dependencies = $configuration[DiConfigKey::DEPENDENCIES] ?? null;
 
-        if (!is_array($dependencies)) {
-            throw new \LogicException('The DI dependencies configuration must be an array.');
-        }
+        self::assertIsArray($dependencies);
 
-        $normalize = new \ReflectionMethod(
-            ContainerBuilder::class,
-            'normalizeDependencies',
-        );
-        $normalized = $normalize->invoke(null, $dependencies);
-
-        if (!is_array($normalized)) {
-            throw new \LogicException('Normalized DI dependencies must be an array.');
-        }
-
-        $version = constant(ContainerBuilder::class . '::CACHE_VERSION');
-        $validatedKey = constant(
-            ContainerBuilder::class . '::CACHE_VALIDATED_KEY',
-        );
-
-        if (!is_int($version) || !is_string($validatedKey)) {
-            throw new \LogicException('The DI cache contract is invalid.');
-        }
-
-        $configure = new \ReflectionMethod(
-            ContainerBuilder::class,
-            'configureFromCache',
-        );
-        $builder = $configure->invoke(
-            null,
+        $container = ContainerBuilder::configureFromCache(
             new Config($configuration),
-            [
-                'version' => $version,
-                $validatedKey => true,
-                DiConfigKey::DEPENDENCIES => $normalized,
-            ],
-        );
-
-        if (!$builder instanceof ContainerBuilder) {
-            throw new \LogicException('DI cache configuration did not return a builder.');
-        }
+            ContainerBuilder::normalizeDependencies($dependencies),
+        )->build();
 
         self::assertInstanceOf(
             AuthenticatorInterface::class,
-            $builder->build()->get(AuthenticatorInterface::class),
+            $container->get(AuthenticatorInterface::class),
         );
     }
 
@@ -194,11 +91,6 @@ final class AuthenticatorDiCompilationTest extends TestCase
 
         return $config;
     }
-    private static function builderHasMethod(string $method): bool
-    {
-        return (new \ReflectionClass(ContainerBuilder::class))->hasMethod($method);
-    }
-
 }
 
 final readonly class DiAuthenticationStrategyFixture implements AuthenticationStrategyInterface
