@@ -33,6 +33,7 @@ final class AuthenticatorDiIntegrationTest extends TestCase
         $dependencies = $configuration[DiConfigKey::DEPENDENCIES] ?? null;
 
         self::assertIsArray($dependencies);
+        /** @var array<string, mixed> $dependencies */
 
         $container = ContainerBuilder::configureFromCache(
             new Config($configuration),
@@ -73,6 +74,7 @@ final class AuthenticatorDiIntegrationTest extends TestCase
             throw new \LogicException('The DI dependencies configuration must be an array.');
         }
 
+        /** @var array<string, mixed> $dependencies */
         $invokables = $dependencies[DiConfigKey::INVOKABLES] ?? [];
 
         if (!is_array($invokables)) {
