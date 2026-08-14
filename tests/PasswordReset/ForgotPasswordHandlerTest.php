@@ -64,6 +64,28 @@ final class ForgotPasswordHandlerTest extends TestCase
             $queue->request->purpose,
         );
     }
+
+    public function testResponseConstructionCompletesBeforeDurableQueueing(): void
+    {
+        $queue = $this->createMock(TokenRequestQueueInterface::class);
+        $queue->expects(self::never())->method('enqueue');
+        $request = $this->createStub(ServerRequestInterface::class);
+        $request->method('getParsedBody')->willReturn([
+            'email' => 'user@example.com',
+        ]);
+        $stream = $this->createStub(StreamInterface::class);
+        $stream->method('write')->willReturnCallback(
+            static fn() => throw new \RuntimeException('response write failed'),
+        );
+        $response = $this->createStub(ResponseInterface::class);
+        $response->method('getBody')->willReturn($stream);
+        $factory = $this->createStub(ResponseFactoryInterface::class);
+        $factory->method('createResponse')->willReturn($response);
+
+        $this->expectException(\RuntimeException::class);
+
+        (new ForgotPasswordHandler($queue, $factory))->handle($request);
+    }
 }
 
 final class PasswordResetQueueFixture implements TokenRequestQueueInterface

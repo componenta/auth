@@ -61,6 +61,28 @@ final class RequestHandlerTest extends TestCase
         );
     }
 
+    public function testResponseConstructionCompletesBeforeDurableQueueing(): void
+    {
+        $queue = $this->createMock(TokenRequestQueueInterface::class);
+        $queue->expects(self::never())->method('enqueue');
+        $request = $this->createStub(ServerRequestInterface::class);
+        $request->method('getParsedBody')->willReturn([
+            'identity' => 'user@example.com',
+        ]);
+        $stream = $this->createStub(StreamInterface::class);
+        $stream->method('write')->willReturnCallback(
+            static fn() => throw new \RuntimeException('response write failed'),
+        );
+        $response = $this->createStub(ResponseInterface::class);
+        $response->method('getBody')->willReturn($stream);
+        $factory = $this->createStub(ResponseFactoryInterface::class);
+        $factory->method('createResponse')->willReturn($response);
+
+        $this->expectException(\RuntimeException::class);
+
+        (new RequestHandler($queue, $factory))->handle($request);
+    }
+
     /** @param array<string, mixed> $body */
     private function assertRejected(array $body): void
     {

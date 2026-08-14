@@ -72,8 +72,10 @@ final readonly class SessionCollection implements SessionCollectionInterface, \J
     }
 
     #[\Override]
-    public function filter(callable $callback): static
-    {
+    public function filter(
+        #[\SensitiveParameter]
+        callable $callback,
+    ): static {
         return new self(array_filter($this->sessions, $callback));
     }
 
@@ -81,7 +83,10 @@ final readonly class SessionCollection implements SessionCollectionInterface, \J
     public function pluck(string $key = 'id'): array
     {
         return array_map(
-            static function (SessionInterface $session) use ($key): mixed {
+            static function (
+                #[\SensitiveParameter]
+                SessionInterface $session,
+            ) use ($key): mixed {
                 if (in_array($key, self::PROPERTIES, true)) {
                     return $session->{$key};
                 }

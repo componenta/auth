@@ -21,7 +21,10 @@ interface SessionCollectionInterface extends Arrayable, \IteratorAggregate, \Cou
     ): SessionInterface|SessionCollectionInterface|null;
 
     /** @param callable(SessionInterface): bool $callback */
-    public function filter(callable $callback): SessionCollectionInterface;
+    public function filter(
+        #[\SensitiveParameter]
+        callable $callback,
+    ): SessionCollectionInterface;
 
     /** @return array<mixed> */
     public function pluck(string $key = 'id'): array;

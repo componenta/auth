@@ -84,6 +84,28 @@ final class RequestHandlerTest extends TestCase
         self::assertNotSame('', $decoded['message']);
     }
 
+    public function testResponseConstructionCompletesBeforeDurableQueueing(): void
+    {
+        $queue = $this->createMock(OtpRequestQueueInterface::class);
+        $queue->expects(self::never())->method('enqueue');
+        $request = $this->createStub(ServerRequestInterface::class);
+        $request->method('getParsedBody')->willReturn([
+            'destination' => 'user@example.com',
+        ]);
+        $stream = $this->createStub(StreamInterface::class);
+        $stream->method('write')->willReturnCallback(
+            static fn() => throw new \RuntimeException('response write failed'),
+        );
+        $response = $this->createStub(ResponseInterface::class);
+        $response->method('getBody')->willReturn($stream);
+        $factory = $this->createStub(ResponseFactoryInterface::class);
+        $factory->method('createResponse')->willReturn($response);
+
+        $this->expectException(\RuntimeException::class);
+
+        (new RequestHandler($queue, $factory))->handle($request);
+    }
+
     private static function response(TestCase $test): ResponseInterface
     {
         $stream = $test->createStub(StreamInterface::class);

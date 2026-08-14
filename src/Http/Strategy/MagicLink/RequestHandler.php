@@ -47,12 +47,17 @@ final readonly class RequestHandler implements RequestHandlerInterface
             return $this->json(400, ['error' => 'redirect_not_supported']);
         }
 
-        $this->queue->enqueue(new TokenRequest(
+        $work = new TokenRequest(
             identity: $identity,
             purpose: TokenRequest::PURPOSE_MAGIC_LINK,
-        ));
+        );
+        $response = $this->json(200, [
+            'message' => 'If the account exists, a link has been sent.',
+        ]);
 
-        return $this->json(200, ['message' => 'If the account exists, a link has been sent.']);
+        $this->queue->enqueue($work);
+
+        return $response;
     }
 
     /** @param array<string, mixed> $data */

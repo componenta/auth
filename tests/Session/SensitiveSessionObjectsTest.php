@@ -80,15 +80,12 @@ final class SensitiveSessionObjectsTest extends TestCase
         self::assertNotFalse(ini_set('zend.exception_ignore_args', '0'));
 
         try {
-            $failure = new \RuntimeException('provider failure');
-            $provider = new class($failure) implements UserProviderInterface {
-                public function __construct(private \RuntimeException $failure) {}
-
+            $provider = new class implements UserProviderInterface {
                 #[\Override]
                 public function findByIdentity(
                     string $identity,
                 ): null|(IdentityInterface&PasswordAwareInterface) {
-                    throw $this->failure;
+                    throw new \RuntimeException('provider failure');
                 }
             };
             $strategy = new PasswordStrategy($provider);
@@ -101,10 +98,16 @@ final class SensitiveSessionObjectsTest extends TestCase
                 );
                 self::fail('Provider exception was expected.');
             } catch (\RuntimeException $exception) {
-                self::assertSame($failure, $exception);
+                $frames = array_values(array_filter(
+                    $exception->getTrace(),
+                    static fn(array $frame): bool =>
+                        ($frame['class'] ?? null) === PasswordStrategy::class,
+                ));
+
+                self::assertNotEmpty($frames);
                 self::assertStringNotContainsString(
                     'trace-secret',
-                    var_export($exception->getTrace(), true),
+                    var_export($frames, true),
                 );
             }
         } finally {

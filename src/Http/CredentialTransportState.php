@@ -47,8 +47,10 @@ final class CredentialTransportState
      * Registers compensation for a durable transition whose response-side
      * replacement credential has not been published yet.
      */
-    public function onDiscard(\Closure $callback): void
-    {
+    public function onDiscard(
+        #[\SensitiveParameter]
+        \Closure $callback,
+    ): void {
         if ($this->clear) {
             $callback();
             return;

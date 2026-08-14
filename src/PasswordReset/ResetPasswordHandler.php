@@ -57,14 +57,19 @@ final readonly class ResetPasswordHandler implements RequestHandlerInterface
             return $this->json(422, ['errors' => $errors]);
         }
 
+        // Build the complete success response before the application-owned
+        // irreversible reset transition can consume the token and invalidate
+        // existing credentials.
+        $successResponse = $this->json(200, [
+            'message' => 'Password has been reset successfully.',
+        ]);
+
         /** @var non-empty-string $token */
         /** @var non-empty-string $password */
         $result = $this->resetService->reset($token, $password);
 
         return match ($result) {
-            PasswordResetResult::Success => $this->json(200, [
-                'message' => 'Password has been reset successfully.',
-            ]),
+            PasswordResetResult::Success => $successResponse,
             PasswordResetResult::InvalidToken => $this->json(400, [
                 'error' => 'invalid_token',
             ]),

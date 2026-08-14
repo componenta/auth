@@ -41,9 +41,14 @@ final readonly class RequestHandler implements RequestHandlerInterface
             return $this->json(400, ['error' => 'invalid_identity']);
         }
 
-        $this->queue->enqueue(new OtpRequest($identity));
+        $work = new OtpRequest($identity);
+        $response = $this->json(200, [
+            'message' => 'If the account exists, a code has been sent.',
+        ]);
 
-        return $this->json(200, ['message' => 'If the account exists, a code has been sent.']);
+        $this->queue->enqueue($work);
+
+        return $response;
     }
 
     /** @param array<string, mixed> $data */

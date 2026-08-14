@@ -44,6 +44,27 @@ final class ServiceObjectTraceTest extends TestCase
         self::assertPackageFramesDoNotContainObject($exception, $storage);
     }
 
+    public function testImmediateDiscardCallbackDoesNotExposeCapturedClosure(): void
+    {
+        $storage = new TraceSensitiveStorage('storage-object-secret');
+        $state = new CredentialTransportState();
+        $state->clear($storage);
+        $secret = 'discard-callback-secret';
+        $callback = static function () use ($secret): void {
+            if ($secret === '') {
+                return;
+            }
+
+            throw new ServiceObjectTraceFailure('discard callback failed');
+        };
+        $exception = $this->capture(
+            static fn() => $state->onDiscard($callback),
+        );
+
+        self::assertInstanceOf(ServiceObjectTraceFailure::class, $exception);
+        self::assertPackageFramesDoNotContainObject($exception, $callback);
+    }
+
     private function capture(
         #[\SensitiveParameter]
         \Closure $callback,
