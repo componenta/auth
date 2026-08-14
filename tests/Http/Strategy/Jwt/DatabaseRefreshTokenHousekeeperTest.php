@@ -20,7 +20,7 @@ final class DatabaseRefreshTokenHousekeeperTest extends TestCase
     private const string FAMILY_A = 'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
     private const string FAMILY_B = 'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
 
-    public function testCleanupRemovesOnlyFamiliesWhoseEntireHistoryExpired(): void
+    public function testCleanupDeletesTerminalFamilyAndPreservesLiveFamily(): void
     {
         if (!extension_loaded('pdo_sqlite')) {
             self::markTestSkipped('pdo_sqlite is required for storage integration tests.');
@@ -151,7 +151,7 @@ final class DatabaseRefreshTokenHousekeeperTest extends TestCase
         );
     }
 
-    public function testCleanupIsBoundedByFamilies(): void
+    public function testTerminalFamilyDeletionBatchHonorsLimit(): void
     {
         if (!extension_loaded('pdo_sqlite')) {
             self::markTestSkipped('pdo_sqlite is required for storage integration tests.');
