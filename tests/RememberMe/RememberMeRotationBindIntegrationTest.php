@@ -30,6 +30,15 @@ final class RememberMeRotationBindIntegrationTest extends TestCase
         // while RememberMeStrategy is still completing the same rotation.
         $manager->updateSessionId('old-session', 'new-session');
 
+        $rebound = $database
+            ->select(['session_id', 'previous_session_id'])
+            ->from('remember_me_tokens')
+            ->run()
+            ->fetch();
+        self::assertIsArray($rebound);
+        self::assertSame('new-session', $rebound['session_id'] ?? null);
+        self::assertSame('old-session', $rebound['previous_session_id'] ?? null);
+
         self::assertTrue($manager->bindRotation($rotation, 'new-session'));
         $nextRotation = $manager->rotate($rotation->successorToken);
         self::assertNotNull($nextRotation);
