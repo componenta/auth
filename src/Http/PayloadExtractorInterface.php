@@ -46,5 +46,8 @@ interface PayloadExtractorInterface
      *
      * @throws InvalidPayloadException If data is malformed or incomplete
      */
-    public function extract(ServerRequestInterface $request): ?object;
+    public function extract(
+        #[\SensitiveParameter]
+        ServerRequestInterface $request,
+    ): ?object;
 }

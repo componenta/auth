@@ -36,8 +36,10 @@ final readonly class DeniedResponseFactory implements DeniedResponseFactoryInter
     }
 
     #[\Override]
-    public function create(DeniedReasonInterface $reason): ResponseInterface
-    {
+    public function create(
+        #[\SensitiveParameter]
+        DeniedReasonInterface $reason,
+    ): ResponseInterface {
         $code = self::validCode($reason->code)
             ? $reason->code
             : self::FALLBACK_CODE;

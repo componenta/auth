@@ -24,14 +24,22 @@ final readonly class JwtStrategy implements AuthenticationStrategyInterface
     ) {}
 
     #[\Override]
-    public function supports(object $payload, ContextInterface $context): bool
-    {
+    public function supports(
+        #[\SensitiveParameter]
+        object $payload,
+        #[\SensitiveParameter]
+        ContextInterface $context,
+    ): bool {
         return $payload instanceof BearerPayload;
     }
 
     #[\Override]
-    public function attempt(#[\SensitiveParameter] object $payload, ContextInterface $context): AuthenticationResult
-    {
+    public function attempt(
+        #[\SensitiveParameter]
+        object $payload,
+        #[\SensitiveParameter]
+        ContextInterface $context,
+    ): AuthenticationResult {
         /** @var BearerPayload $payload */
         $claims = $this->signer->parse($payload->token);
 

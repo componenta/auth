@@ -39,6 +39,7 @@ final readonly class SessionPayload implements \JsonSerializable
     }
 
     private static function assertCredential(
+        #[\SensitiveParameter]
         string $value,
         int $maxLength,
         string $label,

@@ -22,5 +22,10 @@ interface AuthenticatorInterface
      *
      * @throws AuthenticationExceptionInterface
      */
-    public function attempt(object $payload, ContextInterface $context): AuthenticationResult;
+    public function attempt(
+        #[\SensitiveParameter]
+        object $payload,
+        #[\SensitiveParameter]
+        ContextInterface $context,
+    ): AuthenticationResult;
 }

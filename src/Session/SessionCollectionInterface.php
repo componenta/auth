@@ -15,7 +15,10 @@ interface SessionCollectionInterface extends Arrayable, \IteratorAggregate, \Cou
      * @param string|string[] $id
      * @return ($id is string ? ?SessionInterface : SessionCollectionInterface)
      */
-    public function find(string|array $id): SessionInterface|SessionCollectionInterface|null;
+    public function find(
+        #[\SensitiveParameter]
+        string|array $id,
+    ): SessionInterface|SessionCollectionInterface|null;
 
     /** @param callable(SessionInterface): bool $callback */
     public function filter(callable $callback): SessionCollectionInterface;

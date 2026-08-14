@@ -11,6 +11,7 @@ interface SessionManagerInterface
     /** @param array<string, mixed> $attributes */
     public function create(
         UuidInterface $subjectId,
+        #[\SensitiveParameter]
         array $attributes = [],
     ): SessionInterface;
 

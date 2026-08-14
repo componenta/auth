@@ -24,8 +24,10 @@ final readonly class RequestHandler implements RequestHandlerInterface
     }
 
     #[\Override]
-    public function handle(ServerRequestInterface $request): ResponseInterface
-    {
+    public function handle(
+        #[\SensitiveParameter]
+        ServerRequestInterface $request,
+    ): ResponseInterface {
         $body = $request->getParsedBody();
         $identity = is_array($body) ? ($body[$this->identityField] ?? null) : null;
 

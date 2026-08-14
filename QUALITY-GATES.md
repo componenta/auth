@@ -29,7 +29,7 @@ composer audit
 git diff --check
 ```
 
-`tools/verify.sh` guards repository-shape invariants that are appropriate for static inspection: removed identity/session capability APIs and files must stay removed, event DTOs must not regain hidden clocks, raw queued credential exposure and delete-on-consume remember rotation must not return, the canonical MySQL schema must retain its required credential widths/indexes, temporary review artifacts must be absent, and GitHub Actions/container dependencies must remain immutably pinned. Runtime, HTTP, lifecycle and compensation semantics are proved by PHPUnit/integration/concurrency tests rather than grep patterns tied to a particular implementation.
+`tools/verify.sh` also prevents the return of removed identity/session capability APIs, event marker interfaces, `PublicDeniedReasonInterface`, `RememberMeToken`, delete-on-consume remember rotation, hidden clocks in event DTOs, raw queued credential exposure and floating GitHub Action refs. Response hardening and other runtime security behavior are verified by PHPUnit/integration tests instead of source-shape greps.
 
 ## Release-blocking invariants
 
@@ -60,7 +60,7 @@ The suite must prove:
 23. one-time tokens are domain-separated by purpose;
 24. built-in delivery queue messages cannot look up one identity and deliver the credential to a different arbitrary destination;
 25. password reset success represents the complete recovery transition and password-policy rejection is explicit;
-26. denial attributes and bearer credentials are absent from public/debug serialization, credential-bearing strategy/session parameters are redacted from exception traces, and `CredentialTransportState` does not expose queued bearer payloads;
+26. denial attributes and bearer credentials are absent from public/debug serialization, and credential-bearing request/context/storage/event/session parameters and SQL credential-state rows are redacted from exception traces when PHP exception arguments are enabled;
 27. every response-side credential store/remove mutation is non-cacheable, token-bearing responses are non-cacheable, and magic-link verification responses use `Referrer-Policy: no-referrer`;
 28. malformed inputs are rejected before provider/hash/storage work;
 29. credential-state reads use the primary/write connection;
@@ -75,7 +75,11 @@ The suite must prove:
 38. best-effort session cleanup scheduling and its diagnostics cannot replace an already successful application response;
 39. semantically empty token responses remain non-cacheable but do not claim `Content-Type: application/json` without relying on PSR-7 stream-size introspection, while JSON token responses do claim it;
 40. the public magic-link session verifier requires replacing credential storage, so direct construction cannot preserve or re-apply an older browser principal;
-41. remember-me authentication used with `CredentialTransportState` is wrapped by `CompensatingRememberMeStrategy`, and discarding an unpublished successful rotation revokes its successor bearer and terminates its session.
+41. remember-me authentication used with `CredentialTransportState` is wrapped by `CompensatingRememberMeStrategy`, and discarding an unpublished successful rotation revokes its successor bearer and terminates its session;
+42. OTP and magic-link session verification complete fallible request-derived attribute extraction and success-response allocation before the one-time credential can be consumed;
+43. remember-me bind is idempotent when the critical session-regeneration listener has already rebound the same grant to the intended successor session;
+44. discarding queued credential state attempts every registered compensation before rethrowing the first failure actually encountered;
+45. logger failures cannot mask a critical auth-event failure or prevent later best-effort observers from running.
 
 ## Real MySQL concurrency gate
 
@@ -133,7 +137,10 @@ The package does not own the application's password repository, message broker, 
 - `LogoutHandler` is placed after authentication when server-side session termination is expected;
 - magic-link query credentials are redacted from reverse-proxy/access logs and verification pages do not load untrusted third-party resources;
 - access to credential-bearing session persistence and database logs is restricted;
-- custom credential stores pass equivalent concurrency and primary-read tests and honor the strengthened family/session-lineage contracts.
+- custom credential stores pass equivalent concurrency and primary-read tests and honor the strengthened family/session-lineage contracts;
+- custom authentication strategies, authenticators, payload extractors/storages, senders, event listeners and credential stores repeat `#[SensitiveParameter]` on concrete credential-bearing parameters because PHP parameter attributes are not inherited from interfaces.
+
+Third-party PSR/database/provider implementations remain responsible for redacting their own stack frames; Componenta can only mask arguments on frames it owns.
 
 ## Release decision
 

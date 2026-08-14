@@ -41,8 +41,10 @@ final readonly class PasswordExtractor implements PayloadExtractorInterface
     }
 
     #[\Override]
-    public function extract(ServerRequestInterface $request): Payload
-    {
+    public function extract(
+        #[\SensitiveParameter]
+        ServerRequestInterface $request,
+    ): Payload {
         $body = $request->getParsedBody();
         if (!is_array($body)) {
             throw InvalidPayloadException::invalidField('body');

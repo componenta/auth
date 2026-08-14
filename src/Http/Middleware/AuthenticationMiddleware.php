@@ -31,6 +31,7 @@ final readonly class AuthenticationMiddleware implements MiddlewareInterface
 
     #[\Override]
     public function process(
+        #[\SensitiveParameter]
         ServerRequestInterface $request,
         RequestHandlerInterface $handler,
     ): ResponseInterface {

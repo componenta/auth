@@ -30,8 +30,10 @@ readonly class LogoutHandler implements RequestHandlerInterface
     ) {}
 
     #[\Override]
-    public function handle(ServerRequestInterface $request): ResponseInterface
-    {
+    public function handle(
+        #[\SensitiveParameter]
+        ServerRequestInterface $request,
+    ): ResponseInterface {
         $session = $request->getAttribute(SessionInterface::class);
         $identity = $request->getAttribute(IdentityInterface::class);
 

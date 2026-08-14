@@ -23,8 +23,12 @@ final readonly class SessionStrategy implements AuthenticationStrategyInterface
     ) {}
 
     #[\Override]
-    public function supports(object $payload, ContextInterface $context): bool
-    {
+    public function supports(
+        #[\SensitiveParameter]
+        object $payload,
+        #[\SensitiveParameter]
+        ContextInterface $context,
+    ): bool {
         return $payload instanceof SessionPayload && $payload->sessionId !== null;
     }
 
@@ -32,6 +36,7 @@ final readonly class SessionStrategy implements AuthenticationStrategyInterface
     public function attempt(
         #[\SensitiveParameter]
         object $payload,
+        #[\SensitiveParameter]
         ContextInterface $context,
     ): AuthenticationResult {
         /** @var SessionPayload $payload */
@@ -90,8 +95,10 @@ final readonly class SessionStrategy implements AuthenticationStrategyInterface
         );
     }
 
-    private function denied(SessionPayload $payload): AuthenticationResult
-    {
+    private function denied(
+        #[\SensitiveParameter]
+        SessionPayload $payload,
+    ): AuthenticationResult {
         return new AuthenticationResult(
             subject: new InvalidCredentials(),
             continueOnFailure: $payload->rememberMeToken !== null,

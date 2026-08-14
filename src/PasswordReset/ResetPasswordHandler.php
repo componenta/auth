@@ -20,8 +20,10 @@ final readonly class ResetPasswordHandler implements RequestHandlerInterface
     ) {}
 
     #[\Override]
-    public function handle(ServerRequestInterface $request): ResponseInterface
-    {
+    public function handle(
+        #[\SensitiveParameter]
+        ServerRequestInterface $request,
+    ): ResponseInterface {
         $parsed = $request->getParsedBody();
         $body = is_array($parsed) ? $parsed : [];
         $token = $body['token'] ?? null;

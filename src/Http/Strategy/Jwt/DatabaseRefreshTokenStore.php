@@ -27,8 +27,10 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
     ) {}
 
     #[\Override]
-    public function storeInitial(RefreshToken $token): void
-    {
+    public function storeInitial(
+        #[\SensitiveParameter]
+        RefreshToken $token,
+    ): void {
         if ($token->revoked) {
             throw new \InvalidArgumentException(
                 'An initial refresh token must be active.',
@@ -428,6 +430,7 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
      */
     private function claimActiveFamily(
         DatabaseInterface $database,
+        #[\SensitiveParameter]
         string $familyId,
     ): ?RefreshTokenRotationStatus {
         $affected = $database
@@ -473,6 +476,7 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
 
     private function compromiseFamily(
         DatabaseInterface $database,
+        #[\SensitiveParameter]
         string $familyId,
         int $now,
     ): void {
@@ -499,6 +503,7 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
     /** @return array<array-key, mixed>|null */
     private function findToken(
         DatabaseInterface $database,
+        #[\SensitiveParameter]
         string $tokenHash,
     ): ?array {
         $query = $database->select()->withDriver(
@@ -524,6 +529,7 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
     /** @return array<array-key, mixed>|null */
     private function findFamily(
         DatabaseInterface $database,
+        #[\SensitiveParameter]
         string $familyId,
     ): ?array {
         $query = $database->select()->withDriver(
@@ -551,20 +557,27 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
         return bin2hex(random_bytes(self::LOCK_NONCE_BYTES));
     }
 
-    private static function hashToken(string $tokenId): string
-    {
+    private static function hashToken(
+        #[\SensitiveParameter]
+        string $tokenId,
+    ): string {
         return hash('sha256', $tokenId);
     }
 
-    private static function validIdentifier(string $value): bool
-    {
+    private static function validIdentifier(
+        #[\SensitiveParameter]
+        string $value,
+    ): bool {
         return preg_match('/\A[a-f0-9]{64,128}\z/D', $value) === 1
             && strlen($value) % 2 === 0;
     }
 
     /** @param array<array-key, mixed> $row */
-    private static function stringValue(array $row, string $key): string
-    {
+    private static function stringValue(
+        #[\SensitiveParameter]
+        array $row,
+        string $key,
+    ): string {
         $value = $row[$key] ?? null;
 
         if (!is_string($value) && !is_int($value)) {
@@ -578,8 +591,11 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
     }
 
     /** @param array<array-key, mixed> $row */
-    private static function intValue(array $row, string $key): int
-    {
+    private static function intValue(
+        #[\SensitiveParameter]
+        array $row,
+        string $key,
+    ): int {
         $value = $row[$key] ?? null;
 
         if (!is_int($value) && !(is_string($value) && ctype_digit($value))) {
@@ -593,8 +609,11 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
     }
 
     /** @param array<array-key, mixed> $row */
-    private static function nullableIntValue(array $row, string $key): ?int
-    {
+    private static function nullableIntValue(
+        #[\SensitiveParameter]
+        array $row,
+        string $key,
+    ): ?int {
         if (!array_key_exists($key, $row) || $row[$key] === null) {
             return null;
         }
@@ -603,8 +622,11 @@ final readonly class DatabaseRefreshTokenStore implements RefreshTokenStoreInter
     }
 
     /** @param array<array-key, mixed> $row */
-    private static function uuidValue(array $row, string $key): UuidInterface
-    {
+    private static function uuidValue(
+        #[\SensitiveParameter]
+        array $row,
+        string $key,
+    ): UuidInterface {
         try {
             return Uuid::fromString(self::stringValue($row, $key));
         } catch (\InvalidArgumentException $exception) {

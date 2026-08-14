@@ -99,8 +99,10 @@ final readonly class CookieTransport implements TransportInterface
     }
 
     #[\Override]
-    public function extract(ServerRequestInterface $request): ?object
-    {
+    public function extract(
+        #[\SensitiveParameter]
+        ServerRequestInterface $request,
+    ): ?object {
         /** @var array<string, mixed> $cookies */
         $cookies = $request->getCookieParams();
         $sessionId = $this->readCredential(
@@ -125,8 +127,11 @@ final readonly class CookieTransport implements TransportInterface
 
     #[\Override]
     public function store(
+        #[\SensitiveParameter]
         ServerRequestInterface $request,
+        #[\SensitiveParameter]
         ResponseInterface $response,
+        #[\SensitiveParameter]
         object $payload,
     ): ResponseInterface {
         if (!$payload instanceof SessionPayload) {
@@ -174,7 +179,9 @@ final readonly class CookieTransport implements TransportInterface
 
     #[\Override]
     public function remove(
+        #[\SensitiveParameter]
         ServerRequestInterface $request,
+        #[\SensitiveParameter]
         ResponseInterface $response,
     ): ResponseInterface {
         $response = $this->withSetCookie(
@@ -196,6 +203,7 @@ final readonly class CookieTransport implements TransportInterface
 
     /** @param array<string, mixed> $cookies */
     private function readCredential(
+        #[\SensitiveParameter]
         array $cookies,
         string $name,
         int $maxLength,
@@ -228,6 +236,7 @@ final readonly class CookieTransport implements TransportInterface
     }
 
     private static function assertCredential(
+        #[\SensitiveParameter]
         string $value,
         string $name,
         int $maxLength,
@@ -264,8 +273,10 @@ final readonly class CookieTransport implements TransportInterface
     }
 
     private function withSetCookie(
+        #[\SensitiveParameter]
         ResponseInterface $response,
         string $cookieName,
+        #[\SensitiveParameter]
         string $cookieString,
     ): ResponseInterface {
         $existing = $response->getHeader('Set-Cookie');
@@ -285,8 +296,12 @@ final readonly class CookieTransport implements TransportInterface
         return $response->withAddedHeader('Set-Cookie', $cookieString);
     }
 
-    private function buildCookie(string $name, string $value, int $ttl): string
-    {
+    private function buildCookie(
+        string $name,
+        #[\SensitiveParameter]
+        string $value,
+        int $ttl,
+    ): string {
         $parts = [
             sprintf('%s=%s', $name, rawurlencode($value)),
             sprintf('Path=%s', $this->path),

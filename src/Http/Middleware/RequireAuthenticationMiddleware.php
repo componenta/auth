@@ -26,6 +26,7 @@ final readonly class RequireAuthenticationMiddleware implements MiddlewareInterf
     ) {}
 
     public function process(
+        #[\SensitiveParameter]
         ServerRequestInterface $request,
         RequestHandlerInterface $handler,
     ): ResponseInterface {

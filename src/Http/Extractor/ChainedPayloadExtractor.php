@@ -17,8 +17,10 @@ final readonly class ChainedPayloadExtractor implements PayloadExtractorInterfac
         $this->extractors = $extractors;
     }
 
-    public function extract(ServerRequestInterface $request): ?object
-    {
+    public function extract(
+        #[\SensitiveParameter]
+        ServerRequestInterface $request,
+    ): ?object {
         foreach ($this->extractors as $extractor) {
             $payload = $extractor->extract($request);
 

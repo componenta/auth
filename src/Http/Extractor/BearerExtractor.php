@@ -20,8 +20,10 @@ final readonly class BearerExtractor implements PayloadExtractorInterface
     }
 
     #[\Override]
-    public function extract(ServerRequestInterface $request): ?object
-    {
+    public function extract(
+        #[\SensitiveParameter]
+        ServerRequestInterface $request,
+    ): ?object {
         $value = $request->getHeaderLine($this->header);
 
         if ($value === '') {

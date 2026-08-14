@@ -9,5 +9,8 @@ interface EventListenerProviderInterface
     /**
      * @return iterable<EventListenerInterface>
      */
-    public function provideFor(EventInterface $event): iterable;
+    public function provideFor(
+        #[\SensitiveParameter]
+        EventInterface $event,
+    ): iterable;
 }

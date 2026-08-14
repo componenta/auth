@@ -22,8 +22,12 @@ final readonly class OtpStrategy implements AuthenticationStrategyInterface
     ) {}
 
     #[\Override]
-    public function supports(object $payload, ContextInterface $context): bool
-    {
+    public function supports(
+        #[\SensitiveParameter]
+        object $payload,
+        #[\SensitiveParameter]
+        ContextInterface $context,
+    ): bool {
         return $payload instanceof OtpPayload;
     }
 
@@ -31,6 +35,7 @@ final readonly class OtpStrategy implements AuthenticationStrategyInterface
     public function attempt(
         #[\SensitiveParameter]
         object $payload,
+        #[\SensitiveParameter]
         ContextInterface $context,
     ): AuthenticationResult {
         /** @var OtpPayload $payload */

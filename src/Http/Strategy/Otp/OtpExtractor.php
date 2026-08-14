@@ -35,8 +35,10 @@ final readonly class OtpExtractor implements PayloadExtractorInterface
     }
 
     #[\Override]
-    public function extract(ServerRequestInterface $request): ?OtpPayload
-    {
+    public function extract(
+        #[\SensitiveParameter]
+        ServerRequestInterface $request,
+    ): ?OtpPayload {
         $body = $request->getParsedBody();
 
         if ($body === null) {

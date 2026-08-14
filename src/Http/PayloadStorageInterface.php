@@ -30,8 +30,11 @@ interface PayloadStorageInterface
      * @throws TransportException On storage failure
      */
     public function store(
+        #[\SensitiveParameter]
         ServerRequestInterface $request,
+        #[\SensitiveParameter]
         ResponseInterface $response,
+        #[\SensitiveParameter]
         object $payload,
     ): ResponseInterface;
 
@@ -47,7 +50,9 @@ interface PayloadStorageInterface
      * @throws TransportException On removal failure
      */
     public function remove(
+        #[\SensitiveParameter]
         ServerRequestInterface $request,
+        #[\SensitiveParameter]
         ResponseInterface $response,
     ): ResponseInterface;
 }

@@ -19,8 +19,10 @@ final readonly class RememberMeRegenerationListener implements CriticalEventList
     }
 
     #[\Override]
-    public function handleEvent(EventInterface $event): void
-    {
+    public function handleEvent(
+        #[\SensitiveParameter]
+        EventInterface $event,
+    ): void {
         if (!$event instanceof SessionRegenerated) {
             throw new \InvalidArgumentException(sprintf(
                 '%s cannot handle %s.',

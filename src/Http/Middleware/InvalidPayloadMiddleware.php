@@ -17,8 +17,11 @@ final readonly class InvalidPayloadMiddleware implements MiddlewareInterface
     public function __construct(private ResponseFactoryInterface $responseFactory) {}
 
     #[\Override]
-    public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
-    {
+    public function process(
+        #[\SensitiveParameter]
+        ServerRequestInterface $request,
+        RequestHandlerInterface $handler,
+    ): ResponseInterface {
         try {
             return $handler->handle($request);
         } catch (InvalidPayloadException $e) {

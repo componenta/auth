@@ -40,8 +40,11 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
     }
 
     #[\Override]
-    public function create(UuidInterface $subjectId, array $attributes = []): SessionInterface
-    {
+    public function create(
+        UuidInterface $subjectId,
+        #[\SensitiveParameter]
+        array $attributes = [],
+    ): SessionInterface {
         $ip = $attributes[self::ATTR_IP]
             ?? throw new \InvalidArgumentException('Missing required attribute: ' . self::ATTR_IP);
         $userAgent = $attributes[self::ATTR_USER_AGENT]
@@ -297,7 +300,6 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
             ->limit($limit)
             ->run()
             ->fetchAll();
-
         $ids = [];
 
         foreach ($rows as $row) {

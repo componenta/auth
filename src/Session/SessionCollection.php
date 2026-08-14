@@ -17,8 +17,10 @@ final readonly class SessionCollection implements SessionCollectionInterface, \J
     public bool $empty;
 
     /** @param iterable<SessionInterface> $sessions */
-    public function __construct(iterable $sessions = [])
-    {
+    public function __construct(
+        #[\SensitiveParameter]
+        iterable $sessions = [],
+    ) {
         $indexed = [];
 
         foreach ($sessions as $session) {
@@ -46,8 +48,10 @@ final readonly class SessionCollection implements SessionCollectionInterface, \J
     }
 
     #[\Override]
-    public function find(string|array $id): SessionInterface|self|null
-    {
+    public function find(
+        #[\SensitiveParameter]
+        string|array $id,
+    ): SessionInterface|self|null {
         if (is_string($id)) {
             return $this->sessions[self::idKey($id)] ?? null;
         }
@@ -114,8 +118,10 @@ final readonly class SessionCollection implements SessionCollectionInterface, \J
         yield from $this->toArray();
     }
 
-    private static function idKey(string $id): string
-    {
+    private static function idKey(
+        #[\SensitiveParameter]
+        string $id,
+    ): string {
         return 's:' . $id;
     }
 }

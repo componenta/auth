@@ -31,14 +31,19 @@ final readonly class MagicLinkStrategy implements AuthenticationStrategyInterfac
         private DateTimeFactoryInterface $dateTimeFactory,
     ) {}
 
-    public function supports(object $payload, ContextInterface $context): bool
-    {
+    public function supports(
+        #[\SensitiveParameter]
+        object $payload,
+        #[\SensitiveParameter]
+        ContextInterface $context,
+    ): bool {
         return $payload instanceof VerifyPayload;
     }
 
     public function attempt(
         #[\SensitiveParameter]
         object $payload,
+        #[\SensitiveParameter]
         ContextInterface $context,
     ): AuthenticationResult {
         /** @var VerifyPayload $payload */

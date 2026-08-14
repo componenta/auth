@@ -16,8 +16,11 @@ final readonly class ReplacingPayloadStorage implements PayloadStorageInterface
 
     #[\Override]
     public function store(
+        #[\SensitiveParameter]
         ServerRequestInterface $request,
+        #[\SensitiveParameter]
         ResponseInterface $response,
+        #[\SensitiveParameter]
         object $payload,
     ): ResponseInterface {
         $transportState = $request->getAttribute(CredentialTransportState::class);
@@ -32,7 +35,9 @@ final readonly class ReplacingPayloadStorage implements PayloadStorageInterface
 
     #[\Override]
     public function remove(
+        #[\SensitiveParameter]
         ServerRequestInterface $request,
+        #[\SensitiveParameter]
         ResponseInterface $response,
     ): ResponseInterface {
         return $this->storage->remove($request, $response);

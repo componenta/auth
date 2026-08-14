@@ -15,7 +15,10 @@ namespace Componenta\Auth\Http\Strategy\Otp;
  */
 interface CodeStoreInterface
 {
-    public function store(StoredCode $code): void;
+    public function store(
+        #[\SensitiveParameter]
+        StoredCode $code,
+    ): void;
 
     public function verifyAndConsume(
         string $destination,

@@ -55,8 +55,10 @@ final readonly class DatabaseCodeStore implements CodeStoreInterface
     }
 
     #[\Override]
-    public function store(StoredCode $code): void
-    {
+    public function store(
+        #[\SensitiveParameter]
+        StoredCode $code,
+    ): void {
         $values = [
             $this->config->destinationColumn => $code->destination,
             $this->config->subjectIdColumn => $code->subjectId->toString(),
@@ -390,8 +392,11 @@ final readonly class DatabaseCodeStore implements CodeStoreInterface
     }
 
     /** @param array<array-key, mixed> $row */
-    private static function stringValue(array $row, string $key): string
-    {
+    private static function stringValue(
+        #[\SensitiveParameter]
+        array $row,
+        string $key,
+    ): string {
         $value = $row[$key] ?? null;
 
         if (!is_string($value) && !is_int($value)) {
@@ -405,8 +410,11 @@ final readonly class DatabaseCodeStore implements CodeStoreInterface
     }
 
     /** @param array<array-key, mixed> $row */
-    private static function intValue(array $row, string $key): int
-    {
+    private static function intValue(
+        #[\SensitiveParameter]
+        array $row,
+        string $key,
+    ): int {
         $value = $row[$key] ?? null;
 
         if (!is_int($value) && !(is_string($value) && ctype_digit($value))) {
@@ -420,8 +428,11 @@ final readonly class DatabaseCodeStore implements CodeStoreInterface
     }
 
     /** @param array<array-key, mixed> $row */
-    private static function uuidValue(array $row, string $key): UuidInterface
-    {
+    private static function uuidValue(
+        #[\SensitiveParameter]
+        array $row,
+        string $key,
+    ): UuidInterface {
         try {
             return Uuid::fromString(self::stringValue($row, $key));
         } catch (\InvalidArgumentException $exception) {

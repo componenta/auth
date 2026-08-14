@@ -90,7 +90,9 @@ final class CredentialTransportState
     }
 
     public function apply(
+        #[\SensitiveParameter]
         ServerRequestInterface $request,
+        #[\SensitiveParameter]
         ResponseInterface $response,
     ): ResponseInterface {
         if ($this->clear) {

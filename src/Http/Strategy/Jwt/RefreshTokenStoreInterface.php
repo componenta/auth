@@ -11,7 +11,10 @@ use Componenta\Identity\UuidInterface;
  */
 interface RefreshTokenStoreInterface
 {
-    public function storeInitial(RefreshToken $token): void;
+    public function storeInitial(
+        #[\SensitiveParameter]
+        RefreshToken $token,
+    ): void;
 
     /**
      * Returns the subject of a currently active presented grant for preflight

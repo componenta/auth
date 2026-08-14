@@ -15,8 +15,10 @@ final readonly class SessionAttributeExtractor implements SessionAttributeExtrac
     ) {}
 
     #[\Override]
-    public function extract(ServerRequestInterface $request): array
-    {
+    public function extract(
+        #[\SensitiveParameter]
+        ServerRequestInterface $request,
+    ): array {
         $userAgent = substr(
             $request->getHeaderLine('User-Agent'),
             0,

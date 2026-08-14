@@ -18,7 +18,12 @@ interface AuthenticationStrategyInterface
      * @param object $payload The payload to check
      * @return bool True if this strategy can authenticate the payload
      */
-    public function supports(object $payload, ContextInterface $context): bool;
+    public function supports(
+        #[\SensitiveParameter]
+        object $payload,
+        #[\SensitiveParameter]
+        ContextInterface $context,
+    ): bool;
 
     /**
      * Authenticates the given payload.
@@ -31,6 +36,7 @@ interface AuthenticationStrategyInterface
     public function attempt(
         #[\SensitiveParameter]
         object $payload,
+        #[\SensitiveParameter]
         ContextInterface $context,
     ): AuthenticationResult;
 }

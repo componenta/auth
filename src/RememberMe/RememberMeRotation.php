@@ -42,8 +42,10 @@ final readonly class RememberMeRotation implements \JsonSerializable
         return $this->__debugInfo();
     }
 
-    private static function assertSessionId(string $sessionId): void
-    {
+    private static function assertSessionId(
+        #[\SensitiveParameter]
+        string $sessionId,
+    ): void {
         if (
             $sessionId === ''
             || strlen($sessionId) > 512

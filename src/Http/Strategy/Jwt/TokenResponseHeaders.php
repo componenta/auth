@@ -10,20 +10,26 @@ final class TokenResponseHeaders
 {
     private function __construct() {}
 
-    public static function apply(ResponseInterface $response): ResponseInterface
-    {
+    public static function apply(
+        #[\SensitiveParameter]
+        ResponseInterface $response,
+    ): ResponseInterface {
         return self::noStore($response)
             ->withHeader('Content-Type', 'application/json');
     }
 
-    public static function applyEmpty(ResponseInterface $response): ResponseInterface
-    {
+    public static function applyEmpty(
+        #[\SensitiveParameter]
+        ResponseInterface $response,
+    ): ResponseInterface {
         return self::noStore($response)
             ->withoutHeader('Content-Type');
     }
 
-    private static function noStore(ResponseInterface $response): ResponseInterface
-    {
+    private static function noStore(
+        #[\SensitiveParameter]
+        ResponseInterface $response,
+    ): ResponseInterface {
         return $response
             ->withHeader('Cache-Control', 'no-store')
             ->withHeader('Pragma', 'no-cache');

@@ -26,6 +26,7 @@ final readonly class Authenticator implements AuthenticatorInterface
     public function attempt(
         #[\SensitiveParameter]
         object $payload,
+        #[\SensitiveParameter]
         ContextInterface $context,
     ): AuthenticationResult {
         $lastResult = null;

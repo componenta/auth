@@ -20,6 +20,7 @@ final readonly class TouchSessionMiddleware implements MiddlewareInterface
 
     #[\Override]
     public function process(
+        #[\SensitiveParameter]
         ServerRequestInterface $request,
         RequestHandlerInterface $handler,
     ): ResponseInterface {

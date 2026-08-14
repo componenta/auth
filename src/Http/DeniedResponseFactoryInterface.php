@@ -18,5 +18,8 @@ interface DeniedResponseFactoryInterface
      * Implementations should map denial codes to appropriate
      * HTTP status codes and response bodies.
      */
-    public function create(DeniedReasonInterface $reason): ResponseInterface;
+    public function create(
+        #[\SensitiveParameter]
+        DeniedReasonInterface $reason,
+    ): ResponseInterface;
 }

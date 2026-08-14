@@ -29,6 +29,7 @@ final readonly class SessionGarbageCollectionMiddleware implements MiddlewareInt
 
     #[\Override]
     public function process(
+        #[\SensitiveParameter]
         ServerRequestInterface $request,
         RequestHandlerInterface $handler,
     ): ResponseInterface {

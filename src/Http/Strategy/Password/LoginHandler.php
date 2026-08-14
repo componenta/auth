@@ -36,8 +36,10 @@ readonly class LoginHandler implements RequestHandlerInterface
     ) {}
 
     #[\Override]
-    public function handle(ServerRequestInterface $request): ResponseInterface
-    {
+    public function handle(
+        #[\SensitiveParameter]
+        ServerRequestInterface $request,
+    ): ResponseInterface {
         $payload = $this->extractor->extract($request);
         $result = $this->authenticator->attempt($payload, new Context([
             ServerRequestInterface::class => $request,
@@ -86,7 +88,9 @@ readonly class LoginHandler implements RequestHandlerInterface
     }
 
     private function rollbackUnpublishedCredentials(
+        #[\SensitiveParameter]
         SessionInterface $session,
+        #[\SensitiveParameter]
         ?string $rememberMeToken,
     ): void {
         if ($rememberMeToken === null || $this->tokenManager === null) {

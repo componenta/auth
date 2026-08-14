@@ -29,8 +29,12 @@ final readonly class CompensatingRememberMeStrategy implements AuthenticationStr
     ) {}
 
     #[\Override]
-    public function supports(object $payload, ContextInterface $context): bool
-    {
+    public function supports(
+        #[\SensitiveParameter]
+        object $payload,
+        #[\SensitiveParameter]
+        ContextInterface $context,
+    ): bool {
         return $this->strategy->supports($payload, $context);
     }
 
@@ -38,6 +42,7 @@ final readonly class CompensatingRememberMeStrategy implements AuthenticationStr
     public function attempt(
         #[\SensitiveParameter]
         object $payload,
+        #[\SensitiveParameter]
         ContextInterface $context,
     ): AuthenticationResult {
         $result = $this->strategy->attempt($payload, $context);
@@ -72,6 +77,7 @@ final readonly class CompensatingRememberMeStrategy implements AuthenticationStr
     private function rollback(
         #[\SensitiveParameter]
         string $successorToken,
+        #[\SensitiveParameter]
         SessionInterface $session,
     ): void {
         try {

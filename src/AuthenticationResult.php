@@ -10,8 +10,11 @@ use Componenta\Identity\IdentityInterface;
 final readonly class AuthenticationResult implements \JsonSerializable
 {
     public function __construct(
+        #[\SensitiveParameter]
         public IdentityInterface|DeniedReasonInterface $subject,
+        #[\SensitiveParameter]
         public ?object $transportPayload = null,
+        #[\SensitiveParameter]
         public ?SessionInterface $session = null,
         public bool $continueOnFailure = false,
     ) {

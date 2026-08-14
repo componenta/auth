@@ -20,6 +20,7 @@ final readonly class Session implements SessionInterface, \JsonSerializable
         public ?string $replacedBy,
         public \DateTimeImmutable $createdAt,
         public \DateTimeImmutable $lastActiveAt,
+        #[\SensitiveParameter]
         public array $attributes = [],
     ) {
         if (

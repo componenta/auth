@@ -20,8 +20,10 @@ final class PriorityListenerProvider implements EventListenerProviderInterface
     }
 
     #[\Override]
-    public function provideFor(EventInterface $event): iterable
-    {
+    public function provideFor(
+        #[\SensitiveParameter]
+        EventInterface $event,
+    ): iterable {
         if (!$this->sorted) {
             krsort($this->listeners);
             $this->sorted = true;

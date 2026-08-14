@@ -166,8 +166,10 @@ final readonly class TokenManager implements TokenManagerInterface
         return $deleted;
     }
 
-    private static function validToken(string $token): bool
-    {
+    private static function validToken(
+        #[\SensitiveParameter]
+        string $token,
+    ): bool {
         return preg_match('/\A[a-f0-9]{64}\z/D', $token) === 1;
     }
 
@@ -179,8 +181,10 @@ final readonly class TokenManager implements TokenManagerInterface
     }
 
     /** @param array<array-key, mixed> $row */
-    private function hydrate(array $row): Token
-    {
+    private function hydrate(
+        #[\SensitiveParameter]
+        array $row,
+    ): Token {
         $usedAt = $row[$this->config->usedAtColumn] ?? null;
 
         return new Token(
@@ -207,8 +211,11 @@ final readonly class TokenManager implements TokenManagerInterface
     }
 
     /** @param array<array-key, mixed> $row */
-    private static function stringValue(array $row, string $key): string
-    {
+    private static function stringValue(
+        #[\SensitiveParameter]
+        array $row,
+        string $key,
+    ): string {
         $value = $row[$key] ?? null;
 
         if (!is_string($value) && !is_int($value)) {
@@ -222,8 +229,11 @@ final readonly class TokenManager implements TokenManagerInterface
     }
 
     /** @param array<array-key, mixed> $row */
-    private static function intValue(array $row, string $key): int
-    {
+    private static function intValue(
+        #[\SensitiveParameter]
+        array $row,
+        string $key,
+    ): int {
         $value = $row[$key] ?? null;
 
         if (

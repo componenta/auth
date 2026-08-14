@@ -17,8 +17,10 @@ final readonly class EventDispatcher
      * Runs security-critical participants first. Best-effort observers only see
      * the event after every critical participant has completed successfully.
      */
-    public function dispatch(EventInterface $event): void
-    {
+    public function dispatch(
+        #[\SensitiveParameter]
+        EventInterface $event,
+    ): void {
         $this->dispatchCritical($event);
         $this->dispatchBestEffort($event);
     }
@@ -29,8 +31,10 @@ final readonly class EventDispatcher
      * create irreversible side effects even though the owning transition is
      * going to fail or roll back.
      */
-    public function dispatchCritical(EventInterface $event): void
-    {
+    public function dispatchCritical(
+        #[\SensitiveParameter]
+        EventInterface $event,
+    ): void {
         foreach ($this->provider->provideFor($event) as $listener) {
             if (!$listener instanceof CriticalEventListenerInterface) {
                 continue;
@@ -49,8 +53,10 @@ final readonly class EventDispatcher
      * Executes only non-critical observers. Their failures are logged and
      * isolated from an already committed security transition.
      */
-    public function dispatchBestEffort(EventInterface $event): void
-    {
+    public function dispatchBestEffort(
+        #[\SensitiveParameter]
+        EventInterface $event,
+    ): void {
         foreach ($this->provider->provideFor($event) as $listener) {
             if ($listener instanceof CriticalEventListenerInterface) {
                 continue;
@@ -72,8 +78,10 @@ final readonly class EventDispatcher
      * critical marker is intentionally not allowed to turn such an observer
      * notification into a second security commit point.
      */
-    public function dispatchObservers(EventInterface $event): void
-    {
+    public function dispatchObservers(
+        #[\SensitiveParameter]
+        EventInterface $event,
+    ): void {
         foreach ($this->provider->provideFor($event) as $listener) {
             try {
                 $listener->handleEvent($event);
@@ -85,6 +93,7 @@ final readonly class EventDispatcher
 
     /** Logging itself is observational and must never alter auth control flow. */
     private function logFailure(
+        #[\SensitiveParameter]
         EventInterface $event,
         EventListenerInterface $listener,
         \Throwable $exception,

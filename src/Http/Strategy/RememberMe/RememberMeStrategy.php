@@ -29,15 +29,23 @@ final readonly class RememberMeStrategy implements AuthenticationStrategyInterfa
     ) {}
 
     #[\Override]
-    public function supports(object $payload, ContextInterface $context): bool
-    {
+    public function supports(
+        #[\SensitiveParameter]
+        object $payload,
+        #[\SensitiveParameter]
+        ContextInterface $context,
+    ): bool {
         return $payload instanceof SessionPayload
             && $payload->rememberMeToken !== null;
     }
 
     #[\Override]
-    public function attempt(#[\SensitiveParameter] object $payload, ContextInterface $context): AuthenticationResult
-    {
+    public function attempt(
+        #[\SensitiveParameter]
+        object $payload,
+        #[\SensitiveParameter]
+        ContextInterface $context,
+    ): AuthenticationResult {
         /** @var SessionPayload $payload */
         $plainToken = $payload->rememberMeToken;
 
@@ -109,7 +117,9 @@ final readonly class RememberMeStrategy implements AuthenticationStrategyInterfa
     }
 
     private function resolveSession(
+        #[\SensitiveParameter]
         RememberMeRotation $rotation,
+        #[\SensitiveParameter]
         ContextInterface $context,
     ): SessionInterface {
         $existing = $this->sessionManager->find($rotation->previousSessionId);
@@ -136,7 +146,9 @@ final readonly class RememberMeStrategy implements AuthenticationStrategyInterfa
      * credential state active and requires operator attention.
      */
     private function rollbackUnpublishedRotation(
+        #[\SensitiveParameter]
         RememberMeRotation $rotation,
+        #[\SensitiveParameter]
         SessionInterface $session,
     ): void {
         try {

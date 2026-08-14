@@ -26,14 +26,22 @@ final class PasswordStrategy implements AuthenticationStrategyInterface
     }
 
     #[\Override]
-    public function supports(object $payload, ContextInterface $context): bool
-    {
+    public function supports(
+        #[\SensitiveParameter]
+        object $payload,
+        #[\SensitiveParameter]
+        ContextInterface $context,
+    ): bool {
         return $payload instanceof Payload;
     }
 
     #[\Override]
-    public function attempt(#[\SensitiveParameter] object $payload, ContextInterface $context): AuthenticationResult
-    {
+    public function attempt(
+        #[\SensitiveParameter]
+        object $payload,
+        #[\SensitiveParameter]
+        ContextInterface $context,
+    ): AuthenticationResult {
         /** @var Payload $payload */
         $identity = $this->provider->findByIdentity($payload->identity);
         $valid = $this->hasher->verify(

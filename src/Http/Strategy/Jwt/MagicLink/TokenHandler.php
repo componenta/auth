@@ -29,8 +29,10 @@ final readonly class TokenHandler implements RequestHandlerInterface
     ) {}
 
     #[\Override]
-    public function handle(ServerRequestInterface $request): ResponseInterface
-    {
+    public function handle(
+        #[\SensitiveParameter]
+        ServerRequestInterface $request,
+    ): ResponseInterface {
         $payload = $this->extractor->extract($request);
 
         if ($payload === null) {

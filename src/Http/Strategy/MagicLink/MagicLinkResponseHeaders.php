@@ -11,8 +11,10 @@ final class MagicLinkResponseHeaders
 {
     private function __construct() {}
 
-    public static function apply(ResponseInterface $response): ResponseInterface
-    {
+    public static function apply(
+        #[\SensitiveParameter]
+        ResponseInterface $response,
+    ): ResponseInterface {
         return $response->withHeader('Referrer-Policy', 'no-referrer');
     }
 }

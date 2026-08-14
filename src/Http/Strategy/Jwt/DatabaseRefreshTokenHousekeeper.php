@@ -196,6 +196,7 @@ final readonly class DatabaseRefreshTokenHousekeeper
 
     private function familyHasTokenRows(
         DatabaseInterface $database,
+        #[\SensitiveParameter]
         string $familyId,
     ): bool {
         $query = $database->select($this->config->tokenHashColumn)->withDriver(
@@ -220,8 +221,11 @@ final readonly class DatabaseRefreshTokenHousekeeper
     }
 
     /** @param array<array-key, mixed> $row */
-    private static function stringValue(array $row, string $key): string
-    {
+    private static function stringValue(
+        #[\SensitiveParameter]
+        array $row,
+        string $key,
+    ): string {
         $value = $row[$key] ?? null;
 
         if (!is_string($value) && !is_int($value)) {

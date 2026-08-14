@@ -23,8 +23,10 @@ final readonly class VerifyExtractor implements PayloadExtractorInterface
     }
 
     #[\Override]
-    public function extract(ServerRequestInterface $request): ?VerifyPayload
-    {
+    public function extract(
+        #[\SensitiveParameter]
+        ServerRequestInterface $request,
+    ): ?VerifyPayload {
         $query = $request->getQueryParams();
 
         if (array_key_exists($this->tokenField, $query)) {
@@ -48,8 +50,10 @@ final readonly class VerifyExtractor implements PayloadExtractorInterface
         return $this->payload($body[$this->tokenField]);
     }
 
-    private function payload(mixed $token): VerifyPayload
-    {
+    private function payload(
+        #[\SensitiveParameter]
+        mixed $token,
+    ): VerifyPayload {
         if (!is_string($token) || preg_match('/\A[a-f0-9]{64}\z/D', $token) !== 1) {
             throw InvalidPayloadException::invalidField($this->tokenField);
         }

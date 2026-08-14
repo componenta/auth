@@ -21,7 +21,15 @@ interface SenderInterface
      * @param string $token Plain token to include in the URL
      * @param array<string, string> $context Extra key-value pairs for the URL
      *
+     * Implementations must repeat the SensitiveParameter annotation because
+     * parameter attributes are not inherited by concrete method frames.
+     *
      * @throws TransportException On send failure
      */
-    public function send(string $destination, string $token, array $context = []): void;
+    public function send(
+        string $destination,
+        #[\SensitiveParameter]
+        string $token,
+        array $context = [],
+    ): void;
 }

@@ -30,8 +30,10 @@ final readonly class RefreshHandler implements RequestHandlerInterface
     ) {}
 
     #[\Override]
-    public function handle(ServerRequestInterface $request): ResponseInterface
-    {
+    public function handle(
+        #[\SensitiveParameter]
+        ServerRequestInterface $request,
+    ): ResponseInterface {
         $body = $request->getParsedBody();
         $tokenId = is_array($body) ? ($body['refresh_token'] ?? null) : null;
 

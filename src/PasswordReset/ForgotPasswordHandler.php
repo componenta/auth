@@ -21,8 +21,10 @@ final readonly class ForgotPasswordHandler implements RequestHandlerInterface
     ) {}
 
     #[\Override]
-    public function handle(ServerRequestInterface $request): ResponseInterface
-    {
+    public function handle(
+        #[\SensitiveParameter]
+        ServerRequestInterface $request,
+    ): ResponseInterface {
         $body = $request->getParsedBody();
         $email = is_array($body) ? ($body['email'] ?? null) : null;
 

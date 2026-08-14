@@ -24,6 +24,7 @@ final readonly class EventingAuthenticator implements AuthenticatorInterface
     public function attempt(
         #[\SensitiveParameter]
         object $payload,
+        #[\SensitiveParameter]
         ContextInterface $context,
     ): AuthenticationResult {
         $payloadType = $payload::class;

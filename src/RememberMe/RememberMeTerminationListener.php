@@ -21,8 +21,10 @@ final readonly class RememberMeTerminationListener implements CriticalEventListe
     }
 
     #[\Override]
-    public function handleEvent(EventInterface $event): void
-    {
+    public function handleEvent(
+        #[\SensitiveParameter]
+        EventInterface $event,
+    ): void {
         if ($event instanceof SessionsTerminated) {
             $this->tokenManager->revokeForSessions($event->sessionIds);
 
