@@ -14,7 +14,7 @@ final class ChainedPayloadExtractorTest extends TestCase
 {
     public function testReturnsFirstSupportedPayloadAndStopsChain(): void
     {
-        $calls = [];
+        $calls = new ChainedExtractorCallLog();
         $payload = new \stdClass();
         $extractor = new ChainedPayloadExtractor(
             new ChainedExtractorFixture('first', null, $calls),
@@ -26,34 +26,39 @@ final class ChainedPayloadExtractorTest extends TestCase
             $payload,
             $extractor->extract(new ServerRequestFixture()),
         );
-        self::assertSame(['first', 'second'], $calls);
+        self::assertSame(['first', 'second'], $calls->names);
     }
 
     public function testReturnsNullWhenNoExtractorSupportsRequest(): void
     {
-        $calls = [];
+        $calls = new ChainedExtractorCallLog();
         $extractor = new ChainedPayloadExtractor(
             new ChainedExtractorFixture('first', null, $calls),
             new ChainedExtractorFixture('second', null, $calls),
         );
 
         self::assertNull($extractor->extract(new ServerRequestFixture()));
-        self::assertSame(['first', 'second'], $calls);
+        self::assertSame(['first', 'second'], $calls->names);
     }
 }
 
-final class ChainedExtractorFixture implements PayloadExtractorInterface
+final class ChainedExtractorCallLog
 {
-    /** @param list<string> $calls */
+    /** @var list<string> */
+    public array $names = [];
+}
+
+final readonly class ChainedExtractorFixture implements PayloadExtractorInterface
+{
     public function __construct(
         private string $name,
         private ?object $payload,
-        private array &$calls,
+        private ChainedExtractorCallLog $calls,
     ) {}
 
     public function extract(ServerRequestInterface $request): ?object
     {
-        $this->calls[] = $this->name;
+        $this->calls->names[] = $this->name;
 
         return $this->payload;
     }
