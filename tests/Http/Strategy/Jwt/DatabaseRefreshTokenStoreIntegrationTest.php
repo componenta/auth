@@ -127,6 +127,52 @@ final class DatabaseRefreshTokenStoreIntegrationTest extends TestCase
         self::assertSame(RefreshTokenRotationStatus::Reused, $descendant->status);
     }
 
+    public function testExpiredConsumedBearerDoesNotCompromiseLiveSuccessor(): void
+    {
+        self::requireSqlite();
+        $database = SqliteDatabaseFixture::create();
+        self::createSchema($database);
+        $store = new DatabaseRefreshTokenStore($database);
+        $subjectId = self::subjectId();
+
+        $store->storeInitial(new RefreshToken(
+            self::TOKEN_A,
+            $subjectId,
+            self::FAMILY_A,
+            1100,
+        ));
+
+        self::assertSame(
+            RefreshTokenRotationStatus::Rotated,
+            $store->rotateAtomically(
+                self::TOKEN_A,
+                self::TOKEN_B,
+                3000,
+                1000,
+            )->status,
+        );
+
+        self::assertSame(
+            RefreshTokenRotationStatus::Expired,
+            $store->rotateAtomically(
+                self::TOKEN_A,
+                self::RETRY_SUCCESSOR,
+                4000,
+                1200,
+            )->status,
+        );
+
+        self::assertSame(
+            RefreshTokenRotationStatus::Rotated,
+            $store->rotateAtomically(
+                self::TOKEN_B,
+                self::RETRY_SUCCESSOR,
+                4000,
+                1201,
+            )->status,
+        );
+    }
+
     public function testFailedSuccessorInsertRollsBackPresentedTokenClaim(): void
     {
         self::requireSqlite();
