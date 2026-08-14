@@ -56,13 +56,16 @@ final class DatabaseSessionTraceTest extends TestCase
 
             try {
                 $manager->find('session-secret');
-                self::fail('Corrupted subject UUID must fail hydration.');
             } catch (\Throwable $exception) {
                 self::assertStringNotContainsString(
                     'session-secret',
                     var_export($exception->getTrace(), true),
                 );
+
+                return;
             }
+
+            self::fail('Corrupted subject UUID must fail hydration.');
         } finally {
             ini_set('zend.exception_ignore_args', $previous);
         }
