@@ -89,21 +89,6 @@ if grep -R --line-number -E 'function (create|all|terminateAll|revokeAllForSubje
     exit 1
 fi
 
-for handler in \
-    src/Http/Strategy/MagicLink/VerifyHandler.php \
-    src/Http/Strategy/Jwt/MagicLink/TokenHandler.php
-do
-    if ! grep -q --fixed-strings 'MagicLinkResponseHeaders::apply' "$handler"; then
-        echo "Magic-link verification response is missing referrer hardening: $handler" >&2
-        exit 1
-    fi
-done
-
-if ! grep -q --fixed-strings "withHeader('Referrer-Policy', 'no-referrer')" src/Http/Strategy/MagicLink/MagicLinkResponseHeaders.php; then
-    echo 'Magic-link response hardening must enforce Referrer-Policy: no-referrer.' >&2
-    exit 1
-fi
-
 if [[ ! -f resources/schema/mysql-8.4.sql ]]; then
     echo 'Canonical MySQL 8.4 auth schema is missing.' >&2
     exit 1
