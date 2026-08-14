@@ -12,6 +12,7 @@ final readonly class DeniedReason implements DeniedReasonInterface, \JsonSeriali
     /** @param array<string, mixed> $attributes */
     public function __construct(
         public string $code,
+        #[\SensitiveParameter]
         public array $attributes = [],
     ) {}
 

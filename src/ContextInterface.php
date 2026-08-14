@@ -15,8 +15,15 @@ interface ContextInterface
 
     public function hasAttribute(string $key): bool;
 
-    public function withAttribute(string $key, mixed $value): static;
+    public function withAttribute(
+        string $key,
+        #[\SensitiveParameter]
+        mixed $value,
+    ): static;
 
     /** @param array<string, mixed> $attributes */
-    public function withAttributes(array $attributes): static;
+    public function withAttributes(
+        #[\SensitiveParameter]
+        array $attributes,
+    ): static;
 }

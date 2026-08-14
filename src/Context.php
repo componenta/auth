@@ -8,6 +8,7 @@ final readonly class Context implements ContextInterface, \JsonSerializable
 {
     /** @param array<string, mixed> $attributes */
     public function __construct(
+        #[\SensitiveParameter]
         public array $attributes = [],
     ) {}
 
@@ -39,14 +40,19 @@ final readonly class Context implements ContextInterface, \JsonSerializable
     }
 
     #[\Override]
-    public function withAttribute(string $key, mixed $value): static
-    {
+    public function withAttribute(
+        string $key,
+        #[\SensitiveParameter]
+        mixed $value,
+    ): static {
         return new self([...$this->attributes, $key => $value]);
     }
 
     #[\Override]
-    public function withAttributes(array $attributes): static
-    {
+    public function withAttributes(
+        #[\SensitiveParameter]
+        array $attributes,
+    ): static {
         return new self([...$this->attributes, ...$attributes]);
     }
 }

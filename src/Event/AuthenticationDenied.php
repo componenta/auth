@@ -10,6 +10,7 @@ use DateTimeImmutable;
 final readonly class AuthenticationDenied implements EventInterface, \JsonSerializable
 {
     public function __construct(
+        #[\SensitiveParameter]
         public DeniedReasonInterface $reason,
         public string $payloadType,
         public DateTimeImmutable $timestamp,
