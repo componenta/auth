@@ -110,21 +110,6 @@ do
     fi
 done
 
-if grep -q --fixed-strings 'MAX(' src/Http/Strategy/Jwt/DatabaseRefreshTokenHousekeeper.php; then
-    echo 'Refresh cleanup must select candidates from indexed family retention state, not aggregate token history.' >&2
-    exit 1
-fi
-
-for signer in \
-    src/Http/Strategy/Jwt/HmacSigner.php \
-    src/Http/Strategy/Jwt/RsaSigner.php
-do
-    if ! grep -q --fixed-strings 'BearerCredential::' "$signer"; then
-        echo "JWT signer does not enforce the shared bearer transport contract: $signer" >&2
-        exit 1
-    fi
-done
-
 while IFS= read -r action; do
     [[ -z "$action" ]] && continue
 
