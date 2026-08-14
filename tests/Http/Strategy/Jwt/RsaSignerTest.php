@@ -60,8 +60,8 @@ final class RsaSignerTest extends TestCase
             throw new \RuntimeException('Unable to create RSA test key.');
         }
 
-        $privateKey = '';
-        if (!openssl_pkey_export($key, $privateKey)) {
+        $privateKey = null;
+        if (!openssl_pkey_export($key, $privateKey) || !is_string($privateKey) || $privateKey === '') {
             throw new \RuntimeException('Unable to export RSA test private key.');
         }
 
