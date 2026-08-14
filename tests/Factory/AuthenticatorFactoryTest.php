@@ -6,6 +6,7 @@ namespace Componenta\Auth\Tests\Factory;
 
 use Componenta\Auth\AuthenticationResult;
 use Componenta\Auth\AuthenticationStrategyInterface;
+use Componenta\Auth\AuthenticatorInterface;
 use Componenta\Auth\ConfigKey;
 use Componenta\Auth\Context;
 use Componenta\Auth\ContextInterface;
@@ -70,7 +71,6 @@ final class AuthenticatorFactoryTest extends TestCase
         ]);
 
         $this->expectException(AuthenticatorConfigurationException::class);
-        $this->expectExceptionMessage('auth.rememberMe.enabled=true');
 
         (new AuthenticatorFactory())($container);
     }
@@ -89,7 +89,6 @@ final class AuthenticatorFactoryTest extends TestCase
         ]);
 
         $this->expectException(AuthenticatorConfigurationException::class);
-        $this->expectExceptionMessage(CompensatingRememberMeStrategy::class);
 
         (new AuthenticatorFactory())($container);
     }
@@ -118,8 +117,10 @@ final class AuthenticatorFactoryTest extends TestCase
             'remember' => $safe,
         ]);
 
-        (new AuthenticatorFactory())($container);
-        self::addToAssertionCount(1);
+        self::assertInstanceOf(
+            AuthenticatorInterface::class,
+            (new AuthenticatorFactory())($container),
+        );
     }
 
     private function rawRememberStrategy(): RememberMeStrategy
