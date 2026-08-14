@@ -18,7 +18,7 @@ use PHPUnit\Framework\TestCase;
 
 final class PasswordStrategyTest extends TestCase
 {
-    public function testProviderReceivesOnlyNormalizedIdentityNotCredentialPayload(): void
+    public function testProviderReceivesIdentityStringNotCredentialPayload(): void
     {
         $identity = new PasswordIdentityFixture();
         $provider = new PasswordProviderFixture($identity);
