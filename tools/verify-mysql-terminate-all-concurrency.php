@@ -2,8 +2,12 @@
 
 declare(strict_types=1);
 
+use Componenta\Auth\Event\AllSessionsTerminated;
+use Componenta\Auth\Event\CriticalEventListenerInterface;
 use Componenta\Auth\Event\EventDispatcher;
+use Componenta\Auth\Event\EventInterface;
 use Componenta\Auth\Event\PriorityListenerProvider;
+use Componenta\Auth\Event\SessionRegenerated;
 use Componenta\Auth\Session\ConcurrentRegenerationException;
 use Componenta\Auth\Session\DatabaseSessionManager;
 use Componenta\Auth\Session\DatabaseSessionManagerConfig;
@@ -11,6 +15,7 @@ use Componenta\Auth\Session\SessionIdGenerator;
 use Componenta\Auth\Tests\Support\MySqlDatabaseFixture;
 use Componenta\Clock\FrozenClock;
 use Componenta\Identity\Uuid;
+use Componenta\Identity\UuidInterface;
 use Cycle\Database\DatabaseInterface;
 
 require dirname(__DIR__) . '/vendor/autoload.php';
@@ -38,105 +43,108 @@ function terminateAllInvariant(bool $condition, string $message, mixed $actual =
     throw new RuntimeException($message);
 }
 
-/**
- * @param list<Closure(): string> $workers
- * @return list<string>
- */
-function terminateAllRace(array $workers): array
+function terminateAllWaitForFile(string $path, string $label): void
 {
-    $dir = sys_get_temp_dir()
-        . '/componenta-auth-terminate-all-race-'
-        . bin2hex(random_bytes(8));
+    $deadline = microtime(true) + 10.0;
 
-    if (!mkdir($dir, 0700) && !is_dir($dir)) {
-        throw new RuntimeException('Unable to create terminate-all race barrier directory.');
+    while (!is_file($path)) {
+        if (microtime(true) >= $deadline) {
+            throw new RuntimeException($label . ' timed out.');
+        }
+
+        usleep(1000);
+    }
+}
+
+function terminateAllWaitForLockWait(): void
+{
+    $dsn = getenv('AUTH_TEST_MYSQL_DSN');
+    $user = getenv('AUTH_TEST_MYSQL_USER');
+    $password = getenv('AUTH_TEST_MYSQL_PASSWORD');
+
+    if (!is_string($dsn) || $dsn === '') {
+        throw new RuntimeException('AUTH_TEST_MYSQL_DSN is missing.');
     }
 
-    $pids = [];
+    $pdo = new PDO(
+        $dsn,
+        is_string($user) ? $user : '',
+        is_string($password) ? $password : '',
+        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION],
+    );
+    $deadline = microtime(true) + 10.0;
 
-    try {
-        foreach ($workers as $index => $worker) {
-            $pid = pcntl_fork();
+    do {
+        $count = $pdo->query(
+            'SELECT COUNT(*) FROM performance_schema.data_lock_waits',
+        )->fetchColumn();
 
-            if ($pid === -1) {
-                throw new RuntimeException('Unable to fork terminate-all concurrency worker.');
-            }
-
-            if ($pid === 0) {
-                file_put_contents($dir . '/ready-' . $index, '1');
-                $deadline = microtime(true) + 10.0;
-
-                while (!is_file($dir . '/go')) {
-                    if (microtime(true) >= $deadline) {
-                        file_put_contents($dir . '/result-' . $index, json_encode([
-                            'ok' => false,
-                            'error' => 'barrier timeout',
-                        ], JSON_THROW_ON_ERROR));
-                        exit(2);
-                    }
-
-                    usleep(1000);
-                }
-
-                try {
-                    $value = $worker();
-                    file_put_contents($dir . '/result-' . $index, json_encode([
-                        'ok' => true,
-                        'value' => $value,
-                    ], JSON_THROW_ON_ERROR));
-                    exit(0);
-                } catch (Throwable $exception) {
-                    file_put_contents($dir . '/result-' . $index, json_encode([
-                        'ok' => false,
-                        'error' => $exception::class . ': ' . $exception->getMessage(),
-                    ], JSON_THROW_ON_ERROR));
-                    exit(3);
-                }
-            }
-
-            $pids[] = $pid;
+        if ((int) $count > 0) {
+            return;
         }
 
-        $deadline = microtime(true) + 10.0;
+        usleep(5000);
+    } while (microtime(true) < $deadline);
 
-        while (count(glob($dir . '/ready-*') ?: []) !== count($workers)) {
-            if (microtime(true) >= $deadline) {
-                throw new RuntimeException('Terminate-all concurrency workers did not reach the barrier.');
-            }
+    throw new RuntimeException(
+        'The second session transition did not reach a real InnoDB lock wait.',
+    );
+}
 
-            usleep(1000);
-        }
+/** @param Closure(): string $worker */
+function terminateAllFork(string $resultPath, Closure $worker): int
+{
+    $pid = pcntl_fork();
 
-        file_put_contents($dir . '/go', '1');
-        $values = [];
-
-        foreach ($pids as $index => $pid) {
-            pcntl_waitpid($pid, $status);
-            $path = $dir . '/result-' . $index;
-            $payload = is_file($path)
-                ? json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR)
-                : null;
-
-            if (!is_array($payload) || ($payload['ok'] ?? false) !== true) {
-                throw new RuntimeException(
-                    'Terminate-all concurrency worker failed: '
-                    . (is_array($payload)
-                        ? (string) ($payload['error'] ?? 'unknown')
-                        : 'missing result'),
-                );
-            }
-
-            $values[] = (string) ($payload['value'] ?? '');
-        }
-
-        return $values;
-    } finally {
-        foreach (glob($dir . '/*') ?: [] as $path) {
-            @unlink($path);
-        }
-
-        @rmdir($dir);
+    if ($pid === -1) {
+        throw new RuntimeException('Unable to fork terminate-all concurrency worker.');
     }
+
+    if ($pid === 0) {
+        try {
+            $value = $worker();
+            file_put_contents($resultPath, json_encode([
+                'ok' => true,
+                'value' => $value,
+            ], JSON_THROW_ON_ERROR));
+            exit(0);
+        } catch (Throwable $exception) {
+            file_put_contents($resultPath, json_encode([
+                'ok' => false,
+                'error' => $exception::class . ': ' . $exception->getMessage(),
+            ], JSON_THROW_ON_ERROR));
+            exit(2);
+        }
+    }
+
+    return $pid;
+}
+
+/** @param list<int> $pids @return list<string> */
+function terminateAllCollect(array $pids, string $dir): array
+{
+    $values = [];
+
+    foreach ($pids as $index => $pid) {
+        pcntl_waitpid($pid, $status);
+        $path = $dir . '/result-' . $index;
+        $payload = is_file($path)
+            ? json_decode((string) file_get_contents($path), true, 512, JSON_THROW_ON_ERROR)
+            : null;
+
+        if (!is_array($payload) || ($payload['ok'] ?? false) !== true) {
+            throw new RuntimeException(
+                'Terminate-all concurrency worker failed: '
+                . (is_array($payload)
+                    ? (string) ($payload['error'] ?? 'unknown')
+                    : 'missing result'),
+            );
+        }
+
+        $values[] = (string) ($payload['value'] ?? '');
+    }
+
+    return $values;
 }
 
 function terminateAllDb(): DatabaseInterface
@@ -144,18 +152,26 @@ function terminateAllDb(): DatabaseInterface
     return MySqlDatabaseFixture::create();
 }
 
-function terminateAllSubjectId(): Componenta\Identity\UuidInterface
+function terminateAllSubjectId(): UuidInterface
 {
     return Uuid::fromString('018f6d5d-3f7a-7a9b-8c2f-123456789abc');
 }
 
-function terminateAllManager(DatabaseInterface $database): DatabaseSessionManager
-{
+function terminateAllManager(
+    DatabaseInterface $database,
+    ?CriticalEventListenerInterface $listener = null,
+): DatabaseSessionManager {
+    $provider = new PriorityListenerProvider();
+
+    if ($listener !== null) {
+        $provider->addListener($listener);
+    }
+
     return new DatabaseSessionManager(
         $database,
         new SessionIdGenerator(),
         new FrozenClock(1000, 'UTC'),
-        new EventDispatcher(new PriorityListenerProvider()),
+        new EventDispatcher($provider),
         new DatabaseSessionManagerConfig(),
     );
 }
@@ -184,81 +200,177 @@ function resetTerminateAllSchema(DatabaseInterface $database): void
         SQL);
 }
 
-function verifySessionTerminateAllRace(): void
+function terminateAllCleanupRaceDir(string $dir, array $pids, string $releasePath): void
 {
-    foreach ([
-        'regeneration-first' => false,
-        'termination-first' => true,
-    ] as $label => $delayRegeneration) {
-        for ($iteration = 0; $iteration < 4; ++$iteration) {
-            $database = terminateAllDb();
-            resetTerminateAllSchema($database);
-            $old = terminateAllManager($database)->create(terminateAllSubjectId(), [
-                DatabaseSessionManager::ATTR_IP => '127.0.0.1',
-                DatabaseSessionManager::ATTR_USER_AGENT => 'mysql-terminate-all-race-test',
-            ]);
+    @file_put_contents($releasePath, '1');
 
-            $results = terminateAllRace([
-                static function () use ($old, $delayRegeneration): string {
-                    if ($delayRegeneration) {
-                        usleep(100000);
-                    }
+    foreach ($pids as $pid) {
+        pcntl_waitpid($pid, $status, WNOHANG);
+    }
 
-                    try {
-                        terminateAllManager(terminateAllDb())->regenerate($old->id);
+    foreach (glob($dir . '/*') ?: [] as $path) {
+        @unlink($path);
+    }
 
-                        return 'regenerated';
-                    } catch (ConcurrentRegenerationException|InvalidArgumentException) {
-                        return 'regeneration-lost';
-                    }
-                },
-                static function () use ($delayRegeneration): string {
-                    if (!$delayRegeneration) {
-                        usleep(100000);
-                    }
+    @rmdir($dir);
+}
 
-                    terminateAllManager(terminateAllDb())->terminateAll(
-                        terminateAllSubjectId(),
-                    );
+function verifySessionTerminateAllOrdering(bool $regenerationFirst): void
+{
+    $label = $regenerationFirst ? 'regeneration-first' : 'termination-first';
+    $database = terminateAllDb();
+    resetTerminateAllSchema($database);
+    $old = terminateAllManager($database)->create(terminateAllSubjectId(), [
+        DatabaseSessionManager::ATTR_IP => '127.0.0.1',
+        DatabaseSessionManager::ATTR_USER_AGENT => 'mysql-terminate-all-race-test',
+    ]);
+    $dir = sys_get_temp_dir()
+        . '/componenta-auth-terminate-all-race-'
+        . bin2hex(random_bytes(8));
+
+    if (!mkdir($dir, 0700) && !is_dir($dir)) {
+        throw new RuntimeException('Unable to create terminate-all race directory.');
+    }
+
+    $readyPath = $dir . '/first-precommit';
+    $releasePath = $dir . '/release-first';
+    $secondStartedPath = $dir . '/second-started';
+    $pids = [];
+
+    try {
+        $eventClass = $regenerationFirst
+            ? SessionRegenerated::class
+            : AllSessionsTerminated::class;
+        $pids[] = terminateAllFork(
+            $dir . '/result-0',
+            static function () use (
+                $old,
+                $eventClass,
+                $readyPath,
+                $releasePath,
+                $regenerationFirst,
+            ): string {
+                $gate = new TerminateAllGateListener(
+                    $eventClass,
+                    $readyPath,
+                    $releasePath,
+                );
+                $manager = terminateAllManager(terminateAllDb(), $gate);
+
+                if ($regenerationFirst) {
+                    $manager->regenerate($old->id);
+
+                    return 'regenerated';
+                }
+
+                $manager->terminateAll(terminateAllSubjectId());
+
+                return 'terminated-all';
+            },
+        );
+
+        terminateAllWaitForFile(
+            $readyPath,
+            'First ' . $label . ' transition did not reach its pre-commit gate',
+        );
+
+        $pids[] = terminateAllFork(
+            $dir . '/result-1',
+            static function () use (
+                $old,
+                $secondStartedPath,
+                $regenerationFirst,
+            ): string {
+                file_put_contents($secondStartedPath, '1');
+                $manager = terminateAllManager(terminateAllDb());
+
+                if ($regenerationFirst) {
+                    $manager->terminateAll(terminateAllSubjectId());
 
                     return 'terminated-all';
-                },
-            ]);
+                }
 
-            terminateAllInvariant(
-                in_array('terminated-all', $results, true),
-                'Subject-wide session termination worker did not complete',
-                [$label, $results],
-            );
-            terminateAllInvariant(
-                in_array(
-                    $delayRegeneration ? 'regeneration-lost' : 'regenerated',
-                    $results,
-                    true,
-                ),
-                'Directed terminate-all race did not exercise the intended ordering',
-                [$label, $results],
-            );
+                try {
+                    $manager->regenerate($old->id);
 
-            $remaining = terminateAllDb()
-                ->select()
-                ->from('sessions')
-                ->where('user_id', terminateAllSubjectId()->toString())
-                ->count();
+                    return 'regenerated';
+                } catch (ConcurrentRegenerationException|InvalidArgumentException) {
+                    return 'regeneration-lost';
+                }
+            },
+        );
 
-            terminateAllInvariant(
-                $remaining === 0,
-                'Concurrent terminateAll left an active session descendant',
-                [$label, $iteration, $results, $remaining],
-            );
-        }
+        terminateAllWaitForFile(
+            $secondStartedPath,
+            'Second ' . $label . ' transition did not start',
+        );
+        terminateAllWaitForLockWait();
+        file_put_contents($releasePath, '1');
+        $results = terminateAllCollect($pids, $dir);
+
+        terminateAllInvariant(
+            $results[0] === ($regenerationFirst ? 'regenerated' : 'terminated-all'),
+            'First directed session transition produced an unexpected outcome',
+            [$label, $results],
+        );
+        terminateAllInvariant(
+            $results[1] === ($regenerationFirst ? 'terminated-all' : 'regeneration-lost'),
+            'Second directed session transition produced an unexpected outcome',
+            [$label, $results],
+        );
+
+        $remaining = terminateAllDb()
+            ->select()
+            ->from('sessions')
+            ->where('user_id', terminateAllSubjectId()->toString())
+            ->count();
+
+        terminateAllInvariant(
+            $remaining === 0,
+            'Concurrent terminateAll left an active session descendant',
+            [$label, $results, $remaining],
+        );
+    } finally {
+        terminateAllCleanupRaceDir($dir, $pids, $releasePath);
     }
 }
 
 try {
-    verifySessionTerminateAllRace();
+    verifySessionTerminateAllOrdering(true);
+    verifySessionTerminateAllOrdering(false);
     fwrite(STDOUT, "MySQL terminate-all concurrency invariant: OK\n");
 } catch (Throwable $exception) {
     fwrite(STDERR, $exception::class . ': ' . $exception->getMessage() . "\n");
     exit(1);
+}
+
+final readonly class TerminateAllGateListener implements CriticalEventListenerInterface
+{
+    /** @var non-empty-list<class-string<EventInterface>> */
+    public array $events;
+
+    /** @param class-string<EventInterface> $eventClass */
+    public function __construct(
+        string $eventClass,
+        private string $readyPath,
+        private string $releasePath,
+    ) {
+        $this->events = [$eventClass];
+    }
+
+    public function handleEvent(
+        #[\SensitiveParameter]
+        EventInterface $event,
+    ): void {
+        file_put_contents($this->readyPath, '1');
+        $deadline = microtime(true) + 10.0;
+
+        while (!is_file($this->releasePath)) {
+            if (microtime(true) >= $deadline) {
+                throw new RuntimeException('Pre-commit concurrency gate timed out.');
+            }
+
+            usleep(1000);
+        }
+    }
 }
