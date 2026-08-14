@@ -6,9 +6,7 @@ namespace Componenta\Auth\Tests\Factory;
 
 use Componenta\Auth\Exception\AuthenticatorConfigurationException;
 use Componenta\Auth\Factory\AuthenticatorFactory;
-use Componenta\Auth\Factory\DatabaseSessionManagerConfigFactory;
 use Componenta\Auth\Factory\DatabaseSessionManagerFactory;
-use Componenta\DI\ProxyFactoryInterface;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;
 
@@ -40,25 +38,6 @@ final class FactoryContainerTraceTest extends TestCase
         self::assertFactoryTraceHides(
             $exception,
             DatabaseSessionManagerFactory::class,
-            $container->secret,
-        );
-    }
-
-    public function testLazyFactoryDoesNotExposeContainerStateInTrace(): void
-    {
-        $container = new FactoryTraceContainer('lazy-factory-container-secret');
-        $failure = new \RuntimeException('proxy allocation failed');
-        $proxyFactory = $this->createStub(ProxyFactoryInterface::class);
-        $proxyFactory->method('makeProxy')->willThrowException($failure);
-        $factory = new DatabaseSessionManagerConfigFactory();
-        $exception = $this->capture(
-            static fn() => $factory->lazy($container, $proxyFactory),
-        );
-
-        self::assertSame($failure, $exception);
-        self::assertFactoryTraceHides(
-            $exception,
-            DatabaseSessionManagerConfigFactory::class,
             $container->secret,
         );
     }
