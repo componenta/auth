@@ -60,7 +60,7 @@ The suite must prove:
 23. one-time tokens are domain-separated by purpose;
 24. built-in delivery queue messages cannot look up one identity and deliver the credential to a different arbitrary destination;
 25. password reset success represents the complete recovery transition and password-policy rejection is explicit;
-26. denial attributes and bearer credentials are absent from public/debug serialization, and credential-bearing request/context/storage/event/session parameters, generated credential helper values, DI factory containers and SQL credential-state rows are redacted from package-owned exception frames when PHP exception arguments are enabled;
+26. denial attributes and bearer credentials are absent from public/debug serialization, and credential-bearing request/context/storage/event/session parameters, generated credential helper values, downstream PSR request-handler objects, application listener/storage objects, DI factory containers, SQL database/connection objects and SQL credential-state rows are redacted from package-owned exception frames when PHP exception arguments are enabled;
 27. every response-side credential store/remove mutation is non-cacheable, token-bearing responses are non-cacheable, and magic-link verification responses use `Referrer-Policy: no-referrer`;
 28. malformed inputs are rejected before provider/hash/storage work;
 29. credential-state reads use the primary/write connection;
@@ -142,7 +142,7 @@ The package does not own the application's password repository, message broker, 
 - magic-link query credentials are redacted from reverse-proxy/access logs and verification pages do not load untrusted third-party resources;
 - access to credential-bearing session persistence and database logs is restricted;
 - custom credential stores pass equivalent concurrency and primary-read tests and honor the strengthened family/session-lineage contracts;
-- custom authentication strategies, authenticators, payload extractors/storages, senders, event listeners and credential stores repeat `#[SensitiveParameter]` on concrete credential-bearing parameters because PHP parameter attributes are not inherited from interfaces;
+- custom authentication strategies, authenticators, payload extractors/storages, senders, event listeners, middleware and credential stores repeat `#[SensitiveParameter]` on concrete credential/config-bearing parameters because PHP parameter attributes are not inherited from interfaces;
 - custom DI factories should likewise redact secret-bearing container/config arguments on concrete package/application frames.
 
 Third-party PSR/database/provider implementations remain responsible for redacting their own stack frames; Componenta can only mask arguments on frames it owns.
