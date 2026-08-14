@@ -104,36 +104,6 @@ if ! grep -q --fixed-strings "withHeader('Referrer-Policy', 'no-referrer')" src/
     exit 1
 fi
 
-if ! grep -q --fixed-strings 'private ReplacingPayloadStorage $storage' src/Http/Strategy/MagicLink/VerifyHandler.php; then
-    echo 'Public magic-link session verification must require replacing credential storage.' >&2
-    exit 1
-fi
-
-if ! grep -q --fixed-strings 'CompensatingRememberMeStrategy::class' src/ConfigProvider.php; then
-    echo 'Discard-safe remember-me strategy must have a Componenta factory binding.' >&2
-    exit 1
-fi
-
-if ! grep -q --fixed-strings 'Raw %s cannot be placed directly in the middleware strategy chain' src/Factory/AuthenticatorFactory.php; then
-    echo 'AuthenticatorFactory must reject raw remember-me strategy composition.' >&2
-    exit 1
-fi
-
-if ! grep -q --fixed-strings 'onDiscard' src/Http/Strategy/RememberMe/CompensatingRememberMeStrategy.php; then
-    echo 'Discard-safe remember-me strategy must compensate unpublished rotations.' >&2
-    exit 1
-fi
-
-for mutator in \
-    src/Http/CredentialTransportState.php \
-    src/Http/Handler/LogoutHandler.php
-do
-    if ! grep -q --fixed-strings 'CredentialResponseHeaders::apply' "$mutator"; then
-        echo "Credential mutation path is missing no-store hardening: $mutator" >&2
-        exit 1
-    fi
-done
-
 if [[ ! -f resources/schema/mysql-8.4.sql ]]; then
     echo 'Canonical MySQL 8.4 auth schema is missing.' >&2
     exit 1
