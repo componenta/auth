@@ -166,8 +166,12 @@ final readonly class RsaSigner implements SignerInterface
         }
     }
 
-    private static function resolveKey(string $key, string $passphrase = ''): InMemory
-    {
+    private static function resolveKey(
+        #[\SensitiveParameter]
+        string $key,
+        #[\SensitiveParameter]
+        string $passphrase = '',
+    ): InMemory {
         if ($key === '') {
             throw new \InvalidArgumentException('RSA key must not be empty.');
         }

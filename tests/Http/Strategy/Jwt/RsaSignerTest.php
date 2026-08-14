@@ -35,6 +35,47 @@ final class RsaSignerTest extends TestCase
         ]));
     }
 
+    public function testPrivateKeyPassphraseDoesNotAppearInPackageTrace(): void
+    {
+        [$publicKey] = self::keyPair();
+        $passphrase = 'rsa-passphrase-trace-secret';
+        $missingPath = sys_get_temp_dir()
+            . '/componenta-auth-missing-rsa-'
+            . bin2hex(random_bytes(8))
+            . '.pem';
+        $previous = ini_get('zend.exception_ignore_args');
+        self::assertIsString($previous);
+        self::assertNotFalse(ini_set('zend.exception_ignore_args', '0'));
+        $thrown = null;
+
+        try {
+            try {
+                new RsaSigner(
+                    $publicKey,
+                    'file://' . $missingPath,
+                    $passphrase,
+                );
+            } catch (\Throwable $exception) {
+                $thrown = $exception;
+            }
+        } finally {
+            ini_set('zend.exception_ignore_args', $previous);
+        }
+
+        self::assertNotNull($thrown);
+        $packageFrames = array_values(array_filter(
+            $thrown->getTrace(),
+            static fn(array $frame): bool =>
+                is_string($frame['class'] ?? null)
+                && str_starts_with($frame['class'], 'Componenta\\Auth\\'),
+        ));
+        self::assertNotEmpty($packageFrames);
+        self::assertStringNotContainsString(
+            $passphrase,
+            var_export($packageFrames, true),
+        );
+    }
+
     /** @param array<string, mixed> $custom */
     private static function claims(array $custom = []): Claims
     {
