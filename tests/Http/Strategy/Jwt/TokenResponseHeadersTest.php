@@ -7,6 +7,7 @@ namespace Componenta\Auth\Tests\Http\Strategy\Jwt;
 use Componenta\Auth\Http\Strategy\Jwt\TokenResponseHeaders;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\StreamInterface;
 
 final class TokenResponseHeadersTest extends TestCase
 {
@@ -21,7 +22,7 @@ final class TokenResponseHeadersTest extends TestCase
         self::assertSame('application/json', $headers['Content-Type'] ?? null);
     }
 
-    public function testEmptyResponseHasNoContentTypeAndRemainsNonCacheable(): void
+    public function testEmptyResponseHasNoContentTypeWhenBodySizeIsUnknown(): void
     {
         $headers = ['Content-Type' => 'text/plain'];
         $response = $this->response($headers);
@@ -35,7 +36,10 @@ final class TokenResponseHeadersTest extends TestCase
     /** @param array<string, string> $headers */
     private function response(array &$headers): ResponseInterface
     {
+        $body = $this->createStub(StreamInterface::class);
+        $body->method('getSize')->willReturn(null);
         $response = $this->createStub(ResponseInterface::class);
+        $response->method('getBody')->willReturn($body);
         $response->method('withHeader')->willReturnCallback(
             static function (string $name, string $value) use (&$headers, $response): ResponseInterface {
                 $headers[$name] = $value;
