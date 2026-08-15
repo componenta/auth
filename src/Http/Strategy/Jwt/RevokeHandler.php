@@ -9,13 +9,6 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 
-/**
- * Handles refresh token revocation.
- *
- * Accepts a refresh_token in the request body and revokes it.
- * Always returns 200 regardless of whether the token exists
- * (RFC 7009 - do not reveal token existence).
- */
 final readonly class RevokeHandler implements RequestHandlerInterface
 {
     public function __construct(
@@ -23,16 +16,20 @@ final readonly class RevokeHandler implements RequestHandlerInterface
         private ResponseFactoryInterface $responseFactory,
     ) {}
 
-    public function handle(ServerRequestInterface $request): ResponseInterface
-    {
-        $body = (array) $request->getParsedBody();
-        $tokenId = $body['refresh_token'] ?? null;
+    #[\Override]
+    public function handle(
+        #[\SensitiveParameter]
+        ServerRequestInterface $request,
+    ): ResponseInterface {
+        $body = $request->getParsedBody();
+        $tokenId = is_array($body) ? ($body['refresh_token'] ?? null) : null;
 
-        if (is_string($tokenId) && $tokenId !== '') {
+        if (is_string($tokenId)) {
             $this->refreshManager->revoke($tokenId);
         }
 
-        return $this->responseFactory->createResponse(200)
-            ->withHeader('Content-Type', 'application/json');
+        return TokenResponseHeaders::applyEmpty(
+            $this->responseFactory->createResponse(200),
+        );
     }
 }

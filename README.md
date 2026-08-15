@@ -1,182 +1,238 @@
 # Componenta Auth
 
-Authentication contracts and HTTP-oriented authentication building blocks for Componenta applications.
+Authentication contracts and PSR-7/PSR-15 building blocks for Componenta applications on PHP 8.4+.
 
-Use this package when an application needs more than one authentication mechanism: password login, bearer/JWT tokens, session authentication, remember-me cookies, OTP, magic links, password reset, or auth lifecycle events. The package is strategy-based: each mechanism decides whether it supports a payload, attempts authentication, and returns either an authenticated identity or a denial reason.
-
-## Installation
-
-```bash
-composer require componenta/auth
-```
-
-The package declares `Componenta\Auth\ConfigProvider` in `extra.componenta.config-providers`.
-When `componenta/composer-plugin` is installed, the provider is added to the generated provider list automatically.
+The package supports password login, stateful sessions, remember-me credentials, signed JWT access tokens with stateful opaque refresh grants, OTP, magic links, password reset, and authentication lifecycle events.
 
 ## Requirements
 
-- PHP 8.4+
-- PSR-7 / PSR-15 for HTTP middleware and handlers
-- Storage adapters for the strategies you enable: sessions, remember-me tokens, refresh tokens, OTP codes, or password-reset tokens
+- PHP 8.4+;
+- `ext-ctype`, `ext-filter`, `ext-mbstring`;
+- PSR-7, PSR-15, PSR-17 and PSR-20 implementations;
+- Componenta DI 4;
+- Cycle Database for built-in SQL stores.
 
-## Related Packages
+## Canonical identity
 
-| Package | Why it matters here |
-|---|---|
-| `componenta/session` | Stores browser session state and session ids for session authentication. |
-| `componenta/app-http` | Wires authentication middleware into HTTP applications that use PSR-7 requests and PSR-15 middleware. |
-| `componenta/event` | Handles login, denial, logout, session regeneration, and session termination events. |
-| `componenta/policy` | Uses the authenticated identity as the actor for authorization. |
-| `componenta/di` | Builds strategies, token managers, middleware, and listeners from the container. |
-
-## Core Flow
+Authentication uses `Componenta\Identity\IdentityInterface`. The identity UUID is the only public subject identifier:
 
 ```php
-use Componenta\Auth\Authenticator;
-use Componenta\Auth\Context;
-use Componenta\Auth\DeniedReasonInterface;
-use Componenta\Identity\IdentityInterface;
-
-$authenticator = new Authenticator(
-    $passwordStrategy,
-    $jwtStrategy,
-    $sessionStrategy,
-);
-
-$result = $authenticator->attempt($payload, new Context());
-
-if ($result->subject instanceof IdentityInterface) {
-    $identity = $result->subject;
-}
-
-if ($result->subject instanceof DeniedReasonInterface) {
-    $reason = $result->subject;
-}
+$subjectId = $identity->uuid;
 ```
 
-`Authenticator` iterates over registered strategies in order. Unsupported strategies are skipped. Supporting strategies are attempted until one returns an `IdentityInterface`. If every supporting strategy denies the payload, the last denial is returned. If no strategy supports the payload, `NoStrategyFoundException` is thrown.
+Sessions, remember-me grants, one-time tokens, OTP challenges, refresh grants and JWT `sub` use this UUID. There is no auth-specific subject ID and no request-local mutable state on the identity object.
 
-`AuthenticationResult` has two public properties:
+## Authenticator composition
 
-| Property | Meaning |
-|---|---|
-| `$subject` | Either the authenticated `IdentityInterface` or a `DeniedReasonInterface`. |
-| `$transportPayload` | Optional object that must be persisted to the response transport, for example a rotated session or remember-me cookie payload. |
-
-There is no separate boolean success flag. Consumers decide success by checking whether `$result->subject` is an `IdentityInterface`.
-
-## Strategy Contract
+Strategy order is explicit and security-sensitive:
 
 ```php
-use Componenta\Auth\AuthenticationResult;
-use Componenta\Auth\AuthenticationStrategyInterface;
-use Componenta\Auth\ContextInterface;
-
-final readonly class ApiKeyStrategy implements AuthenticationStrategyInterface
-{
-    public function supports(object $payload, ContextInterface $context): bool
-    {
-        return $payload instanceof ApiKeyPayload;
-    }
-
-    public function attempt(object $payload, ContextInterface $context): AuthenticationResult
-    {
-        // Return AuthenticationResult with IdentityInterface on success,
-        // or DeniedReasonInterface on failure.
-    }
-}
+return [
+    'auth' => [
+        'strategies' => [
+            SessionStrategy::class,
+            CompensatingRememberMeStrategy::class,
+            PasswordStrategy::class,
+            JwtStrategy::class,
+        ],
+        'events' => true,
+        'rememberMe' => ['enabled' => true],
+    ],
+];
 ```
 
-Strategies must be deterministic for a given payload and context. They should not throw for normal authentication failure; return a denial result instead.
+`AuthenticatorFactory` rejects empty lists, duplicates, missing/non-strategy services and use of remember-me strategies while remember-me is disabled. The raw built-in `RememberMeStrategy` is deliberately rejected in this middleware-oriented chain; configure `CompensatingRememberMeStrategy` so a successfully rotated remember bearer and session are revoked if their response-side replacement is later discarded. Direct callers that do not use `CredentialTransportState` may still use the raw strategy as a low-level primitive and own publication/rollback themselves.
 
-## Payloads And HTTP Extraction
+A denial is **terminal by default**. A strategy may return `AuthenticationResult(..., continueOnFailure: true)` only for an intentional soft failure such as an invalid session credential when a remember-me credential from the same request may still authenticate the subject. Security denials such as rate limiting or disabled-account decisions therefore cannot be bypassed by a later strategy merely because it supports the same payload.
 
-HTTP strategies are separated from payload extraction. A payload extractor reads a PSR-7 request and produces a strategy-specific payload object:
+`AuthenticationResult` itself is fail-closed:
 
-- bearer token payloads for `Authorization: Bearer ...`
-- password payloads for login forms or JSON bodies
-- session payloads
-- OTP payloads
-- magic-link verification payloads
+- a denied result cannot carry a session;
+- a denied result cannot carry a response-side credential mutation;
+- a successful result cannot request chain continuation;
+- a returned session must belong to the returned identity.
 
-This separation keeps strategies testable and lets applications define their own request shape without changing authentication logic.
+## Request-scoped credential transport
+
+`AuthenticationMiddleware` shares one `CredentialTransportState` through nested authentication layers. Each queued mutation retains its own `PayloadStorageInterface`, so different nested transports do not accidentally apply each other's payloads.
+
+`clear()` is terminal. A logout clears every transport registered on the request and discards queued credential writes. If a successful authentication result needs a transport mutation but the middleware has no storage, it fails **before** invoking the downstream application handler.
+
+Explicit password and OTP session login replace existing browser authentication state. The public magic-link session verifier requires `ReplacingPayloadStorage`, so direct construction cannot accidentally preserve or re-apply an older session/remember principal; the Componenta factory supplies this wrapper automatically.
+
+The current authenticated session is attached to the PSR-7 request under `SessionInterface::class`; it is not stored on the identity.
+
+`LogoutHandler` is designed to run **after `AuthenticationMiddleware`**. Server-side termination uses the authenticated `SessionInterface::class` request attribute. Invoking the logout handler standalone can remove the client-side credential, but it cannot safely infer which unauthenticated server-side session row should be terminated.
 
 ## Sessions
 
-Session support includes session contracts, session collection, session attributes, ID generation, device detection, and database-backed session management.
+The built-in `DatabaseSessionManager`:
 
-Use session authentication when the browser already has a session id and the application can resolve it to a user:
+- validates idle and absolute expiry on the primary/write connection;
+- throttles touch writes;
+- performs regeneration transactionally with an optimistic claim;
+- invalidates the presented old session ID immediately after successful regeneration;
+- never resolves an old ID to its successor;
+- serializes termination with regeneration and terminates any already-created replacement lineage;
+- serializes subject-wide `terminateAll()` with regeneration so a concurrent rotation cannot escape global session termination;
+- executes critical lifecycle participants inside the owning transaction and observers after commit;
+- performs bounded cleanup with an expiry recheck before delete.
+
+Session timestamps are normalized to UTC using the fixed internal format `Y-m-d H:i:s`; the representation is not a public configuration option.
+
+The built-in session table is credential-bearing storage: live session IDs are recoverable because the public session-management API can enumerate sessions and the persistence model must track replacement lineage. Session DTO debug/JSON output redacts IDs, but applications must still restrict database/log access to the session table. Hashing the existing `id` column in place would not be compatible with the current enumeration/lineage contract and therefore is not presented as a drop-in hardening change.
+
+## Remember-me
+
+Remember-me is disabled by default. Enabling it automatically activates the critical termination and regeneration listeners required by the lifecycle.
+
+The v2 remember-me model uses a **stable grant row with rotating bearer material**. It no longer deletes the grant before creating the successor credential.
+
+`RememberMeTokenManagerInterface` exposes:
 
 ```php
-$result = $sessionStrategy->attempt($sessionPayload, $context);
+create(UuidInterface $subjectId, string $sessionId): string;
+rotate(string $plainToken): RememberMeRotation|RememberMeCompromise|null;
+bindRotation(RememberMeRotation $rotation, string $newSessionId): bool;
 ```
 
-Session lifecycle events are available for login/logout, regeneration, and termination flows.
+The bearer contains a stable 128-bit selector and a rotating 256-bit validator.
+Only the selector and SHA-256 verifier are stored. Reuse of a superseded
+validator removes the grant and returns RememberMeCompromise; the strategy
+terminates the affected session lineage. Revocation uses the stable selector,
+so an original bearer still revokes its rotated successor. The grant tracks
+both current and previous session IDs to keep concurrent logout fail-closed.hich the grant originated.
 
-## Tokens
+When remember-me runs inside `AuthenticationMiddleware`, use `CompensatingRememberMeStrategy`. It delegates authentication to the raw strategy but registers request-scoped compensation after a successful bind. If a later nested denial, UUID conflict, explicit login replacement, missing storage or downstream exception discards the queued replacement credential, the successor remember bearer is revoked and the unpublished session is terminated. A successfully applied response clears the compensation without revoking the delivered credential.
 
-The package includes token helpers for:
+Minimum schema:
 
-- JWT access tokens and refresh tokens
-- OTP request/verify flows
-- magic-link request/verify flows
-- password reset tokens
-- remember-me tokens
+```text
+remember_me_tokens
+  id                   PRIMARY KEY
+  user_id              NOT NULL, indexed
+  token                UNIQUE NOT NULL   # stable 128-bit selector
+  verifier             NOT NULL          # SHA-256 current validator
+  session_id           NOT NULL, indexed
+  previous_session_id  nullable, indexed
+  expires_at           NOT NULL
+  created_at           NOT NULL
+```
 
-Token managers own persistence and invalidation. Token handlers own signing/parsing and denial reasons such as expired, invalid, already used, or compromised tokens.
+Plain remember-me bearer values are never persisted.
 
-## Events
+## OTP
 
-`EventingAuthenticator` decorates authentication attempts with events:
+`OtpConfig` controls the actual protocol profile:
 
-- `AuthenticationAttempted`
-- `AuthenticationSucceeded`
-- `AuthenticationDenied`
-- `LoggedOut`
-- `SessionRegenerated`
-- `SessionsTerminated`
-- `AllSessionsTerminated`
+```php
+'auth' => [
+    'otp' => [
+        'length' => 6,       // 6..18 digits
+        'ttl' => 300,        // max 600 seconds
+        'maxAttempts' => 5,
+        'hmacKey' => $_ENV['AUTH_OTP_HMAC_KEY'], // >= 32 bytes
+    ],
+];
+```
 
-Listeners are resolved through `EventListenerProviderInterface`. Use events for audit logs, session cleanup, remember-me token rotation, notifications, and metrics.
+The extractor requires **exactly** the configured code length before the request reaches attempt accounting.
 
-## HTTP Middleware
+`DatabaseCodeStore` persists an HMAC-SHA-256 verifier instead of the numeric OTP and uses a random `challenge_id` as an optimistic version. Verification, failed-attempt accounting and consume are one challenge-version transition: a correct code racing the final failed attempt cannot authenticate after `maxAttempts` has already been reached.
 
-The HTTP layer provides:
+Every negative public OTP verification **response** is deliberately collapsed to `invalid_code`. Internal store states such as expiry or attempt exhaustion are not serialized through the authentication response because doing so would create a direct account/challenge-existence oracle.
 
-- `AuthenticationMiddleware`: attempts authentication and attaches auth state to the request/context.
-- `RequireAuthenticationMiddleware`: rejects unauthenticated requests.
-- `TouchSessionMiddleware`: updates session activity.
-- `SessionGarbageCollectionMiddleware`: triggers storage cleanup.
+This is a public response-semantics guarantee, not a claim that different SQL states have identical end-to-end latency. A missing row and a failed-attempt CAS can require different database work. The package therefore does not add blocking sleeps or expensive dummy hashing, which would create a request-amplification/DoS primitive. Production `OtpRequestQueueInterface` adapters should be durable and non-inline when account-existence request timing matters, and verification/request endpoints still require application-level rate limiting.
 
-The package does not prescribe route layout. Applications decide which routes are public and which routes require authentication.
+`OtpRequest` contains one identity/destination value. The built-in processor cannot look up one identity and deliver the code to a different arbitrary destination. Applications needing alternative delivery routing must validate ownership in an application-specific adapter before enqueueing.
 
-`AuthenticationMiddleware` writes the result to PSR-7 request attributes:
+An application-level destination/account rate limiter is still required; `maxAttempts` limits one challenge only.
 
-| Attribute key | Value |
-|---|---|
-| `Componenta\Identity\IdentityInterface::class` | Present when authentication succeeds. |
-| `Componenta\Auth\DeniedReasonInterface::class` | Present when a supporting strategy denies the request. |
+## One-time tokens: purpose separation
 
-If a strategy returns `$transportPayload`, the middleware requires a `PayloadStorageInterface`; otherwise it throws a `LogicException` because it cannot persist cookies or other response-side transport data.
+`TokenConfig` requires a machine-readable `purpose`, for example:
 
-## DI Registration
+```php
+new TokenConfig('magic_link_tokens', 'magic_link');
+new TokenConfig('password_reset_tokens', 'password_reset');
+```
 
-`ConfigProvider` registers factories, aliases, listeners, token handlers, session managers, middleware, and default configuration keys used by the Componenta application runtime. Only the strategies and adapters wired by the application are active.
+The purpose is domain-separated into the stored token representation:
 
-The main configuration keys are defined by `ConfigKey`:
+```text
+SHA-256(purpose || NUL || bearer)
+```
 
-| Key | Purpose |
-|---|---|
-| `ConfigKey::AUTH` | Root authentication configuration. |
-| `ConfigKey::STRATEGIES` | Ordered authentication strategies. |
-| `ConfigKey::SESSION` | Session authentication and session manager options. |
-| `ConfigKey::REMEMBER_ME` | Remember-me token options. |
-| `ConfigKey::JWT` | JWT access/refresh token options. |
-| `ConfigKey::MAGIC_LINK` | Magic-link request and verification options. |
-| `ConfigKey::PASSWORD_RESET` | Password reset token options. |
-| `ConfigKey::DENIED` | HTTP response factory for denied authentication. |
-| `ConfigKey::LISTENERS` | Authentication event listeners. |
+Therefore a magic-link token cannot be consumed by a password-reset manager even if an application accidentally points both managers at the same table.
 
-## Failure Model
+`TokenRequest` contains the lookup/delivery identity, an explicit machine-readable `purpose`, and optional non-sensitive context; it does not accept a separate untrusted destination. Context keys are bounded machine-readable identifiers and context values are bounded to 4096 bytes and reject control characters before they can reach a queue adapter or URL-building sender. `TokenRequestQueueInterface` is a durable multi-purpose queue boundary: adapters must preserve and route on `purpose`, while a purpose-bound `TokenRequestProcessor` rejects misrouted work before provider lookup, token generation or delivery. Production adapters should not perform provider lookup or delivery inline when uniform account-existence request timing matters.
 
-Normal authentication failure is represented by `DeniedReasonInterface`, not an exception. Exceptions are reserved for infrastructure or programming errors: unsupported payloads, invalid payload extraction, storage failures, invalid token configuration, or transport failures.
+Magic-link consuming endpoints accept only POST with the token in the parsed
+request body. GET returns 405 with Allow: POST and never invokes authentication,
+so mail-client and link-scanner prefetch cannot consume a credential. Responses
+remain non-cacheable and use Referrer-Policy: no-referrer.
+
+## JWT access and refresh tokens
+
+JWT validation uses an explicit issuer/audience/type profile and checks signature, `iat`, optional `nbf`, `exp`, clock skew and maximum access-token lifetime. Registered claims cannot be replaced by custom claims. HMAC secrets must be at least 32/48/64 bytes for HS256/HS384/HS512.
+
+Refresh grants use opaque 32-64 byte bearer IDs. The default `DatabaseRefreshTokenStore`:
+
+- stores only SHA-256 token representations;
+- serializes transitions through a durable family row;
+- consumes the presented token and inserts its successor in one transaction;
+- rolls back the presented-token claim if successor persistence fails;
+- makes ordinary revocation terminal for the complete family and serializes it with rotation;
+- keeps ordinary revocation distinct from replay compromise;
+- on replay marks the family compromised and revokes all active descendants;
+- reads security state from the primary/write connection.
+
+`DatabaseRefreshTokenHousekeeper::cleanup($now, $limit)` performs bounded housekeeping in two stages. It first prunes at most `$limit` token-history rows whose own bearer expiry has passed, including expired history belonging to a still-live sliding family; each deletion serializes through that family row. It then considers at most `$limit` terminal family candidates and deletes a family only after its history has drained and expiry is rechecked on the primary under the same serialization point. Cleanup therefore cannot delete a concurrently created active successor.
+
+Token responses use `Cache-Control: no-store` and `Pragma: no-cache`. Semantically empty token responses explicitly remove `Content-Type`; response semantics never depend on PSR-7 stream size, which may legitimately be unknown.
+
+## Password reset
+
+`PasswordResetServiceInterface` owns the complete account-recovery transition. `PasswordResetResult::Success` means the reset token was accepted and consumed, the password changed, and pre-reset session, remember-me and refresh credentials were durably or logically invalidated. Password policy belongs to the service and can return `PasswordRejected`.
+
+The package cannot manufacture a transaction across an application-owned password repository and unrelated external stores. Implementations spanning resources must use an equivalent credential-version/outbox/idempotent model and must never return `Success` after a partial transition.
+
+## Events and clocks
+
+Listeners use one extensible property-oriented contract:
+
+```php
+interface EventListenerInterface
+{
+    /** @var non-empty-list<class-string<EventInterface>> */
+    public array $events { get; }
+
+    public function handleEvent(
+        #[\SensitiveParameter]
+        EventInterface $event,
+    ): void;
+}
+```
+
+The old per-event marker interfaces and `ListenerFactory` are removed. `CriticalEventListenerInterface` remains because it has independent failure semantics.
+
+Event DTOs do not create clocks. Their timestamp is mandatory and is supplied by the service that owns the transition. Generic authentication/logout events are best-effort observers; security-critical session lifecycle listeners participate in the owning transition where applicable. Best-effort session-GC scheduling likewise isolates scheduler, random-source and logger failures from an already successful application response.
+
+Componenta factories also honor the shared PSR-20 `ClockInterface` for event timestamps, JWT access/refresh issuance/validation and logout observer time. Constructor defaults remain only as a direct-construction fallback for non-Componenta containers.
+
+Credential-bearing DTOs and audit containers use redacted debug/JSON representations. Generic authentication events contain payload type/subject UUID metadata, never raw credentials. Package-owned exception-prone boundaries redact credential-bearing request/context/storage/event/session arguments, generated credential helper values, downstream PSR request-handler objects, application listener/storage objects, DI container objects and SQL database/connection objects that may carry configuration secrets. PHP parameter attributes are not inherited by concrete implementations, so custom strategies, stores, listeners, senders, middleware and factories must apply equivalent `#[SensitiveParameter]` annotations on their own credential/config-bearing frames. Third-party implementations remain responsible for their own stack frames, and applications should not expose exception traces to untrusted clients.
+
+## Denial responses and malformed input
+
+`DeniedReasonInterface::$attributes` is internal audit context. The built-in `DeniedResponseFactory` publishes only the stable error code. Applications needing a richer public body must replace `DeniedResponseFactoryInterface`; there is no `PublicDeniedReasonInterface` capability.
+
+Strict extractors throw `InvalidPayloadException`. Built-in handlers should run behind `InvalidPayloadMiddleware` (or an equivalent application mapper) to produce a stable 400 response.
+
+Cookie-authenticated state-changing endpoints, including logout where appropriate to the application, remain subject to the application's CSRF policy. The auth package cannot infer trusted origins or deployment topology.
+
+## Database consistency
+
+Authentication-state reads in the built-in session, remember-me, one-time, refresh and OTP stores are pinned to the Cycle `WRITE` driver. A lagging read replica must never resurrect revoked credentials.
+
+
+See [MIGRATION-v2.md](MIGRATION-v2.md) for breaking changes.

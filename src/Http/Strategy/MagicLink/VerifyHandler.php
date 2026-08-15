@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Http\Strategy\MagicLink;
 
-use Componenta\Auth\AuthSubject;
+use Componenta\Auth\AuthenticatorInterface;
 use Componenta\Auth\Context;
 use Componenta\Auth\ContextInterface;
 use Componenta\Auth\DeniedReasonInterface;
 use Componenta\Auth\Http\DeniedResponseFactoryInterface;
-use Componenta\Auth\Http\PayloadStorageInterface;
+use Componenta\Auth\Http\ReplacingPayloadStorage;
 use Componenta\Auth\Http\Transport\SessionPayload;
 use Componenta\Auth\Session\SessionAttributeExtractor;
 use Componenta\Auth\Session\SessionAttributeExtractorInterface;
@@ -19,52 +19,98 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 
-/**
- * Handles magic link verification requests.
- *
- * Extracts the token from the request, verifies it via
- * MagicLinkStrategy, creates a session, and sets the session cookie.
- */
 final readonly class VerifyHandler implements RequestHandlerInterface
 {
     public function __construct(
         private VerifyExtractor $extractor,
-        private MagicLinkStrategy $strategy,
+        private AuthenticatorInterface $authenticator,
         private SessionManagerInterface $sessionManager,
-        private PayloadStorageInterface $storage,
+        private ReplacingPayloadStorage $storage,
         private DeniedResponseFactoryInterface $deniedResponseFactory,
         private ResponseFactoryInterface $responseFactory,
         private SessionAttributeExtractorInterface $attributeExtractor = new SessionAttributeExtractor(),
     ) {}
 
-    public function handle(ServerRequestInterface $request): ResponseInterface
-    {
+    #[\Override]
+    public function handle(
+        #[\SensitiveParameter]
+        ServerRequestInterface $request,
+    ): ResponseInterface {
+        if (strtoupper($request->getMethod()) !== 'POST') {
+            return $this->json(405, ['error' => 'method_not_allowed'])
+                ->withHeader('Allow', 'POST');
+        }
+
         $payload = $this->extractor->extract($request);
 
         if ($payload === null) {
-            $response = $this->responseFactory->createResponse(400);
-            $response->getBody()->write(json_encode(['error' => 'missing_token'], JSON_THROW_ON_ERROR));
-
-            return $response->withHeader('Content-Type', 'application/json');
+            return $this->json(400, ['error' => 'missing_token']);
         }
 
-        $result = $this->strategy->attempt($payload, new Context([
+        // Complete request-derived and response-allocation work before the
+        // one-time magic-link bearer can be consumed.
+        $attributes = $this->attributeExtractor->extract($request);
+        $response = $this->successResponse();
+        $result = $this->authenticator->attempt($payload, new Context([
             ServerRequestInterface::class => $request,
             ContextInterface::EXTRACTOR => $this->extractor,
         ]));
 
         if ($result->subject instanceof DeniedReasonInterface) {
-            return $this->deniedResponseFactory->create($result->subject);
+            return MagicLinkResponseHeaders::apply(
+                $this->deniedResponseFactory->create($result->subject),
+            );
         }
 
         $session = $this->sessionManager->create(
-            AuthSubject::id($result->subject),
-            $this->attributeExtractor->extract($request),
+            $result->subject->uuid,
+            $attributes,
         );
 
-        $response = $this->responseFactory->createResponse(200);
-        $response = $this->storage->store($request, $response, new SessionPayload($session->id));
+        try {
+            $stored = $this->storage->store(
+                $request,
+                $response,
+                new SessionPayload($session->id),
+            );
 
-        return $response->withHeader('Content-Type', 'application/json');
+            return MagicLinkResponseHeaders::apply(
+                $stored
+                    ->withHeader('Content-Type', 'application/json')
+                    ->withHeader('Cache-Control', 'no-store')
+                    ->withHeader('Pragma', 'no-cache'),
+            );
+        } catch (\Throwable $exception) {
+            // The magic-link token is already consumed and remains single-use;
+            // only the unpublished server-side session is compensated.
+            $this->sessionManager->terminate($session->id);
+            throw $exception;
+        }
+    }
+
+    /** @param array<string, mixed> $payload */
+    private function json(int $status, array $payload): ResponseInterface
+    {
+        $response = $this->responseFactory->createResponse($status);
+        $response->getBody()->write(json_encode($payload, JSON_THROW_ON_ERROR));
+
+        return MagicLinkResponseHeaders::apply(
+            $response
+                ->withHeader('Content-Type', 'application/json')
+                ->withHeader('Cache-Control', 'no-store')
+                ->withHeader('Pragma', 'no-cache'),
+        );
+    }
+
+    private function successResponse(): ResponseInterface
+    {
+        $response = $this->responseFactory
+            ->createResponse(200)
+            ->withHeader('Content-Type', 'application/json')
+            ->withHeader('Cache-Control', 'no-store')
+            ->withHeader('Pragma', 'no-cache');
+        $response->getBody()->write('{}');
+
+        return MagicLinkResponseHeaders::apply($response);
     }
 }

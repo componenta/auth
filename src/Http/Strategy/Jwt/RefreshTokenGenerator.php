@@ -4,19 +4,15 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Http\Strategy\Jwt;
 
-/**
- * Generates cryptographically secure opaque token identifiers.
- *
- * Used for both refresh token IDs and family IDs.
- */
 final readonly class RefreshTokenGenerator
 {
-    /**
-     * @param int $length Number of random bytes (output is 2x hex characters)
-     */
     public function __construct(
         private int $length = 32,
-    ) {}
+    ) {
+        if ($this->length < 32 || $this->length > 64) {
+            throw new \InvalidArgumentException('Refresh token entropy must be between 32 and 64 bytes.');
+        }
+    }
 
     public function generate(): string
     {

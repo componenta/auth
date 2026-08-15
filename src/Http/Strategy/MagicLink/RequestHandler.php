@@ -4,62 +4,71 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Http\Strategy\MagicLink;
 
-use Componenta\Auth\Token\TokenRequester;
+use Componenta\Auth\Token\TokenRequest;
+use Componenta\Auth\Token\TokenRequestQueueInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 
-/**
- * Handles magic link request (send) step.
- *
- * Extracts the user identity from the request body and
- * delegates to MagicLinkRequester to generate and send the token.
- *
- * Always returns 200 regardless of whether the user exists,
- * to prevent user enumeration attacks.
- */
 final readonly class RequestHandler implements RequestHandlerInterface
 {
+    private const int MAX_IDENTITY_LENGTH = 320;
+
     public function __construct(
-        private TokenRequester $requester,
+        private TokenRequestQueueInterface $queue,
         private ResponseFactoryInterface $responseFactory,
         private string $identityField = 'identity',
-    ) {}
+    ) {
+        if (preg_match('/\A[A-Za-z_][A-Za-z0-9_.-]*\z/D', $this->identityField) !== 1) {
+            throw new \InvalidArgumentException('Magic-link identity field name is invalid.');
+        }
+    }
 
-    public function handle(ServerRequestInterface $request): ResponseInterface
-    {
-        $body = $request->getParsedBody() ?? [];
+    #[\Override]
+    public function handle(
+        #[\SensitiveParameter]
+        ServerRequestInterface $request,
+    ): ResponseInterface {
+        $body = $request->getParsedBody();
+        $identity = is_array($body) ? ($body[$this->identityField] ?? null) : null;
 
-        if (!is_array($body)) {
-            $body = get_object_vars($body);
+        if (
+            !is_string($identity)
+            || $identity === ''
+            || strlen($identity) > self::MAX_IDENTITY_LENGTH
+            || trim($identity) !== $identity
+            || preg_match('/[\x00-\x1F\x7F]/', $identity) === 1
+        ) {
+            return $this->json(400, ['error' => 'invalid_identity']);
         }
 
-        $identity = $body[$this->identityField] ?? null;
-
-        if ($identity === null || $identity === '') {
-            $response = $this->responseFactory->createResponse(400);
-            $response->getBody()->write(
-                json_encode(['error' => 'missing_identity'], JSON_THROW_ON_ERROR)
-            );
-
-            return $response->withHeader('Content-Type', 'application/json');
+        if (array_key_exists('redirect', $body)) {
+            return $this->json(400, ['error' => 'redirect_not_supported']);
         }
 
-        $context = [];
-        $redirect = $body['redirect'] ?? null;
-
-        if (is_string($redirect) && $redirect !== '') {
-            $context['redirect'] = $redirect;
-        }
-
-        $this->requester->request($identity, context: $context);
-
-        $response = $this->responseFactory->createResponse(200);
-        $response->getBody()->write(json_encode([
+        $work = new TokenRequest(
+            identity: $identity,
+            purpose: TokenRequest::PURPOSE_MAGIC_LINK,
+        );
+        $response = $this->json(200, [
             'message' => 'If the account exists, a link has been sent.',
-        ], JSON_THROW_ON_ERROR));
+        ]);
 
-        return $response->withHeader('Content-Type', 'application/json');
+        $this->queue->enqueue($work);
+
+        return $response;
+    }
+
+    /** @param array<string, mixed> $data */
+    private function json(int $status, array $data): ResponseInterface
+    {
+        $response = $this->responseFactory->createResponse($status);
+        $response->getBody()->write(json_encode($data, JSON_THROW_ON_ERROR));
+
+        return $response
+            ->withHeader('Content-Type', 'application/json')
+            ->withHeader('Cache-Control', 'no-store')
+            ->withHeader('Pragma', 'no-cache');
     }
 }

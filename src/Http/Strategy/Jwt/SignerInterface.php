@@ -26,5 +26,8 @@ interface SignerInterface
      * Does NOT check expiry - caller is responsible
      * for comparing Claims::$expiresAt with current time.
      */
-    public function parse(string $token): ?Claims;
+    public function parse(
+        #[\SensitiveParameter]
+        string $token,
+    ): ?Claims;
 }

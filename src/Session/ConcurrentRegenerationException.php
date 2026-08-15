@@ -5,11 +5,10 @@ declare(strict_types=1);
 namespace Componenta\Auth\Session;
 
 /**
- * Internal marker used to roll back a regeneration transaction when
- * the optimistic lock on the old session is lost to a concurrent request.
+ * The optimistic claim on a session was lost to another regeneration.
  *
- * Never surfaces to callers - {@see DatabaseSessionManager::regenerate()}
- * catches it and follows the replacement chain instead.
+ * Callers must fail authentication for the presented session ID. They must not
+ * follow the replacement row or disclose the winning successor credential.
  */
 final class ConcurrentRegenerationException extends \RuntimeException
 {

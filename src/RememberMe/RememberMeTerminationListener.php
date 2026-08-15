@@ -5,38 +5,45 @@ declare(strict_types=1);
 namespace Componenta\Auth\RememberMe;
 
 use Componenta\Auth\Event\AllSessionsTerminated;
-use Componenta\Auth\Event\AllSessionsTerminatedListenerInterface;
+use Componenta\Auth\Event\CriticalEventListenerInterface;
 use Componenta\Auth\Event\EventInterface;
 use Componenta\Auth\Event\SessionsTerminated;
-use Componenta\Auth\Event\SessionsTerminatedListenerInterface;
 
-/**
- * Revokes remember-me tokens when sessions are terminated.
- */
-final readonly class RememberMeTerminationListener implements SessionsTerminatedListenerInterface, AllSessionsTerminatedListenerInterface
+final readonly class RememberMeTerminationListener implements CriticalEventListenerInterface
 {
+    /** @var non-empty-list<class-string<EventInterface>> */
+    public array $events;
+
     public function __construct(
         private RememberMeTokenManagerInterface $tokenManager,
-    ) {}
+    ) {
+        $this->events = [SessionsTerminated::class, AllSessionsTerminated::class];
+    }
 
     #[\Override]
-    public function handleEvent(EventInterface $event): void
-    {
-        match ($event::class) {
-            SessionsTerminated::class => $this->onSessionsTerminated($event),
-            AllSessionsTerminated::class => $this->onAllSessionsTerminated($event),
-        };
-    }
+    public function handleEvent(
+        #[\SensitiveParameter]
+        EventInterface $event,
+    ): void {
+        if ($event instanceof SessionsTerminated) {
+            $this->tokenManager->revokeForSessions($event->sessionIds);
 
-    private function onSessionsTerminated(SessionsTerminated $event): void
-    {
-        foreach ($event->sessionIds as $sessionId) {
-            $this->tokenManager->revokeForSession($sessionId);
+            return;
         }
-    }
 
-    private function onAllSessionsTerminated(AllSessionsTerminated $event): void
-    {
-        $this->tokenManager->revokeAllForUser($event->userId, $event->exceptSessionId);
+        if ($event instanceof AllSessionsTerminated) {
+            $this->tokenManager->revokeAllForSubject(
+                $event->subjectId,
+                $event->exceptSessionId,
+            );
+
+            return;
+        }
+
+        throw new \InvalidArgumentException(sprintf(
+            '%s cannot handle %s.',
+            self::class,
+            $event::class,
+        ));
     }
 }

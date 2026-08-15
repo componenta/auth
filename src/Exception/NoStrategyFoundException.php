@@ -17,7 +17,7 @@ class NoStrategyFoundException extends AuthenticationException
 {
     public readonly string $payloadType;
 
-    public function __construct(object $payload)
+    public function __construct(#[\SensitiveParameter] object $payload)
     {
         $this->payloadType = $payload::class;
 

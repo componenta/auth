@@ -15,6 +15,7 @@ final class Unauthorized implements DeniedReasonInterface
         get => 'unauthorized';
     }
 
+    /** @param array<string, mixed> $attributes */
     public function __construct(
         public readonly array $attributes = []
     ) {

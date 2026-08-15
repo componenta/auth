@@ -15,6 +15,7 @@ final class InvalidRefreshToken implements DeniedReasonInterface
         get => 'invalid_refresh_token';
     }
 
+    /** @param array<string, mixed> $attributes */
     public function __construct(
         public readonly array $attributes = [],
     ) {}

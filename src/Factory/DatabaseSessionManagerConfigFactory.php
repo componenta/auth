@@ -14,41 +14,54 @@ use Psr\Container\ContainerInterface;
 
 final readonly class DatabaseSessionManagerConfigFactory implements LazyServiceFactoryInterface
 {
-    public function lazy(ContainerInterface $container, ProxyFactoryInterface $proxyFactory, array $context = []): object
-    {
+    #[\Override]
+    public function lazy(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+        ProxyFactoryInterface $proxyFactory,
+        array $context = [],
+    ): object {
         return $proxyFactory->makeProxy(
             DatabaseSessionManagerConfig::class,
             fn(object $proxy): DatabaseSessionManagerConfig => $this->__invoke($container),
         );
     }
 
-    public function __invoke(ContainerInterface $container): DatabaseSessionManagerConfig
-    {
-        /**
-         * @var Config $config
-         */
-        $config = $container->get('config');
-        $config = $config->array(new ConfigPath(ConfigKey::AUTH . '.' . ConfigKey::SESSION), []);
+    public function __invoke(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): DatabaseSessionManagerConfig {
+        $config = $container->get(ConfigKey::CONFIG);
+
+        if (!$config instanceof Config) {
+            throw new \LogicException(sprintf(
+                '%s must resolve to %s.',
+                ConfigKey::CONFIG,
+                Config::class,
+            ));
+        }
+
+        $prefix = ConfigKey::AUTH . '.' . ConfigKey::SESSION;
 
         return new DatabaseSessionManagerConfig(
-            table: $config['table'] ?? 'sessions',
-            dateFormat: $config['dateFormat'] ?? 'Y-m-d H:i:s',
-            lazyLoad: $config['lazyLoad'] ?? true,
-            idleTimeout: $config['idleTimeout'] ?? 1800,
-            absoluteTimeout: $config['absoluteTimeout'] ?? 28800,
-            regenerationInterval: $config['regenerationInterval'] ?? 300,
-            regenerationGracePeriod: $config['regenerationGracePeriod'] ?? 30,
-            idColumn: $config['columns']['id'] ?? 'id',
-            userIdColumn: $config['columns']['userId'] ?? 'user_id',
-            ipColumn: $config['columns']['ip'] ?? 'ip',
-            userAgentColumn: $config['columns']['userAgent'] ?? 'user_agent',
-            expiresAtColumn: $config['columns']['expiresAt'] ?? 'expires_at',
-            absoluteExpiresAtColumn: $config['columns']['absoluteExpiresAt'] ?? 'absolute_expires_at',
-            regenerateAtColumn: $config['columns']['regenerateAt'] ?? 'regenerate_at',
-            replacedByColumn: $config['columns']['replacedBy'] ?? 'replaced_by',
-            createdAtColumn: $config['columns']['createdAt'] ?? 'created_at',
-            lastActiveAtColumn: $config['columns']['lastActiveAt'] ?? 'last_active_at',
-            attributesColumn: $config['columns']['attributes'] ?? 'attributes',
+            table: $config->string(new ConfigPath($prefix . '.table'), 'sessions'),
+            lazyLoad: $config->bool(new ConfigPath($prefix . '.lazyLoad'), true),
+            idleTimeout: $config->int(new ConfigPath($prefix . '.idleTimeout'), 1800),
+            absoluteTimeout: $config->int(new ConfigPath($prefix . '.absoluteTimeout'), 28800),
+            regenerationInterval: $config->int(new ConfigPath($prefix . '.regenerationInterval'), 300),
+            regenerationGracePeriod: $config->int(new ConfigPath($prefix . '.regenerationGracePeriod'), 30),
+            touchInterval: $config->int(new ConfigPath($prefix . '.touchInterval'), 60),
+            idColumn: $config->string(new ConfigPath($prefix . '.columns.id'), 'id'),
+            subjectIdColumn: $config->string(new ConfigPath($prefix . '.columns.subjectId'), 'user_id'),
+            ipColumn: $config->string(new ConfigPath($prefix . '.columns.ip'), 'ip'),
+            userAgentColumn: $config->string(new ConfigPath($prefix . '.columns.userAgent'), 'user_agent'),
+            expiresAtColumn: $config->string(new ConfigPath($prefix . '.columns.expiresAt'), 'expires_at'),
+            absoluteExpiresAtColumn: $config->string(new ConfigPath($prefix . '.columns.absoluteExpiresAt'), 'absolute_expires_at'),
+            regenerateAtColumn: $config->string(new ConfigPath($prefix . '.columns.regenerateAt'), 'regenerate_at'),
+            replacedByColumn: $config->string(new ConfigPath($prefix . '.columns.replacedBy'), 'replaced_by'),
+            createdAtColumn: $config->string(new ConfigPath($prefix . '.columns.createdAt'), 'created_at'),
+            lastActiveAtColumn: $config->string(new ConfigPath($prefix . '.columns.lastActiveAt'), 'last_active_at'),
+            attributesColumn: $config->string(new ConfigPath($prefix . '.columns.attributes'), 'attributes'),
         );
     }
 }

@@ -18,31 +18,56 @@ use PHPUnit\Framework\TestCase;
 
 final class AuthenticatorTest extends TestCase
 {
-    public function testReturnsFirstSuccessfulResultAfterDeniedAttempt(): void
+    public function testExplicitSoftFailureContinuesToLaterStrategy(): void
     {
-        $payload = new \stdClass();
-        $context = new Context();
         $identity = new class implements IdentityInterface {
             public UuidInterface $uuid {
                 get => Uuid::fromString('018f6d5d-3f7a-7a9b-8c2f-123456789abc');
             }
         };
-
         $authenticator = new Authenticator(
-            new AuthStrategyFixture(true, new AuthenticationResult(new DeniedReason('invalid'))),
+            new AuthStrategyFixture(true, new AuthenticationResult(
+                subject: new DeniedReason('invalid'),
+                continueOnFailure: true,
+            )),
             new AuthStrategyFixture(true, new AuthenticationResult($identity)),
         );
 
-        $result = $authenticator->attempt($payload, $context);
-
-        self::assertSame($identity, $result->subject);
+        self::assertSame(
+            $identity,
+            $authenticator->attempt(new \stdClass(), new Context())->subject,
+        );
     }
 
-    public function testReturnsLastDeniedResultWhenNoStrategySucceeds(): void
+    public function testTerminalDenialStopsTheChain(): void
+    {
+        $second = new CountingAuthStrategyFixture(
+            new AuthenticationResult(new DeniedReason('second')),
+        );
+        $result = (new Authenticator(
+            new AuthStrategyFixture(
+                true,
+                new AuthenticationResult(new DeniedReason('terminal')),
+            ),
+            $second,
+        ))->attempt(new \stdClass(), new Context());
+
+        self::assertInstanceOf(DeniedReason::class, $result->subject);
+        self::assertSame('terminal', $result->subject->code);
+        self::assertSame(0, $second->attempts);
+    }
+
+    public function testReturnsLastSoftDenialWhenNoStrategySucceeds(): void
     {
         $result = (new Authenticator(
-            new AuthStrategyFixture(true, new AuthenticationResult(new DeniedReason('first'))),
-            new AuthStrategyFixture(true, new AuthenticationResult(new DeniedReason('last'))),
+            new AuthStrategyFixture(true, new AuthenticationResult(
+                subject: new DeniedReason('first'),
+                continueOnFailure: true,
+            )),
+            new AuthStrategyFixture(true, new AuthenticationResult(
+                subject: new DeniedReason('last'),
+                continueOnFailure: true,
+            )),
         ))->attempt(new \stdClass(), new Context());
 
         self::assertInstanceOf(DeniedReason::class, $result->subject);
@@ -72,6 +97,25 @@ final readonly class AuthStrategyFixture implements AuthenticationStrategyInterf
 
     public function attempt(object $payload, ContextInterface $context): AuthenticationResult
     {
+        return $this->result;
+    }
+}
+
+final class CountingAuthStrategyFixture implements AuthenticationStrategyInterface
+{
+    public int $attempts = 0;
+
+    public function __construct(private AuthenticationResult $result) {}
+
+    public function supports(object $payload, ContextInterface $context): bool
+    {
+        return true;
+    }
+
+    public function attempt(object $payload, ContextInterface $context): AuthenticationResult
+    {
+        ++$this->attempts;
+
         return $this->result;
     }
 }

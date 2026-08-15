@@ -6,45 +6,80 @@ namespace Componenta\Auth\Session;
 
 use Componenta\Auth\Event\AllSessionsTerminated;
 use Componenta\Auth\Event\EventDispatcher;
-use Componenta\Auth\Event\EventInterface;
 use Componenta\Auth\Event\SessionRegenerated;
 use Componenta\Auth\Event\SessionsTerminated;
 use Componenta\Clock\DateTimeFactoryInterface;
+use Componenta\Identity\Uuid;
+use Componenta\Identity\UuidInterface;
 use Cycle\Database\DatabaseInterface;
+use Cycle\Database\Query\DeleteQuery;
+use Cycle\Database\Query\SelectQuery;
 
 final readonly class DatabaseSessionManager implements SessionManagerInterface
 {
-    /** Attribute key for client IP address. */
     public const string ATTR_IP = 'ip';
-
-    /** Attribute key for client User-Agent string. */
     public const string ATTR_USER_AGENT = 'user_agent';
 
-    /** Maximum depth for following replacement chains in find(). */
-    private const int MAX_CHAIN_DEPTH = 10;
+    private const int MAX_SESSION_ID_LENGTH = 512;
+    private const int MAX_IP_LENGTH = 45;
+    private const int MAX_USER_AGENT_LENGTH = 1024;
+    private const int MAX_ATTRIBUTES_JSON_LENGTH = 16384;
+    private const int DELETE_CHUNK_SIZE = 500;
+    private const int MAX_CLEANUP_LIMIT = 10000;
+
+    private DateTimeFactoryInterface $dateTimeFactory;
 
     public function __construct(
+        #[\SensitiveParameter]
         private DatabaseInterface $database,
         private SessionIdGeneratorInterface $idGenerator,
-        private DateTimeFactoryInterface $dateTimeFactory,
+        DateTimeFactoryInterface $dateTimeFactory,
         private EventDispatcher $dispatcher,
         private DatabaseSessionManagerConfig $config = new DatabaseSessionManagerConfig(),
-    ) {}
+    ) {
+        $this->dateTimeFactory = $dateTimeFactory->withTimezone('UTC');
+    }
 
-    /**
-     * @throws \InvalidArgumentException If required attributes (ip, user_agent) are missing
-     * @throws \JsonException
-     */
-    public function create(int|string $userId, array $attributes = []): SessionInterface
-    {
-        $ip = $attributes[self::ATTR_IP] ?? throw new \InvalidArgumentException('Missing required attribute: ' . self::ATTR_IP);
-        $userAgent = $attributes[self::ATTR_USER_AGENT] ?? throw new \InvalidArgumentException('Missing required attribute: ' . self::ATTR_USER_AGENT);
+    #[\Override]
+    public function create(
+        UuidInterface $subjectId,
+        #[\SensitiveParameter]
+        array $attributes = [],
+    ): SessionInterface {
+        $ip = $attributes[self::ATTR_IP]
+            ?? throw new \InvalidArgumentException('Missing required attribute: ' . self::ATTR_IP);
+        $userAgent = $attributes[self::ATTR_USER_AGENT]
+            ?? throw new \InvalidArgumentException(
+                'Missing required attribute: ' . self::ATTR_USER_AGENT,
+            );
 
+        if (
+            !is_string($ip)
+            || strlen($ip) > self::MAX_IP_LENGTH
+            || ($ip !== '' && filter_var($ip, FILTER_VALIDATE_IP) === false)
+        ) {
+            throw new \InvalidArgumentException(
+                'Session IP attribute must be a bounded string.',
+            );
+        }
+
+        if (
+            !is_string($userAgent)
+            || strlen($userAgent) > self::MAX_USER_AGENT_LENGTH
+            || preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', $userAgent) === 1
+        ) {
+            throw new \InvalidArgumentException(
+                'Session User-Agent attribute must be a bounded string.',
+            );
+        }
+
+        $sessionId = $this->idGenerator->generate();
+        self::assertSessionId($sessionId);
         $now = $this->dateTimeFactory->now();
 
         $session = new Session(
-            id: $this->idGenerator->generate(),
-            userId: $userId,
+            id: $sessionId,
+            subjectId: $subjectId,
             expiresAt: $now->modify("+{$this->config->idleTimeout} seconds"),
             absoluteExpiresAt: $now->modify("+{$this->config->absoluteTimeout} seconds"),
             regenerateAt: $now->modify("+{$this->config->regenerationInterval} seconds"),
@@ -54,301 +89,678 @@ final readonly class DatabaseSessionManager implements SessionManagerInterface
             attributes: $attributes,
         );
 
-        $this->database
-            ->insert($this->config->table)
-            ->values([
-                $this->config->idColumn => $session->id,
-                $this->config->userIdColumn => $session->userId,
-                $this->config->ipColumn => $ip,
-                $this->config->userAgentColumn => $userAgent,
-                $this->config->expiresAtColumn => $session->expiresAt->format($this->config->dateFormat),
-                $this->config->absoluteExpiresAtColumn => $session->absoluteExpiresAt->format($this->config->dateFormat),
-                $this->config->regenerateAtColumn => $session->regenerateAt->format($this->config->dateFormat),
-                $this->config->replacedByColumn => null,
-                $this->config->createdAtColumn => $session->createdAt->format($this->config->dateFormat),
-                $this->config->lastActiveAtColumn => $session->lastActiveAt->format($this->config->dateFormat),
-                $this->config->attributesColumn => json_encode($session->getAttributes(), JSON_THROW_ON_ERROR),
-            ])
-            ->run();
+        $this->insert($session, $ip, $userAgent);
 
         return $session;
     }
 
-    public function exists(string $sessionId): bool
-    {
-        return $this->database
-                ->select('1')
-                ->from($this->config->table)
-                ->where($this->config->idColumn, $sessionId)
-                ->run()
-                ->fetch() !== false;
+    #[\Override]
+    public function exists(
+        #[\SensitiveParameter]
+        string $sessionId,
+    ): bool {
+        return $this->find($sessionId) !== null;
     }
 
-    public function find(string $sessionId): ?SessionInterface
-    {
-        return $this->findWithDepth($sessionId, 0);
-    }
+    #[\Override]
+    public function find(
+        #[\SensitiveParameter]
+        string $sessionId,
+    ): ?SessionInterface {
+        self::assertSessionId($sessionId);
+        $query = $this->database->select()->withDriver(
+            $this->database->getDriver(DatabaseInterface::WRITE),
+            $this->database->getPrefix(),
+        );
 
-    private function findWithDepth(string $sessionId, int $depth): ?SessionInterface
-    {
-        if ($depth > self::MAX_CHAIN_DEPTH) {
-            return null;
+        if (!$query instanceof SelectQuery) {
+            throw new \LogicException(
+                'Cycle must preserve SelectQuery when pinning the write driver.',
+            );
         }
 
-        $row = $this->database
-            ->select()
+        $row = $query
             ->from($this->config->table)
             ->where($this->config->idColumn, $sessionId)
             ->run()
             ->fetch();
 
-        if ($row === false) {
+        if (!is_array($row)) {
             return null;
         }
 
         $session = $this->hydrate($row);
         $now = $this->dateTimeFactory->now();
 
-        // Replaced session: follow to replacement if grace period not expired
-        if ($session->replacedBy !== null) {
-            if ($session->expiresAt <= $now) {
-                return null;
-            }
-
-            return $this->findWithDepth($session->replacedBy, $depth + 1);
-        }
-
-        // Absolute timeout: non-negotiable expiration
-        if ($session->absoluteExpiresAt <= $now) {
-            return null;
-        }
-
-        // Idle timeout
-        if ($session->expiresAt <= $now) {
+        if (
+            $session->replacedBy !== null
+            || $session->absoluteExpiresAt <= $now
+            || $session->expiresAt <= $now
+        ) {
             return null;
         }
 
         return $session;
     }
 
-    public function all(int|string $userId): SessionCollectionInterface
+    #[\Override]
+    public function all(UuidInterface $subjectId): SessionCollectionInterface
     {
         if ($this->config->lazyLoad) {
             $reflector = new \ReflectionClass(SessionCollection::class);
 
-            return $reflector->newLazyGhost(function (SessionCollection $ghost) use ($userId): void {
-                $ghost->__construct($this->fetchAll($userId));
-            });
+            return $reflector->newLazyGhost(
+                function (SessionCollection $ghost) use ($subjectId): void {
+                    $ghost->__construct($this->fetchAll($subjectId));
+                },
+            );
         }
 
-        return new SessionCollection($this->fetchAll($userId));
+        return new SessionCollection($this->fetchAll($subjectId));
     }
 
-    public function touch(string $sessionId): void
-    {
+    #[\Override]
+    public function touch(
+        #[\SensitiveParameter]
+        string $sessionId,
+        ?\DateTimeImmutable $lastActiveAt = null,
+    ): void {
+        self::assertSessionId($sessionId);
         $now = $this->dateTimeFactory->now();
+        $formattedNow = $now->format($this->config->dateFormat);
+        $touchBefore = $now->modify("-{$this->config->touchInterval} seconds");
 
-        $this->database
+        if ($lastActiveAt !== null && $lastActiveAt > $touchBefore) {
+            return;
+        }
+
+        $query = $this->database
             ->update($this->config->table)
             ->where($this->config->idColumn, $sessionId)
             ->where($this->config->replacedByColumn, null)
+            ->where($this->config->expiresAtColumn, '>', $formattedNow)
+            ->where($this->config->absoluteExpiresAtColumn, '>', $formattedNow);
+
+        if ($this->config->touchInterval > 0) {
+            $query->where(
+                $this->config->lastActiveAtColumn,
+                '<=',
+                $touchBefore->format($this->config->dateFormat),
+            );
+        }
+
+        $query
             ->values([
                 $this->config->lastActiveAtColumn => $now->format($this->config->dateFormat),
-                $this->config->expiresAtColumn => $now->modify("+{$this->config->idleTimeout} seconds")->format($this->config->dateFormat),
+                $this->config->expiresAtColumn => $now
+                    ->modify("+{$this->config->idleTimeout} seconds")
+                    ->format($this->config->dateFormat),
             ])
             ->run();
     }
 
-    public function terminate(string|iterable|SessionCollectionInterface $sessionId): void
-    {
+    #[\Override]
+    public function terminate(
+        #[\SensitiveParameter]
+        string|iterable|SessionCollectionInterface $sessionId,
+    ): void {
         $ids = $this->normalizeIds($sessionId);
 
         if ($ids === []) {
             return;
         }
 
-        $this->database
-            ->delete($this->config->table)
-            ->where($this->config->idColumn, 'IN', $ids)
-            ->run();
+        $now = $this->dateTimeFactory->now();
+        $event = null;
 
-        $this->dispatch(new SessionsTerminated($ids));
-    }
+        $this->database->transaction(function (
+            #[\SensitiveParameter]
+            DatabaseInterface $database,
+        ) use (
+            $ids,
+            $now,
+            &$event,
+        ): void {
+            $terminationIds = $this->terminationLineageIds(
+                $database,
+                $ids,
+                $now,
+            );
 
-    public function terminateAll(int|string $userId, ?string $exceptSessionId = null): void
-    {
-        $query = $this->database
-            ->delete($this->config->table)
-            ->where($this->config->userIdColumn, $userId);
+            foreach (array_chunk($terminationIds, self::DELETE_CHUNK_SIZE) as $chunk) {
+                $database
+                    ->delete($this->config->table)
+                    ->where($this->config->idColumn, 'IN', $chunk)
+                    ->run();
+            }
 
-        if ($exceptSessionId !== null) {
-            $query->where($this->config->idColumn, '!=', $exceptSessionId);
+            $event = new SessionsTerminated($terminationIds, $now);
+            $this->dispatcher->dispatchCritical($event);
+        });
+
+        if (!$event instanceof SessionsTerminated) {
+            throw new \LogicException('Session termination transaction did not produce an event.');
         }
 
-        $query->run();
-
-        $this->dispatch(new AllSessionsTerminated($userId, $exceptSessionId));
+        $this->dispatcher->dispatchBestEffort($event);
     }
 
-    public function cleanup(): void
+    #[\Override]
+    public function terminateAll(
+        UuidInterface $subjectId,
+        #[\SensitiveParameter]
+        ?string $exceptSessionId = null,
+    ): void {
+        if ($exceptSessionId !== null) {
+            self::assertSessionId($exceptSessionId);
+        }
+
+        $event = new AllSessionsTerminated(
+            $subjectId,
+            $exceptSessionId,
+            $this->dateTimeFactory->now(),
+        );
+
+        $this->database->transaction(function () use ($subjectId, $exceptSessionId, $event): void {
+            $query = $this->database
+                ->delete($this->config->table)
+                ->where($this->config->subjectIdColumn, $subjectId->toString());
+
+            if ($exceptSessionId !== null) {
+                $query->where($this->config->idColumn, '!=', $exceptSessionId);
+            }
+
+            $query->run();
+            $this->dispatcher->dispatchCritical($event);
+        });
+
+        $this->dispatcher->dispatchBestEffort($event);
+    }
+
+    #[\Override]
+    public function cleanup(int $limit = 1000): int
     {
+        if ($limit < 1 || $limit > self::MAX_CLEANUP_LIMIT) {
+            throw new \InvalidArgumentException(sprintf(
+                'Session cleanup limit must be between 1 and %d.',
+                self::MAX_CLEANUP_LIMIT,
+            ));
+        }
+
         $now = $this->dateTimeFactory->now()->format($this->config->dateFormat);
+        $rows = $this->database
+            ->select($this->config->idColumn)
+            ->from($this->config->table)
+            ->where(function (mixed $query) use ($now): void {
+                if (!$query instanceof SelectQuery) {
+                    throw new \LogicException('Cycle must provide a SelectQuery to the predicate.');
+                }
 
-        $this->database
-            ->delete($this->config->table)
-            ->where(function ($query) use ($now): void {
                 $query
-                    ->orWhere($this->config->expiresAtColumn, '<', $now)
-                    ->orWhere($this->config->absoluteExpiresAtColumn, '<', $now);
+                    ->where($this->config->replacedByColumn, null)
+                    ->where($this->config->expiresAtColumn, '<=', $now)
+                    ->orWhere($this->config->absoluteExpiresAtColumn, '<=', $now);
             })
-            ->run();
+            ->limit($limit)
+            ->run()
+            ->fetchAll();
+        $ids = [];
+
+        foreach ($rows as $row) {
+            if (is_array($row)) {
+                $ids[] = self::stringValue($row, $this->config->idColumn);
+            }
+        }
+
+        if ($ids === []) {
+            return 0;
+        }
+
+        $deleted = 0;
+
+        foreach (array_chunk($ids, self::DELETE_CHUNK_SIZE) as $chunk) {
+            $deleted += $this->database
+                ->delete($this->config->table)
+                ->where($this->config->idColumn, 'IN', $chunk)
+                ->where(function (mixed $query) use ($now): void {
+                    if (!$query instanceof DeleteQuery) {
+                        throw new \LogicException('Cycle must provide a DeleteQuery to the predicate.');
+                    }
+
+                    $query
+                        ->where($this->config->replacedByColumn, null)
+                        ->where($this->config->expiresAtColumn, '<=', $now)
+                        ->orWhere(
+                            $this->config->absoluteExpiresAtColumn,
+                            '<=',
+                            $now,
+                        );
+                })
+                ->run();
+        }
+
+        return $deleted;
     }
 
-    public function regenerate(string $sessionId): SessionInterface
-    {
-        $row = $this->database
-            ->select()
+    #[\Override]
+    public function regenerate(
+        #[\SensitiveParameter]
+        string $sessionId,
+    ): SessionInterface {
+        self::assertSessionId($sessionId);
+        $query = $this->database->select()->withDriver(
+            $this->database->getDriver(DatabaseInterface::WRITE),
+            $this->database->getPrefix(),
+        );
+
+        if (!$query instanceof SelectQuery) {
+            throw new \LogicException(
+                'Cycle must preserve SelectQuery when pinning the write driver.',
+            );
+        }
+
+        $row = $query
             ->from($this->config->table)
             ->where($this->config->idColumn, $sessionId)
             ->run()
             ->fetch();
 
-        if ($row === false) {
+        if (!is_array($row)) {
             throw new \InvalidArgumentException('Session not found');
         }
 
         $old = $this->hydrate($row);
         $now = $this->dateTimeFactory->now();
 
-        // Already replaced by a concurrent request - follow the chain
         if ($old->replacedBy !== null) {
-            return $this->find($old->replacedBy)
-                ?? throw new \InvalidArgumentException('Session not found');
+            throw new ConcurrentRegenerationException();
         }
 
-        // Check timeouts
         if ($old->absoluteExpiresAt <= $now || $old->expiresAt <= $now) {
             throw new \InvalidArgumentException('Session expired');
         }
 
+        $newSessionId = $this->idGenerator->generate();
+        self::assertSessionId($newSessionId);
+        $idleExpiresAt = $now->modify("+{$this->config->idleTimeout} seconds");
+
         $new = new Session(
-            id: $this->idGenerator->generate(),
-            userId: $old->userId,
-            expiresAt: $now->modify("+{$this->config->idleTimeout} seconds"),
+            id: $newSessionId,
+            subjectId: $old->subjectId,
+            expiresAt: $idleExpiresAt < $old->absoluteExpiresAt
+                ? $idleExpiresAt
+                : $old->absoluteExpiresAt,
             absoluteExpiresAt: $old->absoluteExpiresAt,
             regenerateAt: $now->modify("+{$this->config->regenerationInterval} seconds"),
             replacedBy: null,
             createdAt: $now,
             lastActiveAt: $now,
-            attributes: $old->getAttributes(),
+            attributes: $old->attributes,
         );
+        $event = new SessionRegenerated($sessionId, $new->id, $now);
+        $formattedNow = $now->format($this->config->dateFormat);
 
-        // INSERT new + claim old with optimistic lock, atomically.
-        // If the claim UPDATE affects 0 rows (a concurrent request already
-        // regenerated this session), throwing triggers a rollback so the
-        // just-inserted new row is undone - no orphan can leak. INSERT
-        // must come first to satisfy a potential FK (replaced_by -> id).
-        try {
-            $this->database->transaction(function () use ($sessionId, $new, $now): void {
-                $this->database
-                    ->insert($this->config->table)
-                    ->values([
-                        $this->config->idColumn => $new->id,
-                        $this->config->userIdColumn => $new->userId,
-                        $this->config->ipColumn => $new->getAttribute(self::ATTR_IP, ''),
-                        $this->config->userAgentColumn => $new->getAttribute(self::ATTR_USER_AGENT, ''),
-                        $this->config->expiresAtColumn => $new->expiresAt->format($this->config->dateFormat),
-                        $this->config->absoluteExpiresAtColumn => $new->absoluteExpiresAt->format($this->config->dateFormat),
-                        $this->config->regenerateAtColumn => $new->regenerateAt->format($this->config->dateFormat),
-                        $this->config->replacedByColumn => null,
-                        $this->config->createdAtColumn => $new->createdAt->format($this->config->dateFormat),
-                        $this->config->lastActiveAtColumn => $new->lastActiveAt->format($this->config->dateFormat),
-                        $this->config->attributesColumn => json_encode($new->getAttributes(), JSON_THROW_ON_ERROR),
-                    ])
-                    ->run();
+        $this->database->transaction(function () use (
+            $sessionId,
+            $new,
+            $now,
+            $formattedNow,
+            $event,
+        ): void {
+            $ip = $new->getAttribute(self::ATTR_IP);
+            $userAgent = $new->getAttribute(self::ATTR_USER_AGENT);
 
-                $affectedRows = $this->database
-                    ->update($this->config->table)
-                    ->where($this->config->idColumn, $sessionId)
-                    ->where($this->config->replacedByColumn, null)
-                    ->values([
-                        $this->config->replacedByColumn => $new->id,
-                        $this->config->expiresAtColumn => $now->modify("+{$this->config->regenerationGracePeriod} seconds")->format($this->config->dateFormat),
-                    ])
-                    ->run();
+            if (!is_string($ip) || !is_string($userAgent)) {
+                throw new \UnexpectedValueException(
+                    'Regenerated session is missing transport metadata.',
+                );
+            }
 
-                if ($affectedRows === 0) {
-                    throw new ConcurrentRegenerationException();
-                }
-            });
-        } catch (ConcurrentRegenerationException) {
-            return $this->find($sessionId)
-                ?? throw new \InvalidArgumentException('Session not found');
-        }
+            $this->insert($new, $ip, $userAgent);
 
-        $this->dispatch(new SessionRegenerated($sessionId, $new->id));
+            $affectedRows = $this->database
+                ->update($this->config->table)
+                ->where($this->config->idColumn, $sessionId)
+                ->where($this->config->replacedByColumn, null)
+                ->where($this->config->expiresAtColumn, '>', $formattedNow)
+                ->where($this->config->absoluteExpiresAtColumn, '>', $formattedNow)
+                ->values([
+                    $this->config->replacedByColumn => $new->id,
+                    $this->config->expiresAtColumn => $now
+                        ->modify("+{$this->config->regenerationGracePeriod} seconds")
+                        ->format($this->config->dateFormat),
+                ])
+                ->run();
+
+            if ($affectedRows !== 1) {
+                throw new ConcurrentRegenerationException();
+            }
+
+            $this->dispatcher->dispatchCritical($event);
+        });
+
+        $this->dispatcher->dispatchBestEffort($event);
 
         return $new;
     }
 
-    private function dispatch(EventInterface $event): void
+    /**
+     * Expands requested session IDs to every already-created replacement in
+     * their lineage while serializing with a concurrent regeneration.
+     *
+     * @param list<string> $ids
+     * @return list<string>
+     */
+    private function terminationLineageIds(
+        #[\SensitiveParameter]
+        DatabaseInterface $database,
+        #[\SensitiveParameter]
+        array $ids,
+        \DateTimeImmutable $now,
+    ): array {
+        /** @var array<string, string> $expanded */
+        $expanded = [];
+        $formattedNow = $now->format($this->config->dateFormat);
+
+        foreach ($ids as $rootId) {
+            $currentId = $rootId;
+            /** @var array<string, true> $path */
+            $path = [];
+
+            while (true) {
+                $key = self::idKey($currentId);
+
+                if (isset($path[$key])) {
+                    throw new \UnexpectedValueException(
+                        'Session replacement lineage contains a cycle.',
+                    );
+                }
+
+                if (isset($expanded[$key])) {
+                    break;
+                }
+
+                $path[$key] = true;
+                $expanded[$key] = $currentId;
+
+                $database
+                    ->update($this->config->table)
+                    ->where($this->config->idColumn, $currentId)
+                    ->where($this->config->replacedByColumn, null)
+                    ->values([
+                        $this->config->expiresAtColumn => $formattedNow,
+                    ])
+                    ->run();
+
+                $row = $this->findRow($database, $currentId);
+
+                if ($row === null) {
+                    break;
+                }
+
+                $replacement = $row[$this->config->replacedByColumn] ?? null;
+
+                if ($replacement === null) {
+                    break;
+                }
+
+                $currentId = self::stringValue(
+                    $row,
+                    $this->config->replacedByColumn,
+                );
+                self::assertSessionId($currentId);
+            }
+        }
+
+        return array_values($expanded);
+    }
+
+    /** @return array<array-key, mixed>|null */
+    private function findRow(
+        #[\SensitiveParameter]
+        DatabaseInterface $database,
+        #[\SensitiveParameter]
+        string $sessionId,
+    ): ?array {
+        $query = $database->select()->withDriver(
+            $database->getDriver(DatabaseInterface::WRITE),
+            $database->getPrefix(),
+        );
+
+        if (!$query instanceof SelectQuery) {
+            throw new \LogicException(
+                'Cycle must preserve SelectQuery when pinning the write driver.',
+            );
+        }
+
+        $row = $query
+            ->from($this->config->table)
+            ->where($this->config->idColumn, $sessionId)
+            ->run()
+            ->fetch();
+
+        return is_array($row) ? $row : null;
+    }
+
+    private function insert(
+        #[\SensitiveParameter]
+        SessionInterface $session,
+        string $ip,
+        string $userAgent,
+    ): void
     {
-        $this->dispatcher->dispatch($event);
+        $attributes = $session->attributes;
+        unset(
+            $attributes[self::ATTR_IP],
+            $attributes[self::ATTR_USER_AGENT],
+        );
+
+        $attributesJson = json_encode($attributes, JSON_THROW_ON_ERROR);
+
+        if (strlen($attributesJson) > self::MAX_ATTRIBUTES_JSON_LENGTH) {
+            throw new \InvalidArgumentException(sprintf(
+                'Session attributes must not exceed %d JSON bytes.',
+                self::MAX_ATTRIBUTES_JSON_LENGTH,
+            ));
+        }
+
+        $this->database
+            ->insert($this->config->table)
+            ->values([
+                $this->config->idColumn => $session->id,
+                $this->config->subjectIdColumn => $session->subjectId->toString(),
+                $this->config->ipColumn => $ip,
+                $this->config->userAgentColumn => $userAgent,
+                $this->config->expiresAtColumn => $session->expiresAt
+                    ->format($this->config->dateFormat),
+                $this->config->absoluteExpiresAtColumn => $session->absoluteExpiresAt
+                    ->format($this->config->dateFormat),
+                $this->config->regenerateAtColumn => $session->regenerateAt
+                    ->format($this->config->dateFormat),
+                $this->config->replacedByColumn => null,
+                $this->config->createdAtColumn => $session->createdAt
+                    ->format($this->config->dateFormat),
+                $this->config->lastActiveAtColumn => $session->lastActiveAt
+                    ->format($this->config->dateFormat),
+                $this->config->attributesColumn => $attributesJson,
+            ])
+            ->run();
     }
 
     /**
-     * @return string[]
+     * @param string|iterable<string>|SessionCollectionInterface $sessionId
+     * @return list<string>
      */
-    private function normalizeIds(string|iterable|SessionCollectionInterface $sessionId): array
-    {
+    private function normalizeIds(
+        #[\SensitiveParameter]
+        string|iterable|SessionCollectionInterface $sessionId,
+    ): array {
         if (is_string($sessionId)) {
+            self::assertSessionId($sessionId);
+
             return [$sessionId];
         }
 
-        if ($sessionId instanceof SessionCollectionInterface) {
-            return $sessionId->pluck();
+        $source = $sessionId instanceof SessionCollectionInterface
+            ? $sessionId->pluck()
+            : $sessionId;
+        /** @var array<string, string> $ids */
+        $ids = [];
+
+        foreach ($source as $id) {
+            if (!is_string($id)) {
+                throw new \InvalidArgumentException(
+                    'Every session ID must be a string.',
+                );
+            }
+
+            self::assertSessionId($id);
+            $ids[self::idKey($id)] = $id;
         }
 
-        return [...$sessionId];
+        return array_values($ids);
     }
 
-    /**
-     * @return SessionInterface[]
-     */
-    private function fetchAll(int|string $userId): array
+    private static function idKey(
+        #[\SensitiveParameter]
+        string $sessionId,
+    ): string
+    {
+        return 's:' . $sessionId;
+    }
+
+    private static function assertSessionId(
+        #[\SensitiveParameter]
+        string $sessionId,
+    ): void
+    {
+        if (
+            $sessionId === ''
+            || strlen($sessionId) > self::MAX_SESSION_ID_LENGTH
+            || preg_match('/[\x00-\x1F\x7F]/', $sessionId) === 1
+        ) {
+            throw new \InvalidArgumentException(sprintf(
+                'Session ID must contain between 1 and %d bytes.',
+                self::MAX_SESSION_ID_LENGTH,
+            ));
+        }
+    }
+
+    /** @return SessionInterface[] */
+    private function fetchAll(UuidInterface $subjectId): array
     {
         $now = $this->dateTimeFactory->now();
+        $formattedNow = $now->format($this->config->dateFormat);
+        $query = $this->database->select()->withDriver(
+            $this->database->getDriver(DatabaseInterface::WRITE),
+            $this->database->getPrefix(),
+        );
 
-        $rows = $this->database
-            ->select()
+        if (!$query instanceof SelectQuery) {
+            throw new \LogicException(
+                'Cycle must preserve SelectQuery when pinning the write driver.',
+            );
+        }
+
+        $rows = $query
             ->from($this->config->table)
-            ->where($this->config->userIdColumn, $userId)
+            ->where($this->config->subjectIdColumn, $subjectId->toString())
             ->where($this->config->replacedByColumn, null)
-            ->where($this->config->absoluteExpiresAtColumn, '>', $now->format($this->config->dateFormat))
-            ->where($this->config->expiresAtColumn, '>', $now->format($this->config->dateFormat))
+            ->where($this->config->absoluteExpiresAtColumn, '>', $formattedNow)
+            ->where($this->config->expiresAtColumn, '>', $formattedNow)
             ->orderBy($this->config->lastActiveAtColumn, 'DESC')
             ->run()
             ->fetchAll();
 
-        return array_map($this->hydrate(...), $rows);
+        $sessions = [];
+
+        foreach ($rows as $row) {
+            if (is_array($row)) {
+                $sessions[] = $this->hydrate($row);
+            }
+        }
+
+        return $sessions;
     }
 
-    /**
-     * @param array<string, mixed> $row
-     * @throws \JsonException
-     */
-    private function hydrate(array $row): SessionInterface
-    {
-        return new Session(
-            id: $row[$this->config->idColumn],
-            userId: $row[$this->config->userIdColumn],
-            expiresAt: $this->dateTimeFactory->parse($row[$this->config->expiresAtColumn]),
-            absoluteExpiresAt: $this->dateTimeFactory->parse($row[$this->config->absoluteExpiresAtColumn]),
-            regenerateAt: $this->dateTimeFactory->parse($row[$this->config->regenerateAtColumn]),
-            replacedBy: $row[$this->config->replacedByColumn],
-            createdAt: $this->dateTimeFactory->parse($row[$this->config->createdAtColumn]),
-            lastActiveAt: $this->dateTimeFactory->parse($row[$this->config->lastActiveAtColumn]),
-            attributes: json_decode($row[$this->config->attributesColumn], true, 512, JSON_THROW_ON_ERROR),
+    /** @param array<array-key, mixed> $row */
+    private function hydrate(
+        #[\SensitiveParameter]
+        array $row,
+    ): SessionInterface {
+        $replacedBy = $row[$this->config->replacedByColumn] ?? null;
+        $attributesJson = self::stringValue($row, $this->config->attributesColumn);
+        $attributes = json_decode(
+            $attributesJson,
+            true,
+            512,
+            JSON_THROW_ON_ERROR,
         );
+
+        if (!is_array($attributes)) {
+            throw new \UnexpectedValueException(
+                'Session attributes must decode to an object-like array.',
+            );
+        }
+
+        /** @var array<string, mixed> $attributes */
+        $attributes[self::ATTR_IP] = self::stringValue(
+            $row,
+            $this->config->ipColumn,
+        );
+        $attributes[self::ATTR_USER_AGENT] = self::stringValue(
+            $row,
+            $this->config->userAgentColumn,
+        );
+
+        return new Session(
+            id: self::stringValue($row, $this->config->idColumn),
+            subjectId: Uuid::fromString(self::stringValue(
+                $row,
+                $this->config->subjectIdColumn,
+            )),
+            expiresAt: $this->dateTimeFactory->parse(self::stringValue(
+                $row,
+                $this->config->expiresAtColumn,
+            )),
+            absoluteExpiresAt: $this->dateTimeFactory->parse(self::stringValue(
+                $row,
+                $this->config->absoluteExpiresAtColumn,
+            )),
+            regenerateAt: $this->dateTimeFactory->parse(self::stringValue(
+                $row,
+                $this->config->regenerateAtColumn,
+            )),
+            replacedBy: $replacedBy === null
+                ? null
+                : self::stringValue($row, $this->config->replacedByColumn),
+            createdAt: $this->dateTimeFactory->parse(self::stringValue(
+                $row,
+                $this->config->createdAtColumn,
+            )),
+            lastActiveAt: $this->dateTimeFactory->parse(self::stringValue(
+                $row,
+                $this->config->lastActiveAtColumn,
+            )),
+            attributes: $attributes,
+        );
+    }
+
+    /** @param array<array-key, mixed> $row */
+    private static function stringValue(
+        #[\SensitiveParameter]
+        array $row,
+        string $key,
+    ): string {
+        $value = $row[$key] ?? null;
+
+        if (!is_string($value) && !is_int($value)) {
+            throw new \UnexpectedValueException(sprintf(
+                'Database column "%s" must contain a string-compatible value.',
+                $key,
+            ));
+        }
+
+        return (string) $value;
     }
 }

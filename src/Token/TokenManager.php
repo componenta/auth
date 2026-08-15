@@ -5,117 +5,248 @@ declare(strict_types=1);
 namespace Componenta\Auth\Token;
 
 use Componenta\Clock\DateTimeFactoryInterface;
+use Componenta\Identity\Uuid;
+use Componenta\Identity\UuidInterface;
 use Cycle\Database\DatabaseInterface;
+use Cycle\Database\Query\OnConflict;
+use Cycle\Database\Query\SelectQuery;
 
-/**
- * Database-backed one-time token manager.
- *
- * Tokens are one-time use: generated as random bytes, stored as SHA-256 hash.
- * The plain token is sent to the user; the hash is stored in the database.
- * Consuming a token is atomic (single UPDATE with WHERE used_at IS NULL).
- */
 final readonly class TokenManager implements TokenManagerInterface
 {
+    private const int MAX_CLEANUP_LIMIT = 10000;
+    private const int DELETE_CHUNK_SIZE = 500;
+
+    private DateTimeFactoryInterface $dateTimeFactory;
+
     public function __construct(
+        #[\SensitiveParameter]
         private DatabaseInterface $database,
-        private DateTimeFactoryInterface $dateTimeFactory,
+        DateTimeFactoryInterface $dateTimeFactory,
         private TokenConfig $config,
-    ) {}
+    ) {
+        $this->dateTimeFactory = $dateTimeFactory->withTimezone('UTC');
+    }
 
     #[\Override]
-    public function generate(string $userId): string
+    public function replaceForSubject(UuidInterface $subjectId): string
     {
         $plainToken = bin2hex(random_bytes(32));
         $now = $this->dateTimeFactory->now();
 
+        $values = [
+            $this->config->subjectIdColumn => $subjectId->toString(),
+            $this->config->tokenColumn => $this->hash($plainToken),
+            $this->config->expiresAtColumn => $now
+                ->modify("+{$this->config->ttl} seconds")
+                ->format($this->config->dateFormat),
+            $this->config->usedAtColumn => null,
+            $this->config->createdAtColumn => $now->format($this->config->dateFormat),
+        ];
+
         $this->database
             ->insert($this->config->table)
-            ->values([
-                $this->config->userIdColumn => $userId,
-                $this->config->tokenColumn => $this->hash($plainToken),
-                $this->config->expiresAtColumn => $now->modify("+{$this->config->ttl} seconds")->format($this->config->dateFormat),
-                $this->config->createdAtColumn => $now->format($this->config->dateFormat),
-            ])
+            ->values($values)
+            ->onConflict(OnConflict::target($this->config->subjectIdColumn)
+                ->doUpdate([
+                    $this->config->tokenColumn,
+                    $this->config->expiresAtColumn,
+                    $this->config->usedAtColumn,
+                    $this->config->createdAtColumn,
+                ]))
             ->run();
 
         return $plainToken;
     }
 
     #[\Override]
-    public function find(string $plainToken): ?Token
-    {
-        $row = $this->database
-            ->select()
+    public function find(
+        #[\SensitiveParameter]
+        string $plainToken,
+    ): ?Token {
+        if (!self::validToken($plainToken)) {
+            return null;
+        }
+
+        $query = $this->database->select()->withDriver(
+            $this->database->getDriver(DatabaseInterface::WRITE),
+            $this->database->getPrefix(),
+        );
+
+        if (!$query instanceof SelectQuery) {
+            throw new \LogicException(
+                'Cycle must preserve SelectQuery when pinning the write driver.',
+            );
+        }
+
+        $row = $query
             ->from($this->config->table)
             ->where($this->config->tokenColumn, $this->hash($plainToken))
             ->run()
             ->fetch();
 
-        if ($row === false) {
-            return null;
-        }
-
-        return $this->hydrate($row);
+        return is_array($row) ? $this->hydrate($row) : null;
     }
 
     #[\Override]
-    public function consume(string $plainToken): bool
-    {
-        $now = $this->dateTimeFactory->now();
+    public function consume(
+        #[\SensitiveParameter]
+        string $plainToken,
+    ): bool {
+        if (!self::validToken($plainToken)) {
+            return false;
+        }
 
+        $now = $this->dateTimeFactory->now();
+        $formattedNow = $now->format($this->config->dateFormat);
         $affected = $this->database
             ->update($this->config->table)
-            ->values([
-                $this->config->usedAtColumn => $now->format($this->config->dateFormat),
-            ])
+            ->values([$this->config->usedAtColumn => $formattedNow])
             ->where($this->config->tokenColumn, $this->hash($plainToken))
             ->where($this->config->usedAtColumn, null)
-            ->where($this->config->expiresAtColumn, '>', $now->format($this->config->dateFormat))
+            ->where($this->config->expiresAtColumn, '>', $formattedNow)
             ->run();
 
         return $affected > 0;
     }
 
     #[\Override]
-    public function revokeForUser(string $userId): void
+    public function cleanup(int $limit = 1000): int
     {
-        $this->database
-            ->delete($this->config->table)
-            ->where($this->config->userIdColumn, $userId)
-            ->run();
-    }
+        if ($limit < 1 || $limit > self::MAX_CLEANUP_LIMIT) {
+            throw new \InvalidArgumentException(sprintf(
+                'Token cleanup limit must be between 1 and %d.',
+                self::MAX_CLEANUP_LIMIT,
+            ));
+        }
 
-    #[\Override]
-    public function cleanup(): void
-    {
-        $now = $this->dateTimeFactory->now();
+        $now = $this->dateTimeFactory->now()->format($this->config->dateFormat);
+        $expiredOrUsed = function (mixed $query) use ($now): void {
+            if (!$query instanceof SelectQuery) {
+                throw new \LogicException('Cycle must provide a SelectQuery to the predicate.');
+            }
 
-        $this->database
-            ->delete($this->config->table)
-            ->where(function ($select) use ($now): void {
-                $select
-                    ->orWhere($this->config->expiresAtColumn, '<', $now->format($this->config->dateFormat))
+            $query
+                ->where($this->config->expiresAtColumn, '<=', $now)
+                ->orWhere($this->config->usedAtColumn, '!=', null);
+        };
+        $rows = $this->database
+            ->select($this->config->idColumn)
+            ->from($this->config->table)
+            ->where($expiredOrUsed)
+            ->limit($limit)
+            ->run()
+            ->fetchAll();
+        $ids = [];
+
+        foreach ($rows as $row) {
+            if (is_array($row)) {
+                $ids[] = self::intValue($row, $this->config->idColumn);
+            }
+        }
+
+        $deleted = 0;
+
+        foreach (array_chunk($ids, self::DELETE_CHUNK_SIZE) as $chunk) {
+            $delete = $this->database
+                ->delete($this->config->table)
+                ->where($this->config->idColumn, 'IN', $chunk);
+            $delete->where(function (mixed $query) use ($now): void {
+                if (!$query instanceof \Cycle\Database\Query\DeleteQuery) {
+                    throw new \LogicException(
+                        'Cycle must provide a DeleteQuery to the predicate.',
+                    );
+                }
+
+                $query
+                    ->where($this->config->expiresAtColumn, '<=', $now)
                     ->orWhere($this->config->usedAtColumn, '!=', null);
-            })
-            ->run();
+            });
+            $deleted += $delete->run();
+        }
+
+        return $deleted;
     }
 
-    private function hash(string $plainToken): string
-    {
-        return hash('sha256', $plainToken);
+    private static function validToken(
+        #[\SensitiveParameter]
+        string $token,
+    ): bool {
+        return preg_match('/\A[a-f0-9]{64}\z/D', $token) === 1;
     }
 
-    /**
-     * @param array<string, mixed> $row
-     */
-    private function hydrate(array $row): Token
-    {
+    private function hash(
+        #[\SensitiveParameter]
+        string $plainToken,
+    ): string {
+        return hash('sha256', $this->config->purpose . "\0" . $plainToken);
+    }
+
+    /** @param array<array-key, mixed> $row */
+    private function hydrate(
+        #[\SensitiveParameter]
+        array $row,
+    ): Token {
+        $usedAt = $row[$this->config->usedAtColumn] ?? null;
+
         return new Token(
-            id: (int) $row[$this->config->idColumn],
-            userId: (string) $row[$this->config->userIdColumn],
-            expiresAt: $this->dateTimeFactory->parse($row[$this->config->expiresAtColumn]),
-            usedAt: isset($row[$this->config->usedAtColumn]) ? $this->dateTimeFactory->parse($row[$this->config->usedAtColumn]) : null,
-            createdAt: $this->dateTimeFactory->parse($row[$this->config->createdAtColumn]),
+            id: self::intValue($row, $this->config->idColumn),
+            subjectId: Uuid::fromString(self::stringValue(
+                $row,
+                $this->config->subjectIdColumn,
+            )),
+            expiresAt: $this->dateTimeFactory->parse(self::stringValue(
+                $row,
+                $this->config->expiresAtColumn,
+            )),
+            usedAt: $usedAt === null
+                ? null
+                : $this->dateTimeFactory->parse(self::stringValue(
+                    $row,
+                    $this->config->usedAtColumn,
+                )),
+            createdAt: $this->dateTimeFactory->parse(self::stringValue(
+                $row,
+                $this->config->createdAtColumn,
+            )),
         );
+    }
+
+    /** @param array<array-key, mixed> $row */
+    private static function stringValue(
+        #[\SensitiveParameter]
+        array $row,
+        string $key,
+    ): string {
+        $value = $row[$key] ?? null;
+
+        if (!is_string($value) && !is_int($value)) {
+            throw new \UnexpectedValueException(sprintf(
+                'Database column "%s" must contain a string-compatible value.',
+                $key,
+            ));
+        }
+
+        return (string) $value;
+    }
+
+    /** @param array<array-key, mixed> $row */
+    private static function intValue(
+        #[\SensitiveParameter]
+        array $row,
+        string $key,
+    ): int {
+        $value = $row[$key] ?? null;
+
+        if (
+            !is_int($value)
+            && !(is_string($value) && preg_match('/\A[0-9]+\z/D', $value) === 1)
+        ) {
+            throw new \UnexpectedValueException(sprintf(
+                'Database column "%s" must contain an integer.',
+                $key,
+            ));
+        }
+
+        return (int) $value;
     }
 }

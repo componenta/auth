@@ -4,40 +4,55 @@ declare(strict_types=1);
 
 namespace Componenta\Auth;
 
-/**
- * Default implementation of ContextInterface.
- */
-final readonly class Context implements ContextInterface
+final readonly class Context implements ContextInterface, \JsonSerializable
 {
-    /**
-     * @param array<string, mixed> $attributes
-     */
+    /** @param array<string, mixed> $attributes */
     public function __construct(
-        private array $attributes = [],
+        #[\SensitiveParameter]
+        public array $attributes = [],
     ) {}
 
-    public function getAttribute(string $key, mixed $default = null): mixed
+    /** @return array{attributeKeys: list<string>} */
+    public function __debugInfo(): array
     {
-        return $this->attributes[$key] ?? $default;
+        return ['attributeKeys' => array_keys($this->attributes)];
     }
 
+    /** @return array{attributeKeys: list<string>} */
+    #[\Override]
+    public function jsonSerialize(): array
+    {
+        return $this->__debugInfo();
+    }
+
+    #[\Override]
+    public function getAttribute(string $key, mixed $default = null): mixed
+    {
+        return array_key_exists($key, $this->attributes)
+            ? $this->attributes[$key]
+            : $default;
+    }
+
+    #[\Override]
     public function hasAttribute(string $key): bool
     {
         return array_key_exists($key, $this->attributes);
     }
 
-    public function getAttributes(): array
-    {
-        return $this->attributes;
-    }
-
-    public function withAttribute(string $key, mixed $value): static
-    {
+    #[\Override]
+    public function withAttribute(
+        string $key,
+        #[\SensitiveParameter]
+        mixed $value,
+    ): static {
         return new self([...$this->attributes, $key => $value]);
     }
 
-    public function withAttributes(array $attributes): static
-    {
+    #[\Override]
+    public function withAttributes(
+        #[\SensitiveParameter]
+        array $attributes,
+    ): static {
         return new self([...$this->attributes, ...$attributes]);
     }
 }

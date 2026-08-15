@@ -31,13 +31,21 @@ final readonly class MagicLinkStrategy implements AuthenticationStrategyInterfac
         private DateTimeFactoryInterface $dateTimeFactory,
     ) {}
 
-    public function supports(object $payload, ContextInterface $context): bool
-    {
+    public function supports(
+        #[\SensitiveParameter]
+        object $payload,
+        #[\SensitiveParameter]
+        ContextInterface $context,
+    ): bool {
         return $payload instanceof VerifyPayload;
     }
 
-    public function attempt(object $payload, ContextInterface $context): AuthenticationResult
-    {
+    public function attempt(
+        #[\SensitiveParameter]
+        object $payload,
+        #[\SensitiveParameter]
+        ContextInterface $context,
+    ): AuthenticationResult {
         /** @var VerifyPayload $payload */
         $token = $this->tokenManager->find($payload->token);
 
@@ -57,9 +65,9 @@ final readonly class MagicLinkStrategy implements AuthenticationStrategyInterfac
             return new AuthenticationResult(new InvalidToken());
         }
 
-        $user = $this->provider->findById($token->userId);
+        $user = $this->provider->findByUuid($token->subjectId);
 
-        if ($user === null) {
+        if ($user === null || !$token->subjectId->equals($user->uuid)) {
             return new AuthenticationResult(new InvalidToken());
         }
 

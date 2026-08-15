@@ -4,33 +4,54 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Http\Middleware;
 
-use Componenta\Auth\Session\SessionManagerInterface;
+use Componenta\Auth\Session\SessionCleanupSchedulerInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use Psr\Log\LoggerInterface;
+use Throwable;
 
-/**
- * Probabilistic garbage collection for expired sessions.
- *
- * On each request, rolls a 1-in-$lottery chance to run cleanup.
- * Place anywhere in the pipeline - cleanup runs after the handler.
- */
+/** Probabilistically schedules best-effort cleanup outside the request. */
 final readonly class SessionGarbageCollectionMiddleware implements MiddlewareInterface
 {
     public function __construct(
-        private SessionManagerInterface $sessionManager,
+        private SessionCleanupSchedulerInterface $scheduler,
         private int $lottery = 100,
-    ) {}
+        private ?LoggerInterface $logger = null,
+    ) {
+        if ($this->lottery < 1) {
+            throw new \InvalidArgumentException(
+                'Session cleanup lottery must be greater than zero.',
+            );
+        }
+    }
 
+    #[\Override]
     public function process(
+        #[\SensitiveParameter]
         ServerRequestInterface $request,
+        #[\SensitiveParameter]
         RequestHandlerInterface $handler,
     ): ResponseInterface {
         $response = $handler->handle($request);
 
-        if (random_int(1, $this->lottery) === 1) {
-            $this->sessionManager->cleanup();
+        try {
+            if (random_int(1, $this->lottery) !== 1) {
+                return $response;
+            }
+
+            $this->scheduler->schedule();
+        } catch (Throwable $exception) {
+            try {
+                $this->logger?->warning(
+                    'Unable to schedule session cleanup.',
+                    ['exception' => $exception],
+                );
+            } catch (Throwable) {
+                // Cleanup and its diagnostics are best-effort and must never
+                // replace an already successful application response.
+            }
         }
 
         return $response;

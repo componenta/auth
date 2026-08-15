@@ -1,188 +1,168 @@
 # Componenta Auth
 
-Пакет аутентификации для Componenta-приложений. Он помогает проверить, кто делает запрос: по паролю, bearer/JWT-токену, сессии, remember-me cookie, OTP-коду, magic-link или токену сброса пароля.
+Контракты аутентификации и PSR-7/PSR-15 компоненты для приложений Componenta на PHP 8.4+.
 
-Пакет не решает, какие действия пользователю разрешены. Проверка прав находится в `componenta/policy`. `componenta/auth` только устанавливает личность пользователя или возвращает причину отказа входа.
-
-## Установка
-
-```bash
-composer require componenta/auth
-```
-
-Пакет объявляет `Componenta\Auth\ConfigProvider` в `extra.componenta.config-providers`.
-Если установлен `componenta/composer-plugin`, провайдер автоматически добавляется в сгенерированный список провайдеров.
+Пакет поддерживает password login, stateful sessions, remember-me, JWT access/opaque refresh tokens, OTP, magic links, password reset и lifecycle events.
 
 ## Требования
 
-- PHP 8.4+
-- PSR-7 / PSR-15, если используются HTTP-промежуточные обработчики
-- хранилище для включённых механизмов входа: сессии, remember-me токены, refresh-токены, OTP-коды или токены сброса пароля
+- PHP 8.4+;
+- `ext-ctype`, `ext-filter`, `ext-mbstring`;
+- реализации PSR-7/15/17/20;
+- Componenta DI 4;
+- Cycle Database для встроенных SQL stores.
 
-## Связанные пакеты
+## Единая identity
 
-| Пакет | Зачем нужен здесь |
-|---|---|
-| `componenta/session` | Хранит состояние браузерной сессии и идентификатор сессии. Нужен для сессионной аутентификации. |
-| `componenta/app-http` | Подключает промежуточные обработчики аутентификации в HTTP-приложениях, которые используют PSR-7 запросы и PSR-15 промежуточные обработчики. |
-| `componenta/event` | Нужен, если приложение хочет реагировать на вход, отказ, logout, обновление сессии или завершение всех сессий. |
-| `componenta/policy` | Использует найденного пользователя как актора для проверки прав. |
-| `componenta/di` | Создаёт стратегии входа, менеджеры токенов, промежуточные обработчики и слушателей через контейнер. |
+Единственный публичный идентификатор субъекта — `IdentityInterface::$uuid`. Session, remember-me, one-time tokens, OTP, refresh grants и JWT `sub` используют этот UUID. Auth-specific ID и mutable `currentSessionId` отсутствуют.
 
-## Основной поток
+## Authenticator
+
+Порядок strategies задаётся явно. Для middleware-oriented chain remember-me следует подключать через `CompensatingRememberMeStrategy::class`, а не через raw `RememberMeStrategy::class`. `AuthenticatorFactory` намеренно отклоняет raw strategy: после успешной rotation queued response credential может быть отменён более поздним denial/UUID conflict/login replacement/exception, и в таком случае successor grant и непубликованная session должны быть компенсированы. Raw `RememberMeStrategy` остаётся low-level primitive для прямого вызова, когда caller сам владеет публикацией и rollback результата.
+
+Denial **терминален по умолчанию**. Продолжение chain разрешается только через явный `AuthenticationResult(..., continueOnFailure: true)` для мягких отказов, например invalid session при наличии remember-me credential в том же request. Таким образом `RateLimited`, `UserDisabled` и другие security denials нельзя обойти более поздней strategy только из-за совпадения payload type.
+
+`AuthenticationResult` fail-closed: denial не может содержать session или credential mutation; success не может продолжать chain; session обязана принадлежать возвращённой identity.
+
+## Request-scoped transport
+
+Вложенные `AuthenticationMiddleware` используют один `CredentialTransportState`, но каждая queued mutation сохраняет свой `PayloadStorageInterface`. Поэтому разные nested transports не применяют чужие credentials.
+
+`clear()` терминален и очищает все зарегистрированные transports. Если успешная authentication требует response credential, но storage не настроен, middleware падает **до** downstream application handler.
+
+Explicit password и OTP session login полностью заменяют старое browser auth-state. Public magic-link session verifier принимает только `ReplacingPayloadStorage`, поэтому direct construction не может случайно сохранить или повторно применить credential прежнего principal; стандартная Componenta factory подставляет wrapper автоматически.
+
+Текущая session живёт в request attribute `SessionInterface::class`, а не в identity.
+
+`LogoutHandler` рассчитан на выполнение **после `AuthenticationMiddleware`**. Server-side termination использует уже аутентифицированный request attribute `SessionInterface::class`. Если вызвать logout handler отдельно, он может удалить client-side credential, но не может безопасно угадать, какую неаутентифицированную server-side session row следует завершить.
+
+## Sessions
+
+`DatabaseSessionManager` читает security state только с primary/write connection, проверяет idle/absolute expiry, throttles touch, регенерирует session транзакционно и сразу инвалидирует старый ID. Старый ID никогда не разрешается в successor. Termination сериализуется с regeneration и удаляет уже созданную replacement lineage, поэтому конкурентный logout не оставляет активный successor. Subject-wide `terminateAll()` также сериализуется с regeneration: конкурентная ротация session не может пережить массовое завершение sessions пользователя. Critical lifecycle listeners выполняются внутри owning transition, observers — после commit.
+
+Session timestamps всегда UTC и используют внутренний фиксированный формат `Y-m-d H:i:s`; это больше не пользовательская настройка.
+
+Встроенная session table является credential-bearing storage: live session IDs должны оставаться восстанавливаемыми, потому что публичный session-management API умеет перечислять sessions, а persistence model отслеживает replacement lineage. Session DTO скрывают ID в debug/JSON, но доступ к таблице и логам БД всё равно должен быть ограничен. Хэширование существующего `id` column «на месте» несовместимо с текущим enumeration/lineage contract и поэтому не позиционируется как безопасный drop-in change.
+
+## Remember-me
+
+Remember-me выключен по умолчанию. При включении автоматически подключаются critical termination/regeneration listeners.
+
+В v2 используется **стабильная grant-row с ротацией bearer**, а не delete-on-consume. Основной контракт:
 
 ```php
-use Componenta\Auth\Authenticator;
-use Componenta\Auth\Context;
-use Componenta\Auth\DeniedReasonInterface;
-use Componenta\Identity\IdentityInterface;
-
-$authenticator = new Authenticator(
-    $passwordStrategy,
-    $jwtStrategy,
-    $sessionStrategy,
-);
-
-$result = $authenticator->attempt($payload, new Context());
-
-if ($result->subject instanceof IdentityInterface) {
-    $identity = $result->subject;
-}
-
-if ($result->subject instanceof DeniedReasonInterface) {
-    $reason = $result->subject;
-}
+create(UuidInterface $subjectId, string $sessionId): string;
+rotate(string $plainToken): RememberMeRotation|RememberMeCompromise|null;
+bindRotation(RememberMeRotation $rotation, string $newSessionId): bool;
 ```
 
-`Authenticator` перебирает зарегистрированные стратегии по порядку:
+Grant хранит текущий `session_id` и `previous_session_id`. Logout/revoke совпадает по обоим значениям. Поэтому конкурентный logout не может пропустить уже начатую ротацию и оставить новый persistent credential.
 
-1. стратегия говорит, поддерживает ли она переданный объект входа;
-2. неподдерживаемые стратегии пропускаются;
-3. поддерживающие стратегии выполняются по очереди;
-4. первая успешная стратегия возвращает `IdentityInterface`;
-5. если все поддерживающие стратегии отказали, возвращается последняя причина отказа;
-6. если объект входа не поддержала ни одна стратегия, выбрасывается `NoStrategyFoundException`.
+При работе через `AuthenticationMiddleware` используется `CompensatingRememberMeStrategy`. Она делегирует authentication raw strategy, но после успешного bind регистрирует request-scoped compensation. Если более поздний terminal denial, UUID conflict, explicit login replacement, missing storage или downstream exception отменяет queued replacement credential, successor remember bearer отзывается, а непубликованная session завершается. После успешного `CredentialTransportState::apply()` callback удаляется и доставленный credential не отзывается.
 
-`AuthenticationResult` содержит два публичных свойства:
+Минимальная schema:
 
-| Свойство | Значение |
-|---|---|
-| `$subject` | Успешный `IdentityInterface` или причина отказа `DeniedReasonInterface`. |
-| `$transportPayload` | Необязательный объект, который нужно записать в ответ, например обновлённую сессию или remember-me cookie. |
+```text
+remember_me_tokens
+  id                   PRIMARY KEY
+  user_id              NOT NULL, index
+  token                UNIQUE NOT NULL   # стабильный selector
+  verifier             NOT NULL          # SHA-256 текущего validator
+  session_id           NOT NULL, index
+  previous_session_id  nullable, index
+  expires_at           NOT NULL
+  created_at           NOT NULL
+```
 
-Отдельного boolean-флага успеха нет. Успех определяется проверкой, что `$result->subject` реализует `IdentityInterface`.
+## OTP
 
-## Стратегия входа
+`OtpConfig` задаёт реальный protocol profile: 6-18 цифр, TTL не более 600 секунд и ограничение attempts. `OtpExtractor` принимает **ровно configured length** до обращения к store.
+
+`DatabaseCodeStore` хранит HMAC-SHA-256 verifier с отдельным ключом >=32 bytes и использует `challenge_id` как optimistic version. Verify/attempt accounting/consume являются одной challenge-version transition: правильный код, конкурирующий с последней неудачной попыткой, не может аутентифицироваться после достижения `maxAttempts`.
+
+Все отрицательные публичные **responses** OTP verification схлопываются в `invalid_code`. `expired`/`too_many_attempts` остаются внутренними состояниями store и не сериализуются наружу, иначе endpoint становился бы прямым oracle существования account/challenge.
+
+Это гарантия одинаковой публичной response-семантики, а не утверждение, что разные SQL states имеют абсолютно одинаковую end-to-end latency. DB miss и failed-attempt CAS объективно могут выполнять разный объём работы. Пакет поэтому не добавляет blocking `sleep()` или дорогой dummy hashing: такая «защита» сама создала бы request-amplification/DoS primitive. Production adapters `OtpRequestQueueInterface` должны быть durable/non-inline, если важна uniform account-existence request latency; request/verify endpoints всё равно требуют application-level rate limiting.
+
+`OtpRequest` содержит одно значение identity/destination. Built-in processor не может найти одну identity и отправить code на произвольный другой destination. Альтернативный routing должен проверяться application adapter до enqueue.
+
+Отдельный account/destination rate limiter обязателен; `maxAttempts` защищает только один challenge.
+
+## One-time tokens и purpose
+
+`TokenConfig` требует `purpose`:
 
 ```php
-use Componenta\Auth\AuthenticationResult;
-use Componenta\Auth\AuthenticationStrategyInterface;
-use Componenta\Auth\ContextInterface;
+new TokenConfig('magic_link_tokens', 'magic_link');
+new TokenConfig('password_reset_tokens', 'password_reset');
+```
 
-final readonly class ApiKeyStrategy implements AuthenticationStrategyInterface
+Stored representation domain-separated:
+
+```text
+SHA-256(purpose || NUL || bearer)
+```
+
+Поэтому token одного flow не принимается другим manager даже при ошибочно общей таблице.
+
+`TokenRequest` содержит lookup/delivery identity, обязательный machine-readable `purpose` и optional non-sensitive context; отдельного untrusted destination нет. Context keys ограничены machine-readable identifiers, значения ограничены 4096 bytes и не допускают control characters до передачи queue adapter или sender, который строит URL. `TokenRequestQueueInterface` — durable multi-purpose queue boundary: adapter обязан сохранить и маршрутизировать `purpose`, а purpose-bound `TokenRequestProcessor` отклоняет ошибочно маршрутизированное сообщение до provider lookup, token generation и delivery. Production adapter не должен выполнять provider lookup/delivery inline, если важна uniform account-existence request latency.
+
+Magic-link consuming endpoints принимают только POST с token в parsed body.
+GET возвращает 405 с Allow: POST и не вызывает authentication, поэтому
+prefetch почтового клиента или link scanner не может погасить credential.
+Ответы остаются non-cacheable и используют Referrer-Policy: no-referrer.
+
+## JWT и refresh
+
+JWT profile явно задаёт issuer/audience/type; проверяются signature, `iat`, optional `nbf`, `exp`, skew и максимальная lifetime. Registered claims нельзя заменить custom claims. HMAC minimum: 32/48/64 bytes для HS256/384/512.
+
+`DatabaseRefreshTokenStore` хранит только SHA-256 bearer representations, сериализует transitions через family-row и выполняет consume presented token + insert successor одной transaction. Ordinary revoke теперь terminal для всей family и сериализуется с rotation; он остаётся отдельным от replay compromise. Replay помечает family compromised и отзывает всех active descendants.
+
+`DatabaseRefreshTokenHousekeeper::cleanup($now, $limit)` выполняет bounded housekeeping в два этапа. Сначала он удаляет не более `$limit` history rows, у которых истёк срок именно соответствующего bearer, включая истёкшую history ещё живой sliding family; каждое такое удаление сериализуется через family row. Затем рассматривается не более `$limit` terminal family candidates; family удаляется только после полного drain её history и повторной проверки expiry на primary под той же сериализацией. Поэтому cleanup не может удалить concurrently созданный active successor.
+
+Credential responses получают `Cache-Control: no-store` и `Pragma: no-cache`. Для семантически пустого token response `Content-Type` удаляется явно; семантика response не определяется размером PSR-7 stream, который законно может быть неизвестен.
+
+## Password reset
+
+`PasswordResetServiceInterface` владеет всей recovery transition и password policy. `Success` означает consumed reset token, изменённый пароль и durable/logical invalidation старых session/remember/refresh credentials. `PasswordRejected` является отдельным outcome.
+
+Если password repository и credential stores находятся в разных ресурсах, application implementation должна использовать эквивалент credential version/outbox/idempotent модель и не возвращать success после частичного перехода.
+
+## Events и clocks
+
+Остался один расширяемый listener contract:
+
+```php
+interface EventListenerInterface
 {
-    public function supports(object $payload, ContextInterface $context): bool
-    {
-        return $payload instanceof ApiKeyPayload;
-    }
+    public array $events { get; }
 
-    public function attempt(object $payload, ContextInterface $context): AuthenticationResult
-    {
-        // Верните AuthenticationResult с IdentityInterface при успехе
-        // или DeniedReasonInterface при отказе.
-    }
+    public function handleEvent(
+        #[\SensitiveParameter]
+        EventInterface $event,
+    ): void;
 }
 ```
 
-Стратегия должна быть предсказуемой для одного объекта входа и одного контекста. Обычный отказ входа не должен быть исключением: возвращайте результат с `DeniedReasonInterface`.
+Семь event-specific marker interfaces и `ListenerFactory` удалены. `CriticalEventListenerInterface` сохранён из-за самостоятельной fail-fast семантики.
 
-## Объекты входа и HTTP
+Event DTO не создают `Clock` самостоятельно: timestamp обязателен и передаётся owning service с внедрённым clock. Generic auth/logout events — best-effort observers; critical session events выполняются в owning transition. Best-effort session GC также изолирует scheduler/random/logger failures от уже успешного application response.
 
-Стратегия не обязана знать, откуда пришли данные. HTTP-слой отдельно читает PSR-7 запрос и создаёт объект входа:
+Componenta factories также используют общий PSR-20 `ClockInterface` для event timestamps, JWT access/refresh issuance/validation и logout observer time. Constructor defaults остаются только fallback для прямого создания объектов вне стандартного Componenta container.
 
-- bearer-токен из `Authorization: Bearer ...`;
-- логин и пароль из формы или JSON-тела;
-- идентификатор сессии из cookie;
-- OTP-код;
-- magic-link токен;
-- токен сброса пароля.
+Credential-bearing DTO скрывают bearer material в debug/JSON. Package-owned exception-prone boundaries редактируют credential-bearing request/context/storage/event/session arguments, generated credential helper values, downstream PSR request-handler objects, application listener/storage objects, DI container objects и SQL database/connection objects, которые могут содержать configuration secrets. PHP parameter attributes не наследуются concrete implementations, поэтому custom strategies, stores, listeners, senders, middleware и factories должны повторять эквивалентные `#[SensitiveParameter]` annotations на собственных credential/config-bearing frames. Third-party implementations отвечают за свои stack frames; application не должна публиковать stack traces внешним клиентам.
 
-Так стратегии можно тестировать без HTTP-запроса, а приложение может менять форму запроса без переписывания логики входа.
+## Denials и malformed input
 
-## Сессии
+`DeniedReasonInterface::$attributes` — только audit context. Built-in `DeniedResponseFactory` публикует только стабильный `error` code. `PublicDeniedReasonInterface` удалён; richer public body требует custom `DeniedResponseFactoryInterface`.
 
-Сессионная аутентификация используется, когда браузер уже хранит идентификатор сессии, а приложение может связать эту сессию с пользователем.
+Strict extractors бросают `InvalidPayloadException`. Production handlers должны находиться за `InvalidPayloadMiddleware` либо эквивалентным mapper в 400.
 
-```php
-$result = $sessionStrategy->attempt($sessionPayload, $context);
-```
+Cookie-authenticated state-changing endpoints, включая logout там, где это соответствует модели приложения, остаются под application CSRF policy: auth package не может сам определить trusted origin и deployment topology.
 
-Сессионная часть включает коллекцию сессий, атрибуты сессии, генерацию id, определение устройства и управление сессиями в хранилище.
+## Primary reads и concurrency proof
 
-## Токены
+Credential-state reads session/remember/one-time/refresh/OTP pinned к Cycle WRITE driver: replica lag не может воскресить revoked credential.
 
-Пакет содержит инфраструктуру для:
 
-- JWT access-токенов и refresh-токенов;
-- сценариев запроса и проверки OTP;
-- сценариев запроса и проверки magic-link;
-- токенов сброса пароля;
-- remember-me токенов.
-
-Менеджеры токенов отвечают за хранение и инвалидирование. Обработчики токенов отвечают за подпись, разбор и причины отказа: истёк, некорректен, уже использован или скомпрометирован.
-
-## События
-
-`EventingAuthenticator` оборачивает попытки входа событиями:
-
-- `AuthenticationAttempted`
-- `AuthenticationSucceeded`
-- `AuthenticationDenied`
-- `LoggedOut`
-- `SessionRegenerated`
-- `SessionsTerminated`
-- `AllSessionsTerminated`
-
-Слушатели находятся через `EventListenerProviderInterface`. Используйте события для audit log, очистки сессий, ротации remember-me токенов, уведомлений и метрик.
-
-## HTTP-промежуточные обработчики
-
-HTTP-слой предоставляет:
-
-- `AuthenticationMiddleware`: выполняет попытку входа и прикрепляет состояние аутентификации к запросу или контексту;
-- `RequireAuthenticationMiddleware`: отклоняет запросы без пользователя;
-- `TouchSessionMiddleware`: обновляет активность сессии;
-- `SessionGarbageCollectionMiddleware`: запускает очистку хранилища сессий.
-
-Пакет не задаёт структуру маршрутов. Приложение само решает, какие маршруты публичные, а какие требуют пользователя.
-
-`AuthenticationMiddleware` записывает результат в атрибуты PSR-7 запроса:
-
-| Ключ атрибута | Значение |
-|---|---|
-| `Componenta\Identity\IdentityInterface::class` | Есть, если аутентификация успешна. |
-| `Componenta\Auth\DeniedReasonInterface::class` | Есть, если подходящая стратегия отказала запросу. |
-
-Если стратегия вернула `$transportPayload`, промежуточный обработчик требует `PayloadStorageInterface`. Без него будет выброшен `LogicException`, потому что пакет не сможет записать cookie или другие транспортные данные в ответ.
-
-## Регистрация в контейнере
-
-`ConfigProvider` регистрирует фабрики, псевдонимы, слушателей, обработчики токенов, менеджеры сессий и промежуточные обработчики. Активны только те стратегии и хранилища, которые подключило приложение.
-
-Основные ключи конфигурации находятся в `ConfigKey`:
-
-| Ключ | Назначение |
-|---|---|
-| `ConfigKey::AUTH` | Корневая конфигурация аутентификации. |
-| `ConfigKey::STRATEGIES` | Упорядоченный список стратегий входа. |
-| `ConfigKey::SESSION` | Настройки session-аутентификации и менеджера сессий. |
-| `ConfigKey::REMEMBER_ME` | Настройки remember-me токенов. |
-| `ConfigKey::JWT` | Настройки JWT access/refresh токенов. |
-| `ConfigKey::MAGIC_LINK` | Настройки запроса и проверки magic-link. |
-| `ConfigKey::PASSWORD_RESET` | Настройки токенов сброса пароля. |
-| `ConfigKey::DENIED` | Фабрика HTTP-ответа при отказе входа. |
-| `ConfigKey::LISTENERS` | Слушатели событий аутентификации. |
-
-## Ошибки
-
-Обычный отказ входа представлен `DeniedReasonInterface`, а не исключением. Исключения используются для ошибок инфраструктуры и программирования: неподдерживаемый объект входа, некорректное извлечение данных из запроса, отказ хранилища, неверная настройка токена или ошибка транспорта.
+Breaking changes описаны в [MIGRATION-v2.md](MIGRATION-v2.md).

@@ -8,5 +8,7 @@ use Componenta\Identity\IdentityInterface;
 
 interface UserProviderInterface
 {
-    public function provide(Payload $payload): null|(IdentityInterface&PasswordAwareInterface);
+    public function findByIdentity(
+        string $identity,
+    ): null|(IdentityInterface&PasswordAwareInterface);
 }

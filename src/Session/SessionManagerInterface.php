@@ -4,65 +4,67 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Session;
 
-/**
- * Manages user sessions.
- */
+use Componenta\Identity\UuidInterface;
+
 interface SessionManagerInterface
 {
-    /**
-     * Creates a new session.
-     *
-     * @param array<string, mixed> $attributes Session metadata
-     */
-    public function create(int|string $userId, array $attributes = []): SessionInterface;
+    /** @param array<string, mixed> $attributes */
+    public function create(
+        UuidInterface $subjectId,
+        #[\SensitiveParameter]
+        array $attributes = [],
+    ): SessionInterface;
+
+    /** Returns true only for a currently authenticatable session credential. */
+    public function exists(
+        #[\SensitiveParameter]
+        string $sessionId,
+    ): bool;
+
+    /** Returns only a currently authenticatable, non-replaced session. */
+    public function find(
+        #[\SensitiveParameter]
+        string $sessionId,
+    ): ?SessionInterface;
+
+    public function all(UuidInterface $subjectId): SessionCollectionInterface;
 
     /**
-     * Checks if session exists.
+     * Extends idle expiry when a write is due. Implementations must apply an
+     * atomic last-active predicate in addition to any caller-side check.
      */
-    public function exists(string $sessionId): bool;
+    public function touch(
+        #[\SensitiveParameter]
+        string $sessionId,
+        ?\DateTimeImmutable $lastActiveAt = null,
+    ): void;
 
     /**
-     * Returns session by ID.
-     */
-    public function find(string $sessionId): ?SessionInterface;
-
-    /**
-     * Returns all active sessions for the user.
-     */
-    public function all(int|string $userId): SessionCollectionInterface;
-
-    /**
-     * Updates last activity timestamp.
-     */
-    public function touch(string $sessionId): void;
-
-    /**
-     * Terminates session(s).
+     * Terminates the supplied credential lineages. A replacement created by a
+     * concurrent regeneration must not remain authenticatable after this call.
      *
      * @param string|iterable<string>|SessionCollectionInterface $sessionId
      */
-    public function terminate(string|iterable|SessionCollectionInterface $sessionId): void;
+    public function terminate(
+        #[\SensitiveParameter]
+        string|iterable|SessionCollectionInterface $sessionId,
+    ): void;
+
+    public function terminateAll(
+        UuidInterface $subjectId,
+        #[\SensitiveParameter]
+        ?string $exceptSessionId = null,
+    ): void;
 
     /**
-     * Terminates all sessions for the user.
-     *
-     * If $exceptSessionId is provided, that session is preserved.
+     * Rotates one active credential. A concurrent loser must fail instead of
+     * receiving the winning successor ID.
      */
-    public function terminateAll(int|string $userId, ?string $exceptSessionId = null): void;
+    public function regenerate(
+        #[\SensitiveParameter]
+        string $sessionId,
+    ): SessionInterface;
 
-    /**
-     * Regenerates the session ID (canary).
-     *
-     * Creates a new session with a new ID, copying data from the old one.
-     * The old session is marked as replaced and remains valid during
-     * the grace period to handle concurrent requests.
-     *
-     * The absolute timeout is preserved from the original session.
-     */
-    public function regenerate(string $sessionId): SessionInterface;
-
-    /**
-     * Removes expired sessions (garbage collection).
-     */
-    public function cleanup(): void;
+    /** Removes at most $limit expired sessions and returns affected rows. */
+    public function cleanup(int $limit = 1000): int;
 }

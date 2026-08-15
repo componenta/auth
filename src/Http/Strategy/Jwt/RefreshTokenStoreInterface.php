@@ -4,60 +4,62 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Http\Strategy\Jwt;
 
+use Componenta\Identity\UuidInterface;
+
 /**
- * Persistent storage for refresh tokens.
- *
- * Implementations may use a database table, Redis, or other
- * persistent storage. The interface is defined in the library;
- * the implementation lives in the application.
+ * Persistent refresh-grant storage with durable family terminal state.
  */
 interface RefreshTokenStoreInterface
 {
-    /**
-     * Persists a new refresh token.
-     */
-    public function store(RefreshToken $token): void;
+    public function storeInitial(
+        #[\SensitiveParameter]
+        RefreshToken $token,
+    ): void;
 
     /**
-     * Finds a refresh token by its identifier.
-     *
-     * Returns the token regardless of its revocation status -
-     * the caller decides how to handle revoked tokens.
+     * Returns the subject of a currently active presented grant for preflight
+     * work. This read is not an authorization decision: rotateAtomically()
+     * remains the final serialized transition and must repeat all state checks.
+     * Implementations must read this security state from the primary store.
      */
-    public function find(string $tokenId): ?RefreshToken;
+    public function findActiveSubject(
+        #[\SensitiveParameter]
+        string $tokenId,
+        int $now,
+    ): ?UuidInterface;
 
     /**
-     * Revokes a single refresh token unconditionally.
-     *
-     * @param string $tokenId Token identifier
-     * @param int $revokedAt Revocation timestamp
+     * Rotation, replay detection, family compromise and successor creation are
+     * one serialized transition. Replay must leave no active descendant.
      */
-    public function revoke(string $tokenId, int $revokedAt): void;
+    public function rotateAtomically(
+        #[\SensitiveParameter]
+        string $presentedTokenId,
+        #[\SensitiveParameter]
+        string $successorTokenId,
+        int $successorExpiresAt,
+        int $now,
+    ): RefreshTokenRotationResult;
 
     /**
-     * Atomically revokes a token only if it is currently active.
-     *
-     * Must be implemented as a single compare-and-swap SQL statement,
-     * e.g. `UPDATE ... SET revoked_at = ? WHERE id = ? AND revoked_at IS NULL`,
-     * returning true only when exactly one row was updated.
-     *
-     * Used by rotation to detect concurrent reuse: if two requests try to
-     * rotate the same token, only one revokeIfActive() returns true; the
-     * loser treats this as a reuse signal and revokes the whole family.
-     *
-     * @return bool True if the token was active and got revoked in this call;
-     *              false if it was already revoked (or did not exist).
+     * Performs ordinary revocation of the presented token's complete family.
+     * It must serialize with rotation so a successor created concurrently
+     * cannot escape revocation. Ordinary revocation is terminal but must not
+     * mark the family as replay-compromised.
      */
-    public function revokeIfActive(string $tokenId, int $revokedAt): bool;
+    public function revoke(
+        #[\SensitiveParameter]
+        string $tokenId,
+        int $revokedAt,
+    ): void;
 
     /**
-     * Revokes all tokens in a family.
-     *
-     * Used for reuse detection: when a revoked token is presented,
-     * all tokens in the same family are revoked as a precaution.
-     *
-     * @param string $familyId Family identifier
-     * @param int $revokedAt Revocation timestamp
+     * Revokes every existing refresh family for the subject. Implementations
+     * must serialize with rotations of those families so no existing family can
+     * retain an active descendant after the transition.
      */
-    public function revokeFamily(string $familyId, int $revokedAt): void;
+    public function revokeAllForSubject(
+        UuidInterface $subjectId,
+        int $revokedAt,
+    ): void;
 }

@@ -16,28 +16,103 @@ use Psr\Container\ContainerInterface;
 
 final readonly class DatabaseSessionManagerFactory implements LazyServiceFactoryInterface
 {
-    public function __invoke(ContainerInterface $container): DatabaseSessionManager
-    {
+    public function __invoke(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): DatabaseSessionManager {
         return new DatabaseSessionManager(
-            database: $container->get(DatabaseInterface::class),
-            idGenerator: $container->get(SessionIdGeneratorInterface::class),
-            dateTimeFactory: $container->get(DateTimeFactoryInterface::class),
-            dispatcher: $container->get(EventDispatcher::class),
-            config: $container->get(DatabaseSessionManagerConfig::class),
+            database: self::database($container),
+            idGenerator: self::idGenerator($container),
+            dateTimeFactory: self::dateTimeFactory($container),
+            dispatcher: self::dispatcher($container),
+            config: self::config($container),
         );
     }
 
-    public function lazy(ContainerInterface $container, ProxyFactoryInterface $proxyFactory, array $context = []): object
-    {
+    #[\Override]
+    public function lazy(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+        ProxyFactoryInterface $proxyFactory,
+        array $context = [],
+    ): object {
         return $proxyFactory->makeLazy(
             DatabaseSessionManager::class,
-            fn(object $instance) => $instance->__construct(
-                database: $container->get(DatabaseInterface::class),
-                idGenerator: $container->get(SessionIdGeneratorInterface::class),
-                dateTimeFactory: $container->get(DateTimeFactoryInterface::class),
-                dispatcher: $container->get(EventDispatcher::class),
-                config: $container->get(DatabaseSessionManagerConfig::class),
-            ),
+            static function (object $instance) use ($container): void {
+                if (!$instance instanceof DatabaseSessionManager) {
+                    throw new \LogicException(sprintf(
+                        'Lazy instance must be %s.',
+                        DatabaseSessionManager::class,
+                    ));
+                }
+
+                $instance->__construct(
+                    database: self::database($container),
+                    idGenerator: self::idGenerator($container),
+                    dateTimeFactory: self::dateTimeFactory($container),
+                    dispatcher: self::dispatcher($container),
+                    config: self::config($container),
+                );
+            },
         );
+    }
+
+    private static function database(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): DatabaseInterface {
+        $service = $container->get(DatabaseInterface::class);
+
+        return $service instanceof DatabaseInterface
+            ? $service
+            : throw new \LogicException(sprintf('%s must resolve to %s.', DatabaseInterface::class, DatabaseInterface::class));
+    }
+
+    private static function idGenerator(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): SessionIdGeneratorInterface {
+        $service = $container->get(SessionIdGeneratorInterface::class);
+
+        return $service instanceof SessionIdGeneratorInterface
+            ? $service
+            : throw new \LogicException(sprintf('%s must resolve to %s.', SessionIdGeneratorInterface::class, SessionIdGeneratorInterface::class));
+    }
+
+    private static function dateTimeFactory(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): DateTimeFactoryInterface {
+        $service = $container->get(DateTimeFactoryInterface::class);
+
+        return $service instanceof DateTimeFactoryInterface
+            ? $service
+            : throw new \LogicException(sprintf('%s must resolve to %s.', DateTimeFactoryInterface::class, DateTimeFactoryInterface::class));
+    }
+
+    private static function dispatcher(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): EventDispatcher {
+        $service = $container->get(EventDispatcher::class);
+
+        return $service instanceof EventDispatcher
+            ? $service
+            : throw new \LogicException(sprintf('%s must resolve to %s.', EventDispatcher::class, EventDispatcher::class));
+    }
+
+    private static function config(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): DatabaseSessionManagerConfig {
+        $service = $container->get(DatabaseSessionManagerConfig::class);
+
+        return $service instanceof DatabaseSessionManagerConfig
+            ? $service
+            : throw new \LogicException(sprintf(
+                '%s must resolve to %s.',
+                DatabaseSessionManagerConfig::class,
+                DatabaseSessionManagerConfig::class,
+            ));
     }
 }

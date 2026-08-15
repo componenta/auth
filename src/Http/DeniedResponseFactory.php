@@ -4,45 +4,66 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Http;
 
+use Componenta\Auth\Denied\RateLimited;
 use Componenta\Auth\DeniedReasonInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 
-/**
- * Default implementation mapping denial reasons to JSON responses.
- */
+/** Maps denial reasons to bounded code-only JSON responses. */
 final readonly class DeniedResponseFactory implements DeniedResponseFactoryInterface
 {
-    /**
-     * @param ResponseFactoryInterface $responseFactory PSR-17 response factory
-     * @param array<string, int> $statusMap Map of denial codes to HTTP status codes
-     * @param int $defaultStatus Default HTTP status code
-     */
+    private const string FALLBACK_CODE = 'authentication_denied';
+
+    /** @param array<string, int> $statusMap */
     public function __construct(
         private ResponseFactoryInterface $responseFactory,
         private array $statusMap = [],
         private int $defaultStatus = 401,
-    ) {}
-
-    public function create(DeniedReasonInterface $reason): ResponseInterface
-    {
-        $status = $this->statusMap[$reason->code] ?? $this->defaultStatus;
-        $response = $this->responseFactory->createResponse($status);
-
-        try {
-            $body = json_encode([
-                'error' => $reason->code,
-                'details' => $reason->attributes,
-            ], JSON_THROW_ON_ERROR);
-        } catch (\JsonException) {
-            // attributes carry non-encodable payload (e.g., resource handles).
-            // Fall back to a minimal, guaranteed-serializable body so callers
-            // never get a 500 from the denial path.
-            $body = json_encode(['error' => $reason->code], JSON_THROW_ON_ERROR);
+    ) {
+        if ($this->defaultStatus < 400 || $this->defaultStatus > 599) {
+            throw new \InvalidArgumentException(
+                'The default denial status must be an HTTP error status.',
+            );
         }
 
-        $response->getBody()->write($body);
+        foreach ($this->statusMap as $code => $status) {
+            if (!self::validCode($code) || $status < 400 || $status > 599) {
+                throw new \InvalidArgumentException(
+                    'Every denial status mapping must use a valid code and HTTP error status.',
+                );
+            }
+        }
+    }
 
-        return $response->withHeader('Content-Type', 'application/json');
+    #[\Override]
+    public function create(
+        #[\SensitiveParameter]
+        DeniedReasonInterface $reason,
+    ): ResponseInterface {
+        $code = self::validCode($reason->code)
+            ? $reason->code
+            : self::FALLBACK_CODE;
+        $status = $this->statusMap[$code] ?? $this->defaultStatus;
+        $json = json_encode(['error' => $code], JSON_THROW_ON_ERROR);
+        $response = $this->responseFactory->createResponse($status);
+        $response->getBody()->write($json);
+        $response = $response
+            ->withHeader('Content-Type', 'application/json')
+            ->withHeader('Cache-Control', 'no-store')
+            ->withHeader('Pragma', 'no-cache');
+
+        if ($reason instanceof RateLimited) {
+            $response = $response->withHeader(
+                'Retry-After',
+                (string) $reason->retryAfter,
+            );
+        }
+
+        return $response;
+    }
+
+    private static function validCode(string $code): bool
+    {
+        return preg_match('/\A[a-z0-9][a-z0-9._-]{0,127}\z/D', $code) === 1;
     }
 }

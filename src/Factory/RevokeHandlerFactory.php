@@ -11,11 +11,15 @@ use Psr\Http\Message\ResponseFactoryInterface;
 
 final readonly class RevokeHandlerFactory
 {
-    public function __invoke(ContainerInterface $container): RevokeHandler
-    {
-        return new RevokeHandler(
-            refreshManager: $container->get(RefreshTokenManager::class),
-            responseFactory: $container->get(ResponseFactoryInterface::class),
-        );
+    public function __invoke(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): RevokeHandler {
+        /** @var RefreshTokenManager $refreshManager */
+        $refreshManager = $container->get(RefreshTokenManager::class);
+        /** @var ResponseFactoryInterface $responseFactory */
+        $responseFactory = $container->get(ResponseFactoryInterface::class);
+
+        return new RevokeHandler($refreshManager, $responseFactory);
     }
 }

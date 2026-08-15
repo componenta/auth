@@ -11,44 +11,55 @@ final class PriorityListenerProvider implements EventListenerProviderInterface
     private bool $sorted = false;
 
     public function addListener(
+        #[\SensitiveParameter]
         EventListenerInterface $listener,
         int $priority = 0,
     ): void {
+        self::assertEvents($listener);
         $this->listeners[$priority][] = $listener;
         $this->sorted = false;
     }
 
     #[\Override]
-    public function provideFor(EventInterface $event): iterable
-    {
+    public function provideFor(
+        #[\SensitiveParameter]
+        EventInterface $event,
+    ): iterable {
         if (!$this->sorted) {
             krsort($this->listeners);
             $this->sorted = true;
         }
 
-        $interface = match ($event::class) {
-            AuthenticationAttempted::class => AuthenticationAttemptedListenerInterface::class,
-            AuthenticationSucceeded::class => AuthenticationSucceededListenerInterface::class,
-            AuthenticationDenied::class => AuthenticationDeniedListenerInterface::class,
-            LoggedOut::class => LoggedOutListenerInterface::class,
-            SessionRegenerated::class => SessionRegeneratedListenerInterface::class,
-            SessionsTerminated::class => SessionsTerminatedListenerInterface::class,
-            AllSessionsTerminated::class => AllSessionsTerminatedListenerInterface::class,
-            // Unknown event types (e.g. application-defined events dispatched
-            // through the same provider) yield nothing instead of crashing
-            // the dispatcher with UnhandledMatchError.
-            default => null,
-        };
-
-        if ($interface === null) {
-            return;
-        }
-
         foreach ($this->listeners as $listeners) {
             foreach ($listeners as $listener) {
-                if ($listener instanceof $interface) {
+                if (in_array($event::class, $listener->events, true)) {
                     yield $listener;
                 }
+            }
+        }
+    }
+
+    private static function assertEvents(
+        #[\SensitiveParameter]
+        EventListenerInterface $listener,
+    ): void {
+        $events = $listener->events;
+
+        if ($events === []) {
+            throw new \InvalidArgumentException(
+                'An auth event listener must subscribe to at least one event.',
+            );
+        }
+
+        foreach ($events as $event) {
+            if (
+                !is_string($event)
+                || !is_a($event, EventInterface::class, true)
+            ) {
+                throw new \InvalidArgumentException(sprintf(
+                    'Auth event listener %s declares an invalid event type.',
+                    $listener::class,
+                ));
             }
         }
     }

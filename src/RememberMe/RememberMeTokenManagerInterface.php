@@ -4,61 +4,65 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\RememberMe;
 
-/**
- * Manages remember-me tokens for persistent authentication.
- *
- * Tokens are one-time use: validated, then rotated on each auto-login.
- * Plain tokens are stored in cookies; hashed tokens are stored in the database.
- */
+use Componenta\Identity\UuidInterface;
+
 interface RememberMeTokenManagerInterface
 {
-    /**
-     * Creates a new remember-me token.
-     *
-     * Generates a random token, stores its hash in the database.
-     *
-     * @return string Plain token (for cookie)
-     */
-    public function create(int|string $userId, ?string $sessionId = null): string;
+    public function create(
+        UuidInterface $subjectId,
+        #[\SensitiveParameter]
+        string $sessionId,
+    ): string;
 
     /**
-     * Atomically validates and consumes a remember-me token.
-     *
-     * Hashes the plain token, locks the row, checks expiration,
-     * and deletes the token within a single transaction.
-     * Prevents TOCTOU race conditions between validation and rotation.
-     *
-     * @return RememberMeToken|null Token data if valid, null otherwise
+     * Atomically rotates a current bearer. A superseded bearer revokes its
+     * grant and returns the affected session lineage as a compromise signal.
      */
-    public function consume(string $plainToken): ?RememberMeToken;
+    public function rotate(
+        #[\SensitiveParameter]
+        string $plainToken,
+    ): RememberMeRotation|RememberMeCompromise|null;
 
     /**
-     * Revokes a specific token.
+     * Binds a rotated grant to a new session. False means the grant was revoked
+     * or changed concurrently and the caller must not issue the new session.
      */
-    public function revoke(string $plainToken): void;
+    public function bindRotation(
+        #[\SensitiveParameter]
+        RememberMeRotation $rotation,
+        #[\SensitiveParameter]
+        string $newSessionId,
+    ): bool;
 
-    /**
-     * Revokes the token linked to a specific session.
-     */
-    public function revokeForSession(string $sessionId): void;
+    public function revoke(
+        #[\SensitiveParameter]
+        string $plainToken,
+    ): void;
 
-    /**
-     * Revokes all tokens for a user.
-     *
-     * @param string|null $exceptSessionId If set, keeps the token linked to this session.
-     */
-    public function revokeAllForUser(int|string $userId, ?string $exceptSessionId = null): void;
+    public function revokeForSession(
+        #[\SensitiveParameter]
+        string $sessionId,
+    ): void;
 
-    /**
-     * Updates the session ID for the token linked to the given session.
-     *
-     * Used during session regeneration to keep the token pointing
-     * to the current (leaf) session.
-     */
-    public function updateSessionId(string $oldSessionId, string $newSessionId): void;
+    /** @param iterable<string> $sessionIds */
+    public function revokeForSessions(
+        #[\SensitiveParameter]
+        iterable $sessionIds,
+    ): void;
 
-    /**
-     * Removes expired tokens (garbage collection).
-     */
-    public function cleanup(): void;
+    public function revokeAllForSubject(
+        UuidInterface $subjectId,
+        #[\SensitiveParameter]
+        ?string $exceptSessionId = null,
+    ): void;
+
+    public function updateSessionId(
+        #[\SensitiveParameter]
+        string $oldSessionId,
+        #[\SensitiveParameter]
+        string $newSessionId,
+    ): void;
+
+    /** Removes at most $limit expired grants and returns affected rows. */
+    public function cleanup(int $limit = 1000): int;
 }

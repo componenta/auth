@@ -10,10 +10,13 @@ use Psr\Container\ContainerInterface;
 
 final readonly class RememberMeTerminationListenerFactory
 {
-    public function __invoke(ContainerInterface $container): RememberMeTerminationListener
-    {
-        return new RememberMeTerminationListener(
-            tokenManager: $container->get(RememberMeTokenManagerInterface::class),
-        );
+    public function __invoke(
+        #[\SensitiveParameter]
+        ContainerInterface $container,
+    ): RememberMeTerminationListener {
+        /** @var RememberMeTokenManagerInterface $tokenManager */
+        $tokenManager = $container->get(RememberMeTokenManagerInterface::class);
+
+        return new RememberMeTerminationListener($tokenManager);
     }
 }

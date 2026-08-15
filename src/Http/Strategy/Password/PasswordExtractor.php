@@ -8,51 +8,99 @@ use Componenta\Auth\Exception\InvalidPayloadException;
 use Componenta\Auth\Http\PayloadExtractorInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
-/**
- * Extracts email/password credentials from request body.
- *
- * Normalizes identity field (trim, lowercase) by default.
- */
 final readonly class PasswordExtractor implements PayloadExtractorInterface
 {
-    /**
-     * @param string $identityField Field name for identity (email, username)
-     * @param string $passwordField Field name for password
-     * @param bool $normalizeIdentity Whether to normalize identity (trim, lowercase)
-     */
+    private const int MAX_IDENTITY_LENGTH = 320;
+    private const int MAX_PASSWORD_LENGTH = 4096;
+
     public function __construct(
         public string $identityField = 'email',
         public string $passwordField = 'password',
         public string $rememberField = 'remember',
-        public bool $normalizeIdentity = true,
-    ) {}
+    ) {
+        $fields = [
+            'identity' => $this->identityField,
+            'password' => $this->passwordField,
+            'remember' => $this->rememberField,
+        ];
 
-    public function extract(ServerRequestInterface $request): Payload
-    {
-        $body = $request->getParsedBody() ?? [];
-
-        if (!is_array($body)) {
-            $body = get_object_vars($body);
+        foreach ($fields as $name => $field) {
+            if (preg_match('/\A[A-Za-z_][A-Za-z0-9_.-]*\z/D', $field) !== 1) {
+                throw new \InvalidArgumentException(sprintf(
+                    'Password %s field name is invalid.',
+                    $name,
+                ));
+            }
         }
 
-        $identity = $body[$this->identityField] ?? null;
-        $password = $body[$this->passwordField] ?? null;
+        if (count(array_unique($fields)) !== count($fields)) {
+            throw new \InvalidArgumentException(
+                'Password credential field names must be different.',
+            );
+        }
+    }
 
-        // Incomplete data - error
-        if ($identity === null) {
+    #[\Override]
+    public function extract(
+        #[\SensitiveParameter]
+        ServerRequestInterface $request,
+    ): Payload {
+        $body = $request->getParsedBody();
+        if (!is_array($body)) {
+            throw InvalidPayloadException::invalidField('body');
+        }
+
+        if (!array_key_exists($this->identityField, $body)) {
             throw InvalidPayloadException::missingField($this->identityField);
         }
-
-        if ($password === null) {
+        if (!array_key_exists($this->passwordField, $body)) {
             throw InvalidPayloadException::missingField($this->passwordField);
         }
 
-        if ($this->normalizeIdentity) {
-            $identity = strtolower(trim($identity));
+        $identity = $body[$this->identityField];
+        $password = $body[$this->passwordField];
+
+        if (
+            !is_string($identity)
+            || $identity === ''
+            || strlen($identity) > self::MAX_IDENTITY_LENGTH
+            || trim($identity) !== $identity
+            || preg_match('/[\x00-\x1F\x7F]/', $identity) === 1
+        ) {
+            throw InvalidPayloadException::invalidField($this->identityField);
         }
 
-        $remember = (bool) ($body[$this->rememberField] ?? false);
+        if (
+            !is_string($password)
+            || $password === ''
+            || strlen($password) > self::MAX_PASSWORD_LENGTH
+        ) {
+            throw InvalidPayloadException::invalidField($this->passwordField);
+        }
 
-        return new Payload($identity, $password, $remember);
+        return new Payload(
+            identity: $identity,
+            password: $password,
+            remember: $this->parseBoolean($body[$this->rememberField] ?? false),
+        );
+    }
+
+    private function parseBoolean(mixed $value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+        if (is_int($value) && ($value === 0 || $value === 1)) {
+            return $value === 1;
+        }
+        if (is_string($value)) {
+            return match (strtolower(trim($value))) {
+                '', '0', 'false', 'off', 'no' => false,
+                '1', 'true', 'on', 'yes' => true,
+                default => throw InvalidPayloadException::invalidField($this->rememberField),
+            };
+        }
+
+        throw InvalidPayloadException::invalidField($this->rememberField);
     }
 }

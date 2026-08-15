@@ -4,26 +4,29 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Http\Strategy\Password;
 
-/**
- * Password authentication payload.
- *
- * Carries credentials from the extractor to the strategy. The password
- * is masked in every serialization path (var_dump, json_encode, stack
- * traces) so that listeners, loggers, or error trackers cannot leak
- * it accidentally when they capture authentication events.
- */
-final readonly class Payload implements RememberMeAwareInterface, \JsonSerializable
+final readonly class Payload implements \JsonSerializable
 {
     public function __construct(
         public string $identity,
         #[\SensitiveParameter]
         public string $password,
         public bool $remember = false,
-    ) {}
+    ) {
+        if (
+            $this->identity === ''
+            || strlen($this->identity) > 320
+            || trim($this->identity) !== $this->identity
+            || preg_match('/[\x00-\x1F\x7F]/', $this->identity) === 1
+        ) {
+            throw new \InvalidArgumentException('Password identity is invalid.');
+        }
 
-    /**
-     * @return array{identity: string, password: string, remember: bool}
-     */
+        if ($this->password === '' || strlen($this->password) > 4096) {
+            throw new \InvalidArgumentException('Password credential is invalid.');
+        }
+    }
+
+    /** @return array{identity: string, password: string, remember: bool} */
     public function __debugInfo(): array
     {
         return [
@@ -33,9 +36,8 @@ final readonly class Payload implements RememberMeAwareInterface, \JsonSerializa
         ];
     }
 
-    /**
-     * @return array{identity: string, password: string, remember: bool}
-     */
+    /** @return array{identity: string, password: string, remember: bool} */
+    #[\Override]
     public function jsonSerialize(): array
     {
         return $this->__debugInfo();

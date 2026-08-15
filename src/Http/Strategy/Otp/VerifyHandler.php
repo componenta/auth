@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Http\Strategy\Otp;
 
-use Componenta\Auth\AuthSubject;
+use Componenta\Auth\AuthenticatorInterface;
 use Componenta\Auth\Context;
 use Componenta\Auth\ContextInterface;
 use Componenta\Auth\DeniedReasonInterface;
+use Componenta\Auth\Http\CredentialTransportState;
 use Componenta\Auth\Http\DeniedResponseFactoryInterface;
 use Componenta\Auth\Http\PayloadStorageInterface;
 use Componenta\Auth\Http\Transport\SessionPayload;
@@ -19,17 +20,11 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 
-/**
- * Handles OTP code verification requests.
- *
- * Extracts destination and code from the request, verifies
- * via OtpStrategy, creates a session, and sets the session cookie.
- */
 final readonly class VerifyHandler implements RequestHandlerInterface
 {
     public function __construct(
         private OtpExtractor $extractor,
-        private OtpStrategy $strategy,
+        private AuthenticatorInterface $authenticator,
         private SessionManagerInterface $sessionManager,
         private PayloadStorageInterface $storage,
         private DeniedResponseFactoryInterface $deniedResponseFactory,
@@ -37,20 +32,20 @@ final readonly class VerifyHandler implements RequestHandlerInterface
         private SessionAttributeExtractorInterface $attributeExtractor = new SessionAttributeExtractor(),
     ) {}
 
-    public function handle(ServerRequestInterface $request): ResponseInterface
-    {
+    #[\Override]
+    public function handle(
+        #[\SensitiveParameter]
+        ServerRequestInterface $request,
+    ): ResponseInterface {
         $payload = $this->extractor->extract($request);
 
         if ($payload === null) {
-            $response = $this->responseFactory->createResponse(400);
-            $response->getBody()->write(
-                json_encode(['error' => 'missing_credentials'], JSON_THROW_ON_ERROR)
-            );
-
-            return $response->withHeader('Content-Type', 'application/json');
+            return $this->json(400, ['error' => 'missing_credentials']);
         }
 
-        $result = $this->strategy->attempt($payload, new Context([
+        $attributes = $this->attributeExtractor->extract($request);
+        $response = $this->successResponse();
+        $result = $this->authenticator->attempt($payload, new Context([
             ServerRequestInterface::class => $request,
             ContextInterface::EXTRACTOR => $this->extractor,
         ]));
@@ -59,14 +54,55 @@ final readonly class VerifyHandler implements RequestHandlerInterface
             return $this->deniedResponseFactory->create($result->subject);
         }
 
+        $transportState = $request->getAttribute(CredentialTransportState::class);
+        if ($transportState instanceof CredentialTransportState) {
+            $transportState->discardQueued();
+        }
+
         $session = $this->sessionManager->create(
-            AuthSubject::id($result->subject),
-            $this->attributeExtractor->extract($request),
+            $result->subject->uuid,
+            $attributes,
         );
 
-        $response = $this->responseFactory->createResponse(200);
-        $response = $this->storage->store($request, $response, new SessionPayload($session->id));
+        try {
+            $response = $this->storage->remove($request, $response);
+            $stored = $this->storage->store(
+                $request,
+                $response,
+                new SessionPayload($session->id),
+            );
 
-        return $response->withHeader('Content-Type', 'application/json');
+            return $stored
+                ->withHeader('Content-Type', 'application/json')
+                ->withHeader('Cache-Control', 'no-store')
+                ->withHeader('Pragma', 'no-cache');
+        } catch (\Throwable $exception) {
+            $this->sessionManager->terminate($session->id);
+            throw $exception;
+        }
+    }
+
+    /** @param array<string, mixed> $payload */
+    private function json(int $status, array $payload): ResponseInterface
+    {
+        $response = $this->responseFactory->createResponse($status);
+        $response->getBody()->write(json_encode($payload, JSON_THROW_ON_ERROR));
+
+        return $response
+            ->withHeader('Content-Type', 'application/json')
+            ->withHeader('Cache-Control', 'no-store')
+            ->withHeader('Pragma', 'no-cache');
+    }
+
+    private function successResponse(): ResponseInterface
+    {
+        $response = $this->responseFactory
+            ->createResponse(200)
+            ->withHeader('Content-Type', 'application/json')
+            ->withHeader('Cache-Control', 'no-store')
+            ->withHeader('Pragma', 'no-cache');
+        $response->getBody()->write('{}');
+
+        return $response;
     }
 }

@@ -4,57 +4,119 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Http\Transport;
 
+use Componenta\Auth\Exception\InvalidPayloadException;
+use Componenta\Auth\Exception\TransportException;
 use Componenta\Auth\Http\TransportInterface;
+use Componenta\Clock\Clock;
+use Psr\Clock\ClockInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
-/**
- * Cookie-based transport for session authentication.
- *
- * Handles session cookie (browser session, ttl=0) and optionally
- * remember-me cookie (persistent, configurable ttl).
- */
+/** Cookie transport for session and optional persistent remember-me credentials. */
 final readonly class CookieTransport implements TransportInterface
 {
-    /**
-     * @param string $name Session cookie name
-     * @param string $path Cookie path
-     * @param string $domain Cookie domain (empty = current domain only)
-     * @param bool $secure Send only over HTTPS
-     * @param bool $httpOnly Prevent JavaScript access
-     * @param string $sameSite SameSite policy (Lax, Strict, None)
-     * @param int $ttl Session cookie lifetime (0 = browser session)
-     * @param string $rememberMeName Remember-me cookie name (empty = disabled)
-     * @param int $rememberMeTtl Remember-me cookie lifetime in seconds
-     */
+    private const int MAX_SESSION_ID_LENGTH = 512;
+    private const int MAX_REMEMBER_ME_TOKEN_LENGTH = 4096;
+    private const int MAX_COOKIE_PATH_LENGTH = 1024;
+    private const int MAX_COOKIE_DOMAIN_LENGTH = 253;
+
+    public string $sameSite;
+
     public function __construct(
         public string $name = 'sid',
         public string $path = '/',
         public string $domain = '',
         public bool $secure = true,
         public bool $httpOnly = true,
-        public string $sameSite = 'Lax',
+        string $sameSite = 'Lax',
         public int $ttl = 0,
         public string $rememberMeName = '',
         public int $rememberMeTtl = 2592000,
-    ) {}
+        private ClockInterface $clock = new Clock(),
+    ) {
+        self::assertCookieName($this->name, 'Session cookie');
 
-    public function extract(ServerRequestInterface $request): ?object
-    {
+        if ($this->rememberMeName !== '') {
+            self::assertCookieName($this->rememberMeName, 'Remember-me cookie');
+
+            if ($this->rememberMeName === $this->name) {
+                throw new \InvalidArgumentException(
+                    'Session and remember-me cookie names must be different.',
+                );
+            }
+        }
+
+        if (
+            $this->path === ''
+            || strlen($this->path) > self::MAX_COOKIE_PATH_LENGTH
+            || $this->path[0] !== '/'
+            || preg_match('/[\x00-\x1F\x7F;]/', $this->path) === 1
+        ) {
+            throw new \InvalidArgumentException(
+                'Cookie path must start with "/" and contain no control characters or semicolons.',
+            );
+        }
+
+        if (
+            strlen($this->domain) > self::MAX_COOKIE_DOMAIN_LENGTH
+            || preg_match('/[\x00-\x20\x7F;,\/\\\\]/', $this->domain) === 1
+        ) {
+            throw new \InvalidArgumentException('Cookie domain is invalid.');
+        }
+
+        $this->sameSite = match (strtolower($sameSite)) {
+            'lax' => 'Lax',
+            'strict' => 'Strict',
+            'none' => 'None',
+            default => throw new \InvalidArgumentException(
+                'SameSite must be one of Lax, Strict or None.',
+            ),
+        };
+
+        if ($this->sameSite === 'None' && !$this->secure) {
+            throw new \InvalidArgumentException(
+                'SameSite=None requires Secure cookies.',
+            );
+        }
+
+        if ($this->ttl < 0) {
+            throw new \InvalidArgumentException(
+                'Session cookie TTL must be greater than or equal to zero.',
+            );
+        }
+
+        if ($this->rememberMeName !== '' && $this->rememberMeTtl < 1) {
+            throw new \InvalidArgumentException(
+                'Remember-me cookie TTL must be greater than zero.',
+            );
+        }
+
+        $this->assertPrefixRequirements($this->name);
+
+        if ($this->rememberMeName !== '') {
+            $this->assertPrefixRequirements($this->rememberMeName);
+        }
+    }
+
+    #[\Override]
+    public function extract(
+        #[\SensitiveParameter]
+        ServerRequestInterface $request,
+    ): ?object {
+        /** @var array<string, mixed> $cookies */
         $cookies = $request->getCookieParams();
-
-        $sessionId = $cookies[$this->name] ?? null;
-        $rememberMeToken = ($this->rememberMeName !== '')
-            ? ($cookies[$this->rememberMeName] ?? null)
-            : null;
-
-        if ($sessionId === '') {
-            $sessionId = null;
-        }
-
-        if ($rememberMeToken === '') {
-            $rememberMeToken = null;
-        }
+        $sessionId = $this->readCredential(
+            $cookies,
+            $this->name,
+            self::MAX_SESSION_ID_LENGTH,
+        );
+        $rememberMeToken = $this->rememberMeName === ''
+            ? null
+            : $this->readCredential(
+                $cookies,
+                $this->rememberMeName,
+                self::MAX_REMEMBER_ME_TOKEN_LENGTH,
+            );
 
         if ($sessionId === null && $rememberMeToken === null) {
             return null;
@@ -63,17 +125,31 @@ final readonly class CookieTransport implements TransportInterface
         return new SessionPayload($sessionId, $rememberMeToken);
     }
 
+    #[\Override]
     public function store(
+        #[\SensitiveParameter]
         ServerRequestInterface $request,
+        #[\SensitiveParameter]
         ResponseInterface $response,
+        #[\SensitiveParameter]
         object $payload,
     ): ResponseInterface {
         if (!$payload instanceof SessionPayload) {
             return $response;
         }
 
-        // Session cookie
+        if ($payload->rememberMeToken !== null && $this->rememberMeName === '') {
+            throw new TransportException(
+                'Remember-me credential cannot be stored because rememberMeName is not configured.',
+            );
+        }
+
         if ($payload->sessionId !== null) {
+            self::assertCredential(
+                $payload->sessionId,
+                $this->name,
+                self::MAX_SESSION_ID_LENGTH,
+            );
             $response = $this->withSetCookie(
                 $response,
                 $this->name,
@@ -81,20 +157,31 @@ final readonly class CookieTransport implements TransportInterface
             );
         }
 
-        // Remember-me cookie
-        if ($payload->rememberMeToken !== null && $this->rememberMeName !== '') {
+        if ($payload->rememberMeToken !== null) {
+            self::assertCredential(
+                $payload->rememberMeToken,
+                $this->rememberMeName,
+                self::MAX_REMEMBER_ME_TOKEN_LENGTH,
+            );
             $response = $this->withSetCookie(
                 $response,
                 $this->rememberMeName,
-                $this->buildCookie($this->rememberMeName, $payload->rememberMeToken, $this->rememberMeTtl),
+                $this->buildCookie(
+                    $this->rememberMeName,
+                    $payload->rememberMeToken,
+                    $this->rememberMeTtl,
+                ),
             );
         }
 
         return $response;
     }
 
+    #[\Override]
     public function remove(
+        #[\SensitiveParameter]
         ServerRequestInterface $request,
+        #[\SensitiveParameter]
         ResponseInterface $response,
     ): ResponseInterface {
         $response = $this->withSetCookie(
@@ -114,23 +201,92 @@ final readonly class CookieTransport implements TransportInterface
         return $response;
     }
 
-    /**
-     * Replaces any existing Set-Cookie header for the same cookie name,
-     * preventing duplicate headers when multiple middleware layers
-     * set the same cookie (e.g. chain-follow + remember-me auto-login).
-     */
+    /** @param array<string, mixed> $cookies */
+    private function readCredential(
+        #[\SensitiveParameter]
+        array $cookies,
+        string $name,
+        int $maxLength,
+    ): ?string {
+        if (!array_key_exists($name, $cookies)) {
+            return null;
+        }
+
+        $value = $cookies[$name];
+
+        if (
+            !is_string($value)
+            || strlen($value) > $maxLength
+            || preg_match('/[\x00-\x1F\x7F]/', $value) === 1
+        ) {
+            throw InvalidPayloadException::invalidField($name);
+        }
+
+        return $value === '' ? null : $value;
+    }
+
+    private static function assertCookieName(string $name, string $label): void
+    {
+        if (
+            $name === ''
+            || preg_match('/^[!#$%&\'\*+\-.^_`|~0-9A-Za-z]+$/', $name) !== 1
+        ) {
+            throw new \InvalidArgumentException($label . ' name is invalid.');
+        }
+    }
+
+    private static function assertCredential(
+        #[\SensitiveParameter]
+        string $value,
+        string $name,
+        int $maxLength,
+    ): void {
+        if (
+            $value === ''
+            || strlen($value) > $maxLength
+            || preg_match('/[\x00-\x1F\x7F]/', $value) === 1
+        ) {
+            throw new \InvalidArgumentException(sprintf(
+                'Credential for cookie "%s" must contain between 1 and %d bytes.',
+                $name,
+                $maxLength,
+            ));
+        }
+    }
+
+    private function assertPrefixRequirements(string $name): void
+    {
+        if (str_starts_with($name, '__Secure-') && !$this->secure) {
+            throw new \InvalidArgumentException(
+                '__Secure- cookie names require Secure=true.',
+            );
+        }
+
+        if (
+            str_starts_with($name, '__Host-')
+            && (!$this->secure || $this->domain !== '' || $this->path !== '/')
+        ) {
+            throw new \InvalidArgumentException(
+                '__Host- cookie names require Secure=true, Path=/ and an empty Domain.',
+            );
+        }
+    }
+
     private function withSetCookie(
+        #[\SensitiveParameter]
         ResponseInterface $response,
         string $cookieName,
+        #[\SensitiveParameter]
         string $cookieString,
     ): ResponseInterface {
         $existing = $response->getHeader('Set-Cookie');
-
         $filtered = array_filter(
             $existing,
-            static fn(string $header): bool => !str_starts_with($header, $cookieName . '='),
+            static fn(string $header): bool => !str_starts_with(
+                $header,
+                $cookieName . '=',
+            ),
         );
-
         $response = $response->withoutHeader('Set-Cookie');
 
         foreach ($filtered as $header) {
@@ -140,8 +296,12 @@ final readonly class CookieTransport implements TransportInterface
         return $response->withAddedHeader('Set-Cookie', $cookieString);
     }
 
-    private function buildCookie(string $name, string $value, int $ttl): string
-    {
+    private function buildCookie(
+        string $name,
+        #[\SensitiveParameter]
+        string $value,
+        int $ttl,
+    ): string {
         $parts = [
             sprintf('%s=%s', $name, rawurlencode($value)),
             sprintf('Path=%s', $this->path),
@@ -149,8 +309,13 @@ final readonly class CookieTransport implements TransportInterface
         ];
 
         if ($ttl !== 0) {
-            $expires = time() + $ttl;
-            $parts[] = sprintf('Expires=%s', gmdate('D, d M Y H:i:s T', $expires));
+            $parts[] = sprintf(
+                'Expires=%s',
+                gmdate(
+                    'D, d M Y H:i:s T',
+                    $this->clock->now()->getTimestamp() + $ttl,
+                ),
+            );
             $parts[] = sprintf('Max-Age=%d', max(0, $ttl));
         }
 

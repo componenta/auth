@@ -4,54 +4,62 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\PasswordReset;
 
-use Componenta\Auth\Token\TokenRequester;
+use Componenta\Auth\Token\TokenRequest;
+use Componenta\Auth\Token\TokenRequestQueueInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 
-/**
- * Handles password reset request (forgot password) step.
- *
- * Extracts the user email from the request body and
- * delegates to PasswordResetRequester to generate and send the token.
- *
- * Always returns 200 regardless of whether the user exists,
- * to prevent user enumeration attacks.
- */
 final readonly class ForgotPasswordHandler implements RequestHandlerInterface
 {
+    private const int MAX_IDENTITY_LENGTH = 320;
+
     public function __construct(
-        private TokenRequester $requester,
+        private TokenRequestQueueInterface $queue,
         private ResponseFactoryInterface $responseFactory,
     ) {}
 
-    public function handle(ServerRequestInterface $request): ResponseInterface
-    {
-        $body = $request->getParsedBody() ?? [];
+    #[\Override]
+    public function handle(
+        #[\SensitiveParameter]
+        ServerRequestInterface $request,
+    ): ResponseInterface {
+        $body = $request->getParsedBody();
+        $email = is_array($body) ? ($body['email'] ?? null) : null;
 
-        if (!is_array($body)) {
-            $body = get_object_vars($body);
+        if (
+            !is_string($email)
+            || $email === ''
+            || strlen($email) > self::MAX_IDENTITY_LENGTH
+            || trim($email) !== $email
+            || preg_match('/[\x00-\x1F\x7F]/', $email) === 1
+        ) {
+            return $this->json(400, ['error' => 'invalid_email']);
         }
 
-        $email = $body['email'] ?? null;
-
-        if ($email === null || $email === '') {
-            $response = $this->responseFactory->createResponse(400);
-            $response->getBody()->write(
-                json_encode(['error' => 'missing_email'], JSON_THROW_ON_ERROR),
-            );
-
-            return $response->withHeader('Content-Type', 'application/json');
-        }
-
-        $this->requester->request($email);
-
-        $response = $this->responseFactory->createResponse(200);
-        $response->getBody()->write(json_encode([
+        $work = new TokenRequest(
+            identity: $email,
+            purpose: TokenRequest::PURPOSE_PASSWORD_RESET,
+        );
+        $response = $this->json(200, [
             'message' => 'If the account exists, a reset link has been sent.',
-        ], JSON_THROW_ON_ERROR));
+        ]);
 
-        return $response->withHeader('Content-Type', 'application/json');
+        $this->queue->enqueue($work);
+
+        return $response;
+    }
+
+    /** @param array<string, mixed> $data */
+    private function json(int $status, array $data): ResponseInterface
+    {
+        $response = $this->responseFactory->createResponse($status);
+        $response->getBody()->write(json_encode($data, JSON_THROW_ON_ERROR));
+
+        return $response
+            ->withHeader('Content-Type', 'application/json')
+            ->withHeader('Cache-Control', 'no-store')
+            ->withHeader('Pragma', 'no-cache');
     }
 }

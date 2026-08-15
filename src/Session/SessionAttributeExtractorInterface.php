@@ -15,5 +15,8 @@ interface SessionAttributeExtractorInterface
     /**
      * @return array<string, string>
      */
-    public function extract(ServerRequestInterface $request): array;
+    public function extract(
+        #[\SensitiveParameter]
+        ServerRequestInterface $request,
+    ): array;
 }

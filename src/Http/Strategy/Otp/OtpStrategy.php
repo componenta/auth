@@ -8,24 +8,10 @@ use Componenta\Auth\AuthenticationResult;
 use Componenta\Auth\AuthenticationStrategyInterface;
 use Componenta\Auth\ContextInterface;
 use Componenta\Auth\Http\Strategy\Otp\Denied\InvalidCode;
-use Componenta\Auth\Http\Strategy\Otp\Denied\TooManyAttempts;
 use Componenta\Auth\Token\UserProviderInterface;
 use Componenta\Clock\Clock;
 use Psr\Clock\ClockInterface;
 
-/**
- * Authenticates a user via a one-time code.
- *
- * Handles the verify step of the OTP flow:
- * looks up stored code by destination, validates expiry,
- * checks attempt limit, compares code, loads user.
- *
- * The code is invalidated after successful verification or when the
- * attempt limit is reached. Negative outcomes other than rate-limit
- * collapse to {@see InvalidCode} to prevent code-state enumeration.
- * {@see TooManyAttempts} is preserved - it is a legitimate rate-limit
- * signal for the client (HTTP 429), tied to destination, not to code state.
- */
 final readonly class OtpStrategy implements AuthenticationStrategyInterface
 {
     public function __construct(
@@ -35,71 +21,46 @@ final readonly class OtpStrategy implements AuthenticationStrategyInterface
         private ClockInterface $clock = new Clock(),
     ) {}
 
-    public function supports(object $payload, ContextInterface $context): bool
-    {
+    #[\Override]
+    public function supports(
+        #[\SensitiveParameter]
+        object $payload,
+        #[\SensitiveParameter]
+        ContextInterface $context,
+    ): bool {
         return $payload instanceof OtpPayload;
     }
 
-    /**
-     * Must only be called after {@see supports()} returns true.
-     */
-    public function attempt(object $payload, ContextInterface $context): AuthenticationResult
-    {
+    #[\Override]
+    public function attempt(
+        #[\SensitiveParameter]
+        object $payload,
+        #[\SensitiveParameter]
+        ContextInterface $context,
+    ): AuthenticationResult {
         /** @var OtpPayload $payload */
-        $stored = $this->store->find($payload->destination);
+        $result = $this->store->verifyAndConsume(
+            destination: $payload->destination,
+            presentedCode: $payload->code,
+            now: $this->clock->now()->getTimestamp(),
+            maxAttempts: $this->config->maxAttempts,
+        );
 
-        if ($stored === null) {
+        // Public verification deliberately collapses every negative store state.
+        // Exposing Expired/TooManyAttempts would let an attacker distinguish a
+        // destination for which a worker created a challenge from one for which
+        // no account exists. Operational detail remains inside the store/rate limiter.
+        if (
+            $result->status !== CodeVerificationStatus::Verified
+            || $result->subjectId === null
+        ) {
             return new AuthenticationResult(new InvalidCode());
         }
 
-        if ($stored->expiresAt <= $this->now()) {
-            $this->store->invalidate($payload->destination);
+        $identity = $this->provider->findByUuid($result->subjectId);
 
-            return new AuthenticationResult(new InvalidCode());
-        }
-
-        // Increment attempts BEFORE the comparison. This closes the parallel
-        // brute-force window: N concurrent requests with guesses would all
-        // pass the stale `$stored->attempts` check otherwise. Here each
-        // request gets a unique post-increment count, and only the first
-        // maxAttempts requests continue to hash_equals.
-        $newAttempts = $this->store->incrementAttempts($payload->destination);
-
-        if ($newAttempts > $this->config->maxAttempts) {
-            $this->store->invalidate($payload->destination);
-
-            return new AuthenticationResult(new TooManyAttempts());
-        }
-
-        if (!hash_equals($stored->code, $payload->code)) {
-            return new AuthenticationResult(new InvalidCode());
-        }
-
-        // Code matches - atomically consume to prevent replay.
-        // A concurrent request with the same code will get null here.
-        $consumed = $this->store->consume($payload->destination);
-
-        if ($consumed === null) {
-            return new AuthenticationResult(new InvalidCode());
-        }
-
-        // Re-check expiry on the consumed (authoritative) data to close
-        // the TOCTOU gap between find() and consume().
-        if ($consumed->expiresAt <= $this->now()) {
-            return new AuthenticationResult(new InvalidCode());
-        }
-
-        $user = $this->provider->findById($consumed->userId);
-
-        if ($user === null) {
-            return new AuthenticationResult(new InvalidCode());
-        }
-
-        return new AuthenticationResult($user);
-    }
-
-    private function now(): int
-    {
-        return $this->clock->now()->getTimestamp();
+        return $identity === null || !$result->subjectId->equals($identity->uuid)
+            ? new AuthenticationResult(new InvalidCode())
+            : new AuthenticationResult($identity);
     }
 }

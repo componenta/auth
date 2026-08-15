@@ -9,49 +9,57 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 
-/**
- * Handles OTP code request (send) step.
- *
- * Extracts the user identity from the request body and
- * delegates to OtpRequester to generate, store, and send the code.
- *
- * Always returns 200 regardless of whether the user exists,
- * to prevent user enumeration attacks.
- */
 final readonly class RequestHandler implements RequestHandlerInterface
 {
+    private const int MAX_IDENTITY_LENGTH = 320;
+
     public function __construct(
-        private OtpRequester $requester,
+        private OtpRequestQueueInterface $queue,
         private ResponseFactoryInterface $responseFactory,
         private string $identityField = 'destination',
-    ) {}
+    ) {
+        if (preg_match('/\A[A-Za-z_][A-Za-z0-9_.-]*\z/D', $this->identityField) !== 1) {
+            throw new \InvalidArgumentException('OTP identity field name is invalid.');
+        }
+    }
 
-    public function handle(ServerRequestInterface $request): ResponseInterface
-    {
-        $body = $request->getParsedBody() ?? [];
+    #[\Override]
+    public function handle(
+        #[\SensitiveParameter]
+        ServerRequestInterface $request,
+    ): ResponseInterface {
+        $body = $request->getParsedBody();
+        $identity = is_array($body) ? ($body[$this->identityField] ?? null) : null;
 
-        if (!is_array($body)) {
-            $body = get_object_vars($body);
+        if (
+            !is_string($identity)
+            || $identity === ''
+            || strlen($identity) > self::MAX_IDENTITY_LENGTH
+            || trim($identity) !== $identity
+            || preg_match('/[\x00-\x1F\x7F]/', $identity) === 1
+        ) {
+            return $this->json(400, ['error' => 'invalid_identity']);
         }
 
-        $identity = $body[$this->identityField] ?? null;
-
-        if ($identity === null || $identity === '') {
-            $response = $this->responseFactory->createResponse(400);
-            $response->getBody()->write(
-                json_encode(['error' => 'missing_identity'], JSON_THROW_ON_ERROR)
-            );
-
-            return $response->withHeader('Content-Type', 'application/json');
-        }
-
-        $this->requester->request($identity);
-
-        $response = $this->responseFactory->createResponse(200);
-        $response->getBody()->write(json_encode([
+        $work = new OtpRequest($identity);
+        $response = $this->json(200, [
             'message' => 'If the account exists, a code has been sent.',
-        ], JSON_THROW_ON_ERROR));
+        ]);
 
-        return $response->withHeader('Content-Type', 'application/json');
+        $this->queue->enqueue($work);
+
+        return $response;
+    }
+
+    /** @param array<string, mixed> $data */
+    private function json(int $status, array $data): ResponseInterface
+    {
+        $response = $this->responseFactory->createResponse($status);
+        $response->getBody()->write(json_encode($data, JSON_THROW_ON_ERROR));
+
+        return $response
+            ->withHeader('Content-Type', 'application/json')
+            ->withHeader('Cache-Control', 'no-store')
+            ->withHeader('Pragma', 'no-cache');
     }
 }
