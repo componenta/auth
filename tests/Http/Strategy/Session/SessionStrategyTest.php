@@ -11,6 +11,9 @@ use Componenta\Auth\Http\Strategy\Session\UserProviderInterface;
 use Componenta\Auth\Http\Transport\SessionPayload;
 use Componenta\Auth\Session\ConcurrentRegenerationException;
 use Componenta\Auth\Session\Session;
+use Componenta\Auth\Session\SessionAwareInterface;
+use Componenta\Auth\Session\SessionCollection;
+use Componenta\Auth\Session\SessionCollectionInterface;
 use Componenta\Auth\Session\SessionInterface;
 use Componenta\Auth\Session\SessionManagerInterface;
 use Componenta\Clock\DateTimeFactoryInterface;
@@ -155,11 +158,13 @@ final class SessionStrategyTest extends TestCase
         );
     }
 
-    private static function identity(UuidInterface $uuid): IdentityInterface
-    {
-        return new class($uuid) implements IdentityInterface {
+    private static function identity(
+        UuidInterface $uuid,
+    ): IdentityInterface&SessionAwareInterface {
+        return new readonly class($uuid, new SessionCollection()) implements IdentityInterface, SessionAwareInterface {
             public function __construct(
                 public UuidInterface $uuid,
+                public SessionCollectionInterface $sessions,
             ) {}
         };
     }

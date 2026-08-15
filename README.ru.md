@@ -16,6 +16,14 @@
 
 Единственный публичный идентификатор субъекта — `IdentityInterface::$uuid`. Session, remember-me, one-time tokens, OTP, refresh grants и JWT `sub` используют этот UUID. Auth-specific ID и mutable `currentSessionId` отсутствуют.
 
+Identity, которая предоставляет коллекцию своих активных сессий, может реализовать `SessionAwareInterface`:
+
+```php
+public SessionCollectionInterface $sessions { get; }
+```
+
+Этот контракт содержит только доступную для чтения коллекцию сессий. В нём нет `currentSessionId`: сессия, аутентифицировавшая текущий запрос, остаётся состоянием запроса. Session `UserProviderInterface` возвращает `IdentityInterface&SessionAwareInterface`, поэтому проверяющие этот контракт middleware и обработчик выхода продолжают работать с аутентифицированной по сессии identity.
+
 ## Authenticator
 
 Порядок strategies задаётся явно. Для middleware-oriented chain remember-me следует подключать через `CompensatingRememberMeStrategy::class`, а не через raw `RememberMeStrategy::class`. `AuthenticatorFactory` намеренно отклоняет raw strategy: после успешной rotation queued response credential может быть отменён более поздним denial/UUID conflict/login replacement/exception, и в таком случае successor grant и непубликованная session должны быть компенсированы. Raw `RememberMeStrategy` остаётся low-level primitive для прямого вызова, когда caller сам владеет публикацией и rollback результата.

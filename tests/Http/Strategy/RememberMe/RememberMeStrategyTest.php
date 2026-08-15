@@ -13,6 +13,9 @@ use Componenta\Auth\RememberMe\RememberMeCompromise;
 use Componenta\Auth\RememberMe\RememberMeRotation;
 use Componenta\Auth\RememberMe\RememberMeTokenManagerInterface;
 use Componenta\Auth\Session\Session;
+use Componenta\Auth\Session\SessionAwareInterface;
+use Componenta\Auth\Session\SessionCollection;
+use Componenta\Auth\Session\SessionCollectionInterface;
 use Componenta\Auth\Session\SessionInterface;
 use Componenta\Auth\Session\SessionManagerInterface;
 use Componenta\Identity\IdentityInterface;
@@ -39,7 +42,11 @@ final class RememberMeStrategyTest extends TestCase
         $sessionManager->expects(self::never())->method('create');
         $provider = $this->createStub(UserProviderInterface::class);
         $provider->method('findByUuid')->willReturn(
-            new class implements IdentityInterface {
+            new class implements IdentityInterface, SessionAwareInterface {
+                public SessionCollectionInterface $sessions {
+                    get => new SessionCollection();
+                }
+
                 public UuidInterface $uuid {
                     get => Uuid::fromString(
                         '018f6d5d-3f7a-7a9b-8c2f-123456789abd',
@@ -230,7 +237,12 @@ final class RememberMeStrategyTest extends TestCase
     }
 }
 
-final readonly class RememberMeIdentityFixture implements IdentityInterface
+final readonly class RememberMeIdentityFixture implements IdentityInterface, SessionAwareInterface
 {
-    public function __construct(public UuidInterface $uuid) {}
+    public SessionCollectionInterface $sessions;
+
+    public function __construct(public UuidInterface $uuid)
+    {
+        $this->sessions = new SessionCollection();
+    }
 }

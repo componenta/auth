@@ -9,6 +9,7 @@ use Componenta\Auth\Event\LoggedOut;
 use Componenta\Auth\Http\CredentialResponseHeaders;
 use Componenta\Auth\Http\CredentialTransportState;
 use Componenta\Auth\Http\PayloadStorageInterface;
+use Componenta\Auth\Session\SessionAwareInterface;
 use Componenta\Auth\Session\SessionInterface;
 use Componenta\Auth\Session\SessionManagerInterface;
 use Componenta\Clock\Clock;
@@ -37,7 +38,10 @@ readonly class LogoutHandler implements RequestHandlerInterface
         $session = $request->getAttribute(SessionInterface::class);
         $identity = $request->getAttribute(IdentityInterface::class);
 
-        if ($session instanceof SessionInterface) {
+        if (
+            $identity instanceof SessionAwareInterface
+            && $session instanceof SessionInterface
+        ) {
             $this->sessionManager->terminate($session->id);
         }
 

@@ -22,6 +22,14 @@ $subjectId = $identity->uuid;
 
 Sessions, remember-me grants, one-time tokens, OTP challenges, refresh grants and JWT `sub` use this UUID. There is no auth-specific subject ID and no request-local mutable state on the identity object.
 
+Identities that expose their active sessions may implement `SessionAwareInterface`:
+
+```php
+public SessionCollectionInterface $sessions { get; }
+```
+
+This capability contains only the get-only session collection. It does not contain `currentSessionId`; the session that authenticated the current request remains request-scoped. Session `UserProviderInterface` returns `IdentityInterface&SessionAwareInterface`, so session-authenticated identities retain the capability used by session-aware middleware and handlers.
+
 ## Authenticator composition
 
 Strategy order is explicit and security-sensitive:

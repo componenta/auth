@@ -9,11 +9,12 @@ Removed:
 ```text
 AuthSubjectInterface
 AuthSubject
-SessionAwareInterface
 RememberMeAwareInterface
 ```
 
-Use `IdentityInterface::$uuid` as the only subject identifier. Obtain the current request session from `SessionInterface::class` on the PSR-7 request and query all sessions explicitly through `SessionManagerInterface::all($identity->uuid)`.
+`SessionAwareInterface` remains available for identities that expose their active sessions. Its v2 contract contains only the get-only `SessionCollectionInterface $sessions` property; remove `currentSessionId` from implementations. Session `UserProviderInterface` returns `IdentityInterface&SessionAwareInterface`, preserving this capability for session-authenticated identities.
+
+Use `IdentityInterface::$uuid` as the only subject identifier. Obtain the current request session from `SessionInterface::class` on the PSR-7 request. Query all sessions through `SessionAwareInterface::$sessions` when the identity provides that capability, or explicitly through `SessionManagerInterface::all($identity->uuid)`.
 
 Do not store `currentSessionId` or request-local authentication state on reusable identity objects.
 
@@ -211,7 +212,6 @@ The following dead APIs were removed:
 
 ```text
 AuthSubject / AuthSubjectInterface
-SessionAwareInterface
 RememberMeAwareInterface
 RememberMeToken
 PasswordUpdaterInterface
