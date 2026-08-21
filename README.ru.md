@@ -9,8 +9,10 @@
 - PHP 8.4+;
 - `ext-ctype`, `ext-filter`, `ext-mbstring`;
 - реализации PSR-7/15/17/20;
-- Componenta DI 4;
+- Componenta Config 2.0.2+ или 3.x;
 - Cycle Database для встроенных SQL stores.
+
+Auth core не зависит от DI. Интеграция с Componenta DI, включая атрибуты текущего authentication context, находится в `componenta/auth-app`.
 
 ## Единая identity
 
