@@ -9,8 +9,10 @@ The package supports password login, stateful sessions, remember-me credentials,
 - PHP 8.4+;
 - `ext-ctype`, `ext-filter`, `ext-mbstring`;
 - PSR-7, PSR-15, PSR-17 and PSR-20 implementations;
-- Componenta DI 4;
+- Componenta Config 2.0.2+ or 3.x;
 - Cycle Database for built-in SQL stores.
+
+The auth core is DI-neutral. Componenta DI integration, including current authentication-context attributes, is provided by `componenta/auth-app`.
 
 ## Canonical identity
 
@@ -109,7 +111,7 @@ Only the selector and SHA-256 verifier are stored. Reuse of a superseded
 validator removes the grant and returns RememberMeCompromise; the strategy
 terminates the affected session lineage. Revocation uses the stable selector,
 so an original bearer still revokes its rotated successor. The grant tracks
-both current and previous session IDs to keep concurrent logout fail-closed.hich the grant originated.
+both current and previous session IDs to keep concurrent logout fail-closed.
 
 When remember-me runs inside `AuthenticationMiddleware`, use `CompensatingRememberMeStrategy`. It delegates authentication to the raw strategy but registers request-scoped compensation after a successful bind. If a later nested denial, UUID conflict, explicit login replacement, missing storage or downstream exception discards the queued replacement credential, the successor remember bearer is revoked and the unpublished session is terminated. A successfully applied response clears the compensation without revoking the delivered credential.
 
