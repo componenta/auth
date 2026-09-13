@@ -20,7 +20,7 @@ final readonly class DatabaseCodeStoreFactory
     ): DatabaseCodeStore {
         $database = $container->get(DatabaseInterface::class);
         $storeConfig = $container->get(DatabaseCodeStoreConfig::class);
-        $config = $container->get(ConfigKey::CONFIG);
+        $config = $container->get(\Componenta\Config\Config::class);
 
         if (!$database instanceof DatabaseInterface) {
             throw new \LogicException(sprintf(
@@ -41,7 +41,7 @@ final readonly class DatabaseCodeStoreFactory
         if (!$config instanceof Config) {
             throw new \LogicException(sprintf(
                 '%s must resolve to %s.',
-                ConfigKey::CONFIG,
+                \Componenta\Config\Config::class,
                 Config::class,
             ));
         }

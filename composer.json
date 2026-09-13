@@ -9,8 +9,9 @@
         "ext-filter": "*",
         "ext-mbstring": "*",
         "componenta/arrayable": "^1.0",
-        "componenta/clock": "^1.0",
-        "componenta/config": "^2.0.2 || ^3.0",
+        "componenta/clock": "^1.1.0",
+        "componenta/config": "^3.0.0",
+        "componenta/di": "^5.0.0",
         "componenta/identity": "^1.0",
         "componenta/password": "^1.0",
         "cycle/database": "^2.22",
@@ -34,13 +35,15 @@
             "config-providers": [
                 "Componenta\\Auth\\ConfigProvider"
             ]
+        },
+        "branch-alias": {
+            "dev-main": "2.1.x-dev"
         }
     },
     "config": {
         "sort-packages": true
     },
     "require-dev": {
-        "componenta/di": "^4.0.8 || ^5.0",
         "phpunit/phpunit": "^12.0"
     },
     "scripts": {

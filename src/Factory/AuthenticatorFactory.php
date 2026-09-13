@@ -25,7 +25,7 @@ final readonly class AuthenticatorFactory
         #[\SensitiveParameter]
         ContainerInterface $container,
     ): AuthenticatorInterface {
-        $config = $container->get(ConfigKey::CONFIG);
+        $config = $container->get(\Componenta\Config\Config::class);
         if (!$config instanceof Config) {
             throw new AuthenticatorConfigurationException('The config service must be an instance of Componenta\\Config\\Config.');
         }

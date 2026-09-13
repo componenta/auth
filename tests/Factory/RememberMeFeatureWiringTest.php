@@ -43,12 +43,12 @@ final class RememberMeFeatureWiringTest extends TestCase
     public function testDisabledRememberMeDoesNotResolveLifecycleListeners(): void
     {
         $container = new TrackingContainerFixture([
-            ConfigKey::CONFIG => new Config([
+            \Componenta\Config\Config::class => new Config([
                 ConfigKey::AUTH => [
                     ConfigKey::REMEMBER_ME => [ConfigKey::ENABLED => false],
                 ],
                 ConfigKey::LISTENERS => [],
-            ]),
+            ], new \Componenta\Config\Environment([])),
         ]);
 
         $provider = (new PriorityListenerProviderFactory())($container);
@@ -76,12 +76,12 @@ final class RememberMeFeatureWiringTest extends TestCase
         $termination = new RememberMeTerminationListener($tokens);
         $regeneration = new RememberMeRegenerationListener($tokens);
         $container = new TrackingContainerFixture([
-            ConfigKey::CONFIG => new Config([
+            \Componenta\Config\Config::class => new Config([
                 ConfigKey::AUTH => [
                     ConfigKey::REMEMBER_ME => [ConfigKey::ENABLED => true],
                 ],
                 ConfigKey::LISTENERS => [],
-            ]),
+            ], new \Componenta\Config\Environment([])),
             RememberMeTerminationListener::class => $termination,
             RememberMeRegenerationListener::class => $regeneration,
         ]);
@@ -111,11 +111,11 @@ final class RememberMeFeatureWiringTest extends TestCase
     public function testLoginFactoryResolvesRememberManagerWhenFeatureIsEnabled(): void
     {
         $container = new TrackingContainerFixture([
-            ConfigKey::CONFIG => new Config([
+            \Componenta\Config\Config::class => new Config([
                 ConfigKey::AUTH => [
                     ConfigKey::REMEMBER_ME => [ConfigKey::ENABLED => true],
                 ],
-            ]),
+            ], new \Componenta\Config\Environment([])),
             PasswordExtractor::class => new PasswordExtractor(),
             AuthenticatorInterface::class => $this->createStub(AuthenticatorInterface::class),
             SessionManagerInterface::class => $this->createStub(SessionManagerInterface::class),
@@ -137,11 +137,11 @@ final class RememberMeFeatureWiringTest extends TestCase
     public function testLoginFactoryDoesNotResolveRememberManagerWhenFeatureIsDisabled(): void
     {
         $container = new TrackingContainerFixture([
-            ConfigKey::CONFIG => new Config([
+            \Componenta\Config\Config::class => new Config([
                 ConfigKey::AUTH => [
                     ConfigKey::REMEMBER_ME => [ConfigKey::ENABLED => false],
                 ],
-            ]),
+            ], new \Componenta\Config\Environment([])),
             PasswordExtractor::class => new PasswordExtractor(),
             AuthenticatorInterface::class => $this->createStub(AuthenticatorInterface::class),
             SessionManagerInterface::class => $this->createStub(SessionManagerInterface::class),

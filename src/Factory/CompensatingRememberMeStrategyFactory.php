@@ -20,7 +20,7 @@ final readonly class CompensatingRememberMeStrategyFactory
         #[\SensitiveParameter]
         ContainerInterface $container,
     ): CompensatingRememberMeStrategy {
-        $config = $container->get(ConfigKey::CONFIG);
+        $config = $container->get(\Componenta\Config\Config::class);
         if (!$config instanceof Config) {
             throw new AuthenticatorConfigurationException(
                 'The config service must be an instance of Componenta\\Config\\Config.',

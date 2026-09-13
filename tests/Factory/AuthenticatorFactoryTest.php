@@ -32,7 +32,7 @@ final class AuthenticatorFactoryTest extends TestCase
         $recorder = new StrategyCallRecorder();
         $identity = new FactoryIdentityFixture();
         $container = new FactoryContainerFixture([
-            ConfigKey::CONFIG => new Config(['auth' => ['strategies' => ['first', 'second'], 'events' => false]]),
+            \Componenta\Config\Config::class => new Config(['auth' => ['strategies' => ['first', 'second'], 'events' => false]], new \Componenta\Config\Environment([])),
             'first' => new OrderedStrategyFixture('first', $recorder, new AuthenticationResult(
                 subject: new DeniedReason('denied'),
                 continueOnFailure: true,
@@ -51,7 +51,7 @@ final class AuthenticatorFactoryTest extends TestCase
         $this->expectException(AuthenticatorConfigurationException::class);
         $recorder = new StrategyCallRecorder();
         (new AuthenticatorFactory())(new FactoryContainerFixture([
-            ConfigKey::CONFIG => new Config(['auth' => ['strategies' => ['same', 'same'], 'events' => false]]),
+            \Componenta\Config\Config::class => new Config(['auth' => ['strategies' => ['same', 'same'], 'events' => false]], new \Componenta\Config\Environment([])),
             'same' => new OrderedStrategyFixture('same', $recorder, new AuthenticationResult(new DeniedReason('x'))),
         ]));
     }
@@ -60,13 +60,13 @@ final class AuthenticatorFactoryTest extends TestCase
     {
         $rememberMe = $this->rawRememberStrategy();
         $container = new FactoryContainerFixture([
-            ConfigKey::CONFIG => new Config([
+            \Componenta\Config\Config::class => new Config([
                 ConfigKey::AUTH => [
                     ConfigKey::STRATEGIES => ['remember'],
                     ConfigKey::EVENTS => false,
                     ConfigKey::REMEMBER_ME => [ConfigKey::ENABLED => false],
                 ],
-            ]),
+            ], new \Componenta\Config\Environment([])),
             'remember' => $rememberMe,
         ]);
 
@@ -78,13 +78,13 @@ final class AuthenticatorFactoryTest extends TestCase
     public function testRejectsRawRememberMeStrategyEvenWhenFeatureIsEnabled(): void
     {
         $container = new FactoryContainerFixture([
-            ConfigKey::CONFIG => new Config([
+            \Componenta\Config\Config::class => new Config([
                 ConfigKey::AUTH => [
                     ConfigKey::STRATEGIES => ['remember'],
                     ConfigKey::EVENTS => false,
                     ConfigKey::REMEMBER_ME => [ConfigKey::ENABLED => true],
                 ],
-            ]),
+            ], new \Componenta\Config\Environment([])),
             'remember' => $this->rawRememberStrategy(),
         ]);
 
@@ -107,13 +107,13 @@ final class AuthenticatorFactoryTest extends TestCase
             $sessions,
         );
         $container = new FactoryContainerFixture([
-            ConfigKey::CONFIG => new Config([
+            \Componenta\Config\Config::class => new Config([
                 ConfigKey::AUTH => [
                     ConfigKey::STRATEGIES => ['remember'],
                     ConfigKey::EVENTS => false,
                     ConfigKey::REMEMBER_ME => [ConfigKey::ENABLED => true],
                 ],
-            ]),
+            ], new \Componenta\Config\Environment([])),
             'remember' => $safe,
         ]);
 

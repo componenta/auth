@@ -31,12 +31,12 @@ final readonly class DatabaseRememberMeTokenManagerConfigFactory implements Lazy
         #[\SensitiveParameter]
         ContainerInterface $container,
     ): DatabaseRememberMeTokenManagerConfig {
-        $config = $container->get(ConfigKey::CONFIG);
+        $config = $container->get(\Componenta\Config\Config::class);
 
         if (!$config instanceof Config) {
             throw new \LogicException(sprintf(
                 '%s must resolve to %s.',
-                ConfigKey::CONFIG,
+                \Componenta\Config\Config::class,
                 Config::class,
             ));
         }

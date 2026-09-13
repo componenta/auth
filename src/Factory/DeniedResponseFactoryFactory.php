@@ -17,13 +17,13 @@ final readonly class DeniedResponseFactoryFactory
         #[\SensitiveParameter]
         ContainerInterface $container,
     ): DeniedResponseFactory {
-        $config = $container->get(ConfigKey::CONFIG);
+        $config = $container->get(\Componenta\Config\Config::class);
         $responseFactory = $container->get(ResponseFactoryInterface::class);
 
         if (!$config instanceof Config) {
             throw new \LogicException(sprintf(
                 '%s must resolve to %s.',
-                ConfigKey::CONFIG,
+                \Componenta\Config\Config::class,
                 Config::class,
             ));
         }

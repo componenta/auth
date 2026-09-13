@@ -10,49 +10,21 @@ use Componenta\Auth\AuthenticatorInterface;
 use Componenta\Auth\ConfigProvider;
 use Componenta\Auth\ContextInterface;
 use Componenta\Auth\Denied\DeniedReason;
-use Componenta\Config\Config;
-use Componenta\DI\ConfigKey as DiConfigKey;
-use Componenta\DI\ContainerBuilder;
+use Componenta\Config\ConfigKey as DiConfigKey;
 use PHPUnit\Framework\TestCase;
 
 final class AuthenticatorDiIntegrationTest extends TestCase
 {
     public function testRuntimeCompositionResolvesThroughComponentaDi(): void
     {
-        $container = self::builder()->build();
-
-        self::assertInstanceOf(
-            AuthenticatorInterface::class,
-            $container->get(AuthenticatorInterface::class),
-        );
-    }
-
-    public function testCachedCompositionResolvesThroughPublicDiContract(): void
-    {
-        $configuration = self::configuration();
-        $dependencies = $configuration[DiConfigKey::DEPENDENCIES] ?? null;
-
-        self::assertIsArray($dependencies);
-        /** @var array<string, mixed> $dependencies */
-
-        $container = ContainerBuilder::configureFromCache(
-            new Config($configuration),
-            [
-                'version' => ContainerBuilder::CACHE_VERSION,
-                DiConfigKey::DEPENDENCIES
-                    => ContainerBuilder::normalizeDependencies($dependencies),
-            ],
-        )->build();
-
-        self::assertInstanceOf(
-            AuthenticatorInterface::class,
-            $container->get(AuthenticatorInterface::class),
-        );
-    }
-
-    private static function builder(): ContainerBuilder
-    {
-        return ContainerBuilder::configure(new Config(self::configuration()));
+        foreach (['development', 'production'] as $mode) {
+            $composition = (new \Componenta\Config\ConfigFactory())->create(
+                new \Componenta\Config\Environment(['APP_ENV' => $mode]),
+                static fn (): array => self::configuration(),
+            );
+            $container = (new \Componenta\DI\ContainerFactory())->create($composition->config, $composition->dependencies);
+            self::assertInstanceOf(AuthenticatorInterface::class, $container->get(AuthenticatorInterface::class));
+        }
     }
 
     /** @return array<string, mixed> */
