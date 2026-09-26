@@ -42,15 +42,6 @@ final readonly class AuthenticationResult implements \JsonSerializable
             );
         }
 
-        if (
-            $this->session !== null
-            && !$this->session->subjectId->equals($this->subject->uuid)
-        ) {
-            throw new \InvalidArgumentException(
-                'The authenticated session must belong to the returned identity.',
-            );
-        }
-
         $this->evidence = $evidence ?? AuthenticationEvidence::unknown();
     }
 
