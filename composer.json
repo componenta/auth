@@ -37,7 +37,8 @@
             ]
         },
         "branch-alias": {
-            "dev-main": "2.1.x-dev"
+            "dev-main": "2.1.x-dev",
+            "dev-auth-3": "3.0.x-dev"
         }
     },
     "config": {
