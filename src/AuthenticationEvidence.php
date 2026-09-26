@@ -30,14 +30,15 @@ final readonly class AuthenticationEvidence implements \JsonSerializable
         array $methods,
         array $capabilities = [],
     ) {
-        $this->methods = self::normalize($methods, 'method');
+        $normalizedMethods = self::normalize($methods, 'method');
 
-        if ($this->methods === []) {
+        if ($normalizedMethods === []) {
             throw new \InvalidArgumentException(
                 'Authentication evidence must contain at least one method.',
             );
         }
 
+        $this->methods = $normalizedMethods;
         $this->capabilities = self::normalize($capabilities, 'capability');
     }
 

@@ -75,6 +75,17 @@ final readonly class AuthenticationResult implements \JsonSerializable
         ];
     }
 
+    /**
+     * @return array{
+     *     subjectType: class-string,
+     *     subjectId: string|null,
+     *     deniedCode: string|null,
+     *     transportPayloadType: class-string|null,
+     *     stateType: class-string|null,
+     *     continueOnFailure: bool,
+     *     evidence: array{methods: non-empty-list<string>, capabilities: list<string>}|null
+     * }
+     */
     #[\Override]
     public function jsonSerialize(): array
     {

@@ -22,7 +22,7 @@ final readonly class GuardedAuthenticator implements AuthenticatorInterface
         private AuthenticatorInterface $authenticator,
         AuthenticationGuardInterface ...$guards,
     ) {
-        $this->guards = $guards;
+        $this->guards = array_values($guards);
     }
 
     #[\Override]
