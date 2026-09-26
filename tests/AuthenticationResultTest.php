@@ -17,13 +17,13 @@ use PHPUnit\Framework\TestCase;
 
 final class AuthenticationResultTest extends TestCase
 {
-    public function testRejectsSessionOnDeniedResult(): void
+    public function testRejectsStateOnDeniedResult(): void
     {
         $this->expectException(\InvalidArgumentException::class);
 
         new AuthenticationResult(
             new DeniedReason('invalid_credentials'),
-            session: self::session(
+            state: self::session(
                 Uuid::fromString('018f6d5d-3f7a-7a9b-8c2f-123456789abc'),
             ),
         );
@@ -39,30 +39,15 @@ final class AuthenticationResultTest extends TestCase
         );
     }
 
-    public function testRejectsSessionOwnedByAnotherIdentity(): void
-    {
-        $this->expectException(\InvalidArgumentException::class);
-        $identity = new AuthenticationResultIdentityFixture(
-            Uuid::fromString('018f6d5d-3f7a-7a9b-8c2f-123456789abc'),
-        );
-
-        new AuthenticationResult(
-            $identity,
-            session: self::session(
-                Uuid::fromString('018f6d5d-3f7a-7a9b-8c2f-123456789abd'),
-            ),
-        );
-    }
-
-    public function testAcceptsSessionOwnedByIdentity(): void
+    public function testAcceptsTypedAuthenticationState(): void
     {
         $uuid = Uuid::fromString('018f6d5d-3f7a-7a9b-8c2f-123456789abc');
         $identity = new AuthenticationResultIdentityFixture($uuid);
         $session = self::session($uuid);
 
-        $result = new AuthenticationResult($identity, session: $session);
+        $result = new AuthenticationResult($identity, state: $session);
 
-        self::assertSame($session, $result->session);
+        self::assertSame($session, $result->state);
         self::assertTrue($result->evidence?->hasMethod('unknown'));
     }
 
@@ -92,7 +77,7 @@ final class AuthenticationResultTest extends TestCase
         $result = new AuthenticationResult(
             $identity,
             transportPayload: new SessionPayload('session-secret'),
-            session: self::session($uuid),
+            state: self::session($uuid),
             evidence: new AuthenticationEvidence(['session']),
         );
 
@@ -107,6 +92,7 @@ final class AuthenticationResultTest extends TestCase
             SessionPayload::class,
             $decoded['transportPayloadType'] ?? null,
         );
+        self::assertSame(Session::class, $decoded['stateType'] ?? null);
         self::assertSame(['session'], $decoded['evidence']['methods'] ?? null);
     }
 

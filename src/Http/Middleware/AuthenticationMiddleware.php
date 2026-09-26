@@ -112,7 +112,9 @@ final readonly class AuthenticationMiddleware implements MiddlewareInterface
                 $result->subject,
             );
 
-            $session = $result->session;
+            $session = $result->state instanceof SessionInterface
+                ? $result->state
+                : null;
 
             if (
                 $session === null

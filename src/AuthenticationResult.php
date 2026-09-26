@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Componenta\Auth;
 
-use Componenta\Auth\Session\SessionInterface;
 use Componenta\Identity\IdentityInterface;
 
 final readonly class AuthenticationResult implements \JsonSerializable
@@ -17,18 +16,18 @@ final readonly class AuthenticationResult implements \JsonSerializable
         #[\SensitiveParameter]
         public ?object $transportPayload = null,
         #[\SensitiveParameter]
-        public ?SessionInterface $session = null,
+        public ?object $state = null,
         public bool $continueOnFailure = false,
         ?AuthenticationEvidence $evidence = null,
     ) {
         if ($this->subject instanceof DeniedReasonInterface) {
             if (
                 $this->transportPayload !== null
-                || $this->session !== null
+                || $this->state !== null
                 || $evidence !== null
             ) {
                 throw new \InvalidArgumentException(
-                    'A denied authentication result cannot contain evidence, credential mutations or a session.',
+                    'A denied authentication result cannot contain evidence, credential mutations or authentication state.',
                 );
             }
 
@@ -61,7 +60,7 @@ final readonly class AuthenticationResult implements \JsonSerializable
      *     subjectId: string|null,
      *     deniedCode: string|null,
      *     transportPayloadType: class-string|null,
-     *     hasSession: bool,
+     *     stateType: class-string|null,
      *     continueOnFailure: bool,
      *     evidence: array{methods: non-empty-list<string>, capabilities: list<string>}|null
      * }
@@ -79,7 +78,7 @@ final readonly class AuthenticationResult implements \JsonSerializable
             'transportPayloadType' => $this->transportPayload === null
                 ? null
                 : $this->transportPayload::class,
-            'hasSession' => $this->session !== null,
+            'stateType' => $this->state === null ? null : $this->state::class,
             'continueOnFailure' => $this->continueOnFailure,
             'evidence' => $this->evidence?->__debugInfo(),
         ];

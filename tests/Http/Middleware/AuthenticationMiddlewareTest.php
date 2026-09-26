@@ -249,7 +249,7 @@ final class AuthenticationMiddlewareTest extends TestCase
         $innerExtractor->method('extract')->willReturn(new \stdClass());
         $outerAuthenticator = $this->createStub(AuthenticatorInterface::class);
         $outerAuthenticator->method('attempt')->willReturn(
-            new AuthenticationResult($identity, session: $session),
+            new AuthenticationResult($identity, state: $session),
         );
         $innerAuthenticator = $this->createStub(AuthenticatorInterface::class);
         $innerAuthenticator->method('attempt')->willReturn(

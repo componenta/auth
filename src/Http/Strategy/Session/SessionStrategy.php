@@ -91,7 +91,7 @@ final readonly class SessionStrategy implements AuthenticationStrategyInterface
         return new AuthenticationResult(
             subject: $identity,
             transportPayload: $transportPayload,
-            session: $session,
+            state: $session,
         );
     }
 

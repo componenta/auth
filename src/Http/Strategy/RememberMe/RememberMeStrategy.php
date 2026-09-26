@@ -119,7 +119,7 @@ final readonly class RememberMeStrategy implements AuthenticationStrategyInterfa
                 $session->id,
                 $rotation->successorToken,
             ),
-            session: $session,
+            state: $session,
         );
     }
 

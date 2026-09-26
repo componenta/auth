@@ -52,7 +52,7 @@ final class SessionStrategyTest extends TestCase
         );
 
         self::assertSame($identity, $result->subject);
-        self::assertSame($new, $result->session);
+        self::assertSame($new, $result->state);
         self::assertInstanceOf(SessionPayload::class, $result->transportPayload);
         self::assertSame('new-session', $result->transportPayload->sessionId);
     }
@@ -78,7 +78,7 @@ final class SessionStrategyTest extends TestCase
         );
 
         self::assertInstanceOf(InvalidCredentials::class, $result->subject);
-        self::assertNull($result->session);
+        self::assertNull($result->state);
         self::assertNull($result->transportPayload);
     }
 
@@ -130,7 +130,7 @@ final class SessionStrategyTest extends TestCase
         );
 
         self::assertInstanceOf(InvalidCredentials::class, $result->subject);
-        self::assertNull($result->session);
+        self::assertNull($result->state);
         self::assertNull($result->transportPayload);
     }
 

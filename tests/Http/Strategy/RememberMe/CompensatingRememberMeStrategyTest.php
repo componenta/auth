@@ -41,7 +41,7 @@ final class CompensatingRememberMeStrategyTest extends TestCase
         $strategy = new CompensatingRememberMeStrategy($delegate, $tokens, $sessions);
 
         $result = $strategy->attempt(new \stdClass(), $context);
-        self::assertSame($session, $result->session);
+        self::assertSame($session, $result->state);
 
         $state->discardQueued();
     }
@@ -72,7 +72,7 @@ final class CompensatingRememberMeStrategyTest extends TestCase
 
         self::assertInstanceOf(InvalidCredentials::class, $result->subject);
         self::assertNull($result->transportPayload);
-        self::assertNull($result->session);
+        self::assertNull($result->state);
     }
 
     public function testSuccessfulResultIsPreservedWhenNoTransportStateExists(): void

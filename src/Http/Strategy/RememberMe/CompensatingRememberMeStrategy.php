@@ -47,13 +47,13 @@ final readonly class CompensatingRememberMeStrategy implements AuthenticationStr
     ): AuthenticationResult {
         $result = $this->strategy->attempt($payload, $context);
         $transportPayload = $result->transportPayload;
-        $session = $result->session;
+        $session = $result->state;
         $state = $context->getAttribute(CredentialTransportState::class);
 
         if (
             !$transportPayload instanceof SessionPayload
             || $transportPayload->rememberMeToken === null
-            || $session === null
+            || !$session instanceof SessionInterface
             || !$state instanceof CredentialTransportState
         ) {
             return $result;

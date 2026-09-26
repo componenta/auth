@@ -65,7 +65,7 @@ final class RememberMeStrategyTest extends TestCase
         );
 
         self::assertInstanceOf(InvalidCredentials::class, $result->subject);
-        self::assertNull($result->session);
+        self::assertNull($result->state);
         self::assertNull($result->transportPayload);
     }
 
@@ -163,7 +163,7 @@ final class RememberMeStrategyTest extends TestCase
         );
 
         self::assertInstanceOf(InvalidCredentials::class, $result->subject);
-        self::assertNull($result->session);
+        self::assertNull($result->state);
         self::assertNull($result->transportPayload);
     }
 
@@ -199,7 +199,7 @@ final class RememberMeStrategyTest extends TestCase
         );
 
         self::assertInstanceOf(InvalidCredentials::class, $result->subject);
-        self::assertNull($result->session);
+        self::assertNull($result->state);
         self::assertNull($result->transportPayload);
     }
 
