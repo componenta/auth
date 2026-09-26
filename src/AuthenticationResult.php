@@ -15,8 +15,7 @@ final readonly class AuthenticationResult implements \JsonSerializable
         public IdentityInterface|DeniedReasonInterface $subject,
         #[\SensitiveParameter]
         public ?object $transportPayload = null,
-        #[\SensitiveParameter]
-        public ?object $state = null,
+        public ?AuthenticationStateInterface $state = null,
         public bool $continueOnFailure = false,
         ?AuthenticationEvidence $evidence = null,
     ) {
@@ -42,7 +41,13 @@ final readonly class AuthenticationResult implements \JsonSerializable
             );
         }
 
-        $this->evidence = $evidence ?? AuthenticationEvidence::unknown();
+        if ($evidence === null) {
+            throw new \InvalidArgumentException(
+                'A successful authentication result must contain authentication evidence.',
+            );
+        }
+
+        $this->evidence = $evidence;
     }
 
     /**

@@ -6,6 +6,7 @@ namespace Componenta\Auth\Tests;
 
 use Componenta\Auth\AuthenticationEvidence;
 use Componenta\Auth\AuthenticationResult;
+use Componenta\Auth\AuthenticationStateInterface;
 use Componenta\Auth\Denied\DeniedReason;
 use Componenta\Identity\IdentityInterface;
 use Componenta\Identity\Uuid;
@@ -34,31 +35,34 @@ final class AuthenticationResultTest extends TestCase
         );
     }
 
+    public function testRejectsSuccessfulResultWithoutEvidence(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        new AuthenticationResult(
+            new AuthenticationResultIdentityFixture(
+                Uuid::fromString(
+                    '018f6d5d-3f7a-7a9b-8c2f-123456789abc',
+                ),
+            ),
+        );
+    }
+
     public function testAcceptsOneTypedAuthenticationStateObject(): void
     {
         $identity = new AuthenticationResultIdentityFixture(
             Uuid::fromString('018f6d5d-3f7a-7a9b-8c2f-123456789abc'),
         );
         $state = new AuthenticationStateFixture();
+        $evidence = new AuthenticationEvidence(['custom']);
 
-        $result = new AuthenticationResult($identity, state: $state);
+        $result = new AuthenticationResult(
+            $identity,
+            state: $state,
+            evidence: $evidence,
+        );
 
         self::assertSame($state, $result->state);
-        self::assertTrue($result->evidence?->hasMethod('unknown'));
-    }
-
-    public function testPreservesExplicitAuthenticationEvidence(): void
-    {
-        $identity = new AuthenticationResultIdentityFixture(
-            Uuid::fromString('018f6d5d-3f7a-7a9b-8c2f-123456789abc'),
-        );
-        $evidence = new AuthenticationEvidence(
-            ['webauthn'],
-            ['user_verified', 'phishing_resistant'],
-        );
-
-        $result = new AuthenticationResult($identity, evidence: $evidence);
-
         self::assertSame($evidence, $result->evidence);
     }
 
@@ -109,7 +113,7 @@ final class AuthenticationPayloadFixture
     public string $secret = 'transport-secret';
 }
 
-final class AuthenticationStateFixture
+final class AuthenticationStateFixture implements AuthenticationStateInterface
 {
     public string $secret = 'state-secret';
 }

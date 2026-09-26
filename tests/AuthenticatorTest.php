@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Tests;
 
+use Componenta\Auth\AuthenticationEvidence;
 use Componenta\Auth\AuthenticationResult;
 use Componenta\Auth\AuthenticationStrategyInterface;
 use Componenta\Auth\Authenticator;
@@ -30,7 +31,10 @@ final class AuthenticatorTest extends TestCase
                 subject: new DeniedReason('invalid'),
                 continueOnFailure: true,
             )),
-            new AuthStrategyFixture(true, new AuthenticationResult($identity)),
+            new AuthStrategyFixture(true, new AuthenticationResult(
+                $identity,
+                evidence: new AuthenticationEvidence(['test']),
+            )),
         );
 
         self::assertSame(

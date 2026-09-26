@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Tests\Event;
 
+use Componenta\Auth\AuthenticationEvidence;
 use Componenta\Auth\AuthenticationResult;
 use Componenta\Auth\AuthenticatorInterface;
 use Componenta\Auth\Context;
@@ -27,7 +28,10 @@ final class EventingAuthenticatorTest extends TestCase
     {
         $identity = new EventingIdentityFixture();
         $inner = $this->createStub(AuthenticatorInterface::class);
-        $inner->method('attempt')->willReturn(new AuthenticationResult($identity));
+        $inner->method('attempt')->willReturn(new AuthenticationResult(
+            $identity,
+            evidence: new AuthenticationEvidence(['test']),
+        ));
         $listener = new EventCollectorFixture();
         $dispatcher = new EventDispatcher(new EventCollectorProviderFixture($listener));
         $payload = new EventCredentialFixture('secret');
