@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Componenta\Auth\Tests;
 
+use Componenta\Auth\AuthenticationEvidence;
 use Componenta\Auth\AuthenticationResult;
 use Componenta\Auth\Denied\DeniedReason;
 use Componenta\Auth\Http\Transport\SessionPayload;
@@ -25,6 +26,16 @@ final class AuthenticationResultTest extends TestCase
             session: self::session(
                 Uuid::fromString('018f6d5d-3f7a-7a9b-8c2f-123456789abc'),
             ),
+        );
+    }
+
+    public function testRejectsEvidenceOnDeniedResult(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        new AuthenticationResult(
+            new DeniedReason('invalid_credentials'),
+            evidence: new AuthenticationEvidence(['password']),
         );
     }
 
@@ -52,6 +63,22 @@ final class AuthenticationResultTest extends TestCase
         $result = new AuthenticationResult($identity, session: $session);
 
         self::assertSame($session, $result->session);
+        self::assertTrue($result->evidence?->hasMethod('unknown'));
+    }
+
+    public function testPreservesExplicitAuthenticationEvidence(): void
+    {
+        $identity = new AuthenticationResultIdentityFixture(
+            Uuid::fromString('018f6d5d-3f7a-7a9b-8c2f-123456789abc'),
+        );
+        $evidence = new AuthenticationEvidence(
+            ['webauthn'],
+            ['user_verified', 'phishing_resistant'],
+        );
+
+        $result = new AuthenticationResult($identity, evidence: $evidence);
+
+        self::assertSame($evidence, $result->evidence);
     }
 
     public function testSerializationDoesNotTraverseIdentityOrCredentials(): void
@@ -66,6 +93,7 @@ final class AuthenticationResultTest extends TestCase
             $identity,
             transportPayload: new SessionPayload('session-secret'),
             session: self::session($uuid),
+            evidence: new AuthenticationEvidence(['session']),
         );
 
         $json = json_encode($result, JSON_THROW_ON_ERROR);
@@ -79,6 +107,7 @@ final class AuthenticationResultTest extends TestCase
             SessionPayload::class,
             $decoded['transportPayloadType'] ?? null,
         );
+        self::assertSame(['session'], $decoded['evidence']['methods'] ?? null);
     }
 
     private static function session(UuidInterface $subjectId): Session

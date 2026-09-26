@@ -9,6 +9,8 @@ use Componenta\Identity\IdentityInterface;
 
 final readonly class AuthenticationResult implements \JsonSerializable
 {
+    public ?AuthenticationEvidence $evidence;
+
     public function __construct(
         #[\SensitiveParameter]
         public IdentityInterface|DeniedReasonInterface $subject,
@@ -17,13 +19,20 @@ final readonly class AuthenticationResult implements \JsonSerializable
         #[\SensitiveParameter]
         public ?SessionInterface $session = null,
         public bool $continueOnFailure = false,
+        ?AuthenticationEvidence $evidence = null,
     ) {
         if ($this->subject instanceof DeniedReasonInterface) {
-            if ($this->transportPayload !== null || $this->session !== null) {
+            if (
+                $this->transportPayload !== null
+                || $this->session !== null
+                || $evidence !== null
+            ) {
                 throw new \InvalidArgumentException(
-                    'A denied authentication result cannot contain credential mutations or a session.',
+                    'A denied authentication result cannot contain evidence, credential mutations or a session.',
                 );
             }
+
+            $this->evidence = null;
 
             return;
         }
@@ -42,9 +51,21 @@ final readonly class AuthenticationResult implements \JsonSerializable
                 'The authenticated session must belong to the returned identity.',
             );
         }
+
+        $this->evidence = $evidence ?? AuthenticationEvidence::unknown();
     }
 
-    /** @return array<string, bool|string|null> */
+    /**
+     * @return array{
+     *     subjectType: class-string,
+     *     subjectId: string|null,
+     *     deniedCode: string|null,
+     *     transportPayloadType: class-string|null,
+     *     hasSession: bool,
+     *     continueOnFailure: bool,
+     *     evidence: array{methods: non-empty-list<string>, capabilities: list<string>}|null
+     * }
+     */
     public function __debugInfo(): array
     {
         return [
@@ -60,10 +81,10 @@ final readonly class AuthenticationResult implements \JsonSerializable
                 : $this->transportPayload::class,
             'hasSession' => $this->session !== null,
             'continueOnFailure' => $this->continueOnFailure,
+            'evidence' => $this->evidence?->__debugInfo(),
         ];
     }
 
-    /** @return array<string, bool|string|null> */
     #[\Override]
     public function jsonSerialize(): array
     {
