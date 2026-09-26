@@ -32,9 +32,8 @@ Core не зависит от PSR HTTP, Componenta DI, Cycle Database, password/
 - `componenta/auth-app` — invocation-only `#[CurrentUser]`.
 - `componenta/auth-session` — модель и lifecycle authentication session.
 - `componenta/auth-session-database` — persistence через Cycle Database.
-- `componenta/auth-session-http` — browser session и pre-auth transport.
+- `componenta/auth-session-http` — browser session, pre-auth transport и CSRF, привязанный к generation сессии.
 - `componenta/auth-session-app` — invocation-only `#[CurrentSession]`.
-- `componenta/auth-session-csrf` — CSRF, привязанный к generation сессии.
 
 Password, OTP, remember-me, magic-link, password-reset, JWT, WebAuthn, TOTP и
 recovery codes должны находиться в собственных capability-пакетах.

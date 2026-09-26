@@ -30,9 +30,8 @@ Install only the capabilities your application uses:
 - `componenta/auth-app` — invocation-only `#[CurrentUser]`.
 - `componenta/auth-session` — authentication-session contracts and lifecycle.
 - `componenta/auth-session-database` — Cycle Database persistence.
-- `componenta/auth-session-http` — secure browser session and pre-auth transport.
+- `componenta/auth-session-http` — secure browser session, pre-auth transport and session-bound CSRF.
 - `componenta/auth-session-app` — invocation-only `#[CurrentSession]`.
-- `componenta/auth-session-csrf` — session-generation-bound CSRF.
 
 Password, OTP, remember-me, magic-link, password-reset, JWT, WebAuthn, TOTP
 and recovery-code support belong to their own capability packages.

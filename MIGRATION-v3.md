@@ -53,7 +53,6 @@ componenta/auth-session
 componenta/auth-session-database
 componenta/auth-session-http
 componenta/auth-session-app
-componenta/auth-session-csrf
 ```
 
 The public session management identifier is now:
@@ -94,7 +93,7 @@ Use the pre-authentication transaction from `componenta/auth-session` +
 ## CSRF
 
 Session CSRF no longer needs a mutable secret field on the session record.
-`componenta/auth-session-csrf` derives a synchronizer token from the public
+`componenta/auth-session-http` derives a synchronizer token from the public
 session UUID + credential generation using a server key. Session credential
 rotation invalidates the old CSRF token automatically.
 
