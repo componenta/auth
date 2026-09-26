@@ -109,7 +109,7 @@ final class CountingGuardFixture implements AuthenticationGuardInterface
     }
 }
 
-final readonly class GuardedIdentityFixture implements IdentityInterface
+final class GuardedIdentityFixture implements IdentityInterface
 {
     public UuidInterface $uuid {
         get => Uuid::fromString('018f6d5d-3f7a-7a9b-8c2f-123456789abc');
