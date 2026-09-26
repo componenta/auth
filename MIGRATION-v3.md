@@ -110,10 +110,10 @@ Migration targets:
 | password | auth-password* |
 | one-time token | auth-token* |
 | magic link | auth-magic-link* |
-| password reset | auth-password-reset* |
+| password reset | auth-password (using auth-token purpose=password_reset) |
 | JWT / refresh grants | auth-jwt* |
 | OTP | auth-otp* |
-| reauthentication | auth-reauth* |
+| reauthentication | auth-session + concrete factor package (auth-otp/auth-webauthn/auth-totp/auth-recovery-code) |
 | WebAuthn/passkeys | auth-webauthn* |
 | TOTP | auth-totp* |
 | recovery codes | auth-recovery-code* |
