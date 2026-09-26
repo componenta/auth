@@ -7,12 +7,9 @@ namespace Componenta\Auth\Tests;
 use Componenta\Auth\AuthenticationEvidence;
 use Componenta\Auth\AuthenticationResult;
 use Componenta\Auth\Denied\DeniedReason;
-use Componenta\Auth\Http\Transport\SessionPayload;
-use Componenta\Auth\Session\Session;
 use Componenta\Identity\IdentityInterface;
 use Componenta\Identity\Uuid;
 use Componenta\Identity\UuidInterface;
-use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 
 final class AuthenticationResultTest extends TestCase
@@ -23,9 +20,7 @@ final class AuthenticationResultTest extends TestCase
 
         new AuthenticationResult(
             new DeniedReason('invalid_credentials'),
-            state: self::session(
-                Uuid::fromString('018f6d5d-3f7a-7a9b-8c2f-123456789abc'),
-            ),
+            state: new AuthenticationStateFixture(),
         );
     }
 
@@ -39,15 +34,16 @@ final class AuthenticationResultTest extends TestCase
         );
     }
 
-    public function testAcceptsTypedAuthenticationState(): void
+    public function testAcceptsOneTypedAuthenticationStateObject(): void
     {
-        $uuid = Uuid::fromString('018f6d5d-3f7a-7a9b-8c2f-123456789abc');
-        $identity = new AuthenticationResultIdentityFixture($uuid);
-        $session = self::session($uuid);
+        $identity = new AuthenticationResultIdentityFixture(
+            Uuid::fromString('018f6d5d-3f7a-7a9b-8c2f-123456789abc'),
+        );
+        $state = new AuthenticationStateFixture();
 
-        $result = new AuthenticationResult($identity, state: $session);
+        $result = new AuthenticationResult($identity, state: $state);
 
-        self::assertSame($session, $result->state);
+        self::assertSame($state, $result->state);
         self::assertTrue($result->evidence?->hasMethod('unknown'));
     }
 
@@ -66,7 +62,7 @@ final class AuthenticationResultTest extends TestCase
         self::assertSame($evidence, $result->evidence);
     }
 
-    public function testSerializationDoesNotTraverseIdentityOrCredentials(): void
+    public function testSerializationDoesNotTraverseIdentityPayloadOrState(): void
     {
         $uuid = Uuid::fromString('018f6d5d-3f7a-7a9b-8c2f-123456789abc');
         $identity = new class($uuid) implements IdentityInterface {
@@ -74,10 +70,12 @@ final class AuthenticationResultTest extends TestCase
 
             public function __construct(public UuidInterface $uuid) {}
         };
+        $payload = new AuthenticationPayloadFixture();
+        $state = new AuthenticationStateFixture();
         $result = new AuthenticationResult(
             $identity,
-            transportPayload: new SessionPayload('session-secret'),
-            state: self::session($uuid),
+            transportPayload: $payload,
+            state: $state,
             evidence: new AuthenticationEvidence(['session']),
         );
 
@@ -86,34 +84,32 @@ final class AuthenticationResultTest extends TestCase
 
         self::assertIsArray($decoded);
         self::assertStringNotContainsString('identity-secret', $json);
-        self::assertStringNotContainsString('session-secret', $json);
+        self::assertStringNotContainsString('transport-secret', $json);
+        self::assertStringNotContainsString('state-secret', $json);
         self::assertSame($uuid->toString(), $decoded['subjectId'] ?? null);
         self::assertSame(
-            SessionPayload::class,
+            AuthenticationPayloadFixture::class,
             $decoded['transportPayloadType'] ?? null,
         );
-        self::assertSame(Session::class, $decoded['stateType'] ?? null);
-        self::assertSame(['session'], $decoded['evidence']['methods'] ?? null);
-    }
-
-    private static function session(UuidInterface $subjectId): Session
-    {
-        $now = new DateTimeImmutable('@1000');
-
-        return new Session(
-            id: 'session-id',
-            subjectId: $subjectId,
-            expiresAt: $now->modify('+30 minutes'),
-            absoluteExpiresAt: $now->modify('+8 hours'),
-            regenerateAt: $now->modify('+5 minutes'),
-            replacedBy: null,
-            createdAt: $now,
-            lastActiveAt: $now,
+        self::assertSame(
+            AuthenticationStateFixture::class,
+            $decoded['stateType'] ?? null,
         );
+        self::assertSame(['session'], $decoded['evidence']['methods'] ?? null);
     }
 }
 
 final readonly class AuthenticationResultIdentityFixture implements IdentityInterface
 {
     public function __construct(public UuidInterface $uuid) {}
+}
+
+final class AuthenticationPayloadFixture
+{
+    public string $secret = 'transport-secret';
+}
+
+final class AuthenticationStateFixture
+{
+    public string $secret = 'state-secret';
 }
