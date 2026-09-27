@@ -91,12 +91,100 @@ jobs:
               archive.add(output / "manifest.json", arcname="manifest.json")
           print(json.dumps(manifest, indent=2))
 
-      - name: Preserve audit sources and commit manifest
+      - name: Setup audit PHP
+        uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: '8.4'
+          coverage: none
+          extensions: dom, mbstring, xml, xmlwriter, pdo_sqlite, sodium
+          tools: composer:v2
+
+      - name: Verify the captured package set together
+        env:
+          SNAPSHOT_OUTPUT: ${{ runner.temp }}/auth3-audit
+        shell: python
+        run: |
+          import json
+          import os
+          import pathlib
+          import shutil
+          import subprocess
+          import tarfile
+
+          root = pathlib.Path(os.environ["SNAPSHOT_OUTPUT"])
+          manifest = json.loads((root / "manifest.json").read_text())
+          versions = {"componenta/" + name: "dev-" + item["branch"] for name, item in manifest.items()}
+          require = dict(versions)
+          tests = {}
+          repositories = {}
+          packages = {}
+          for name in manifest:
+              package = json.loads((root / "sources" / name / "composer.json").read_text())
+              packages[name] = package
+              for dependency, constraint in package.get("require-dev", {}).items():
+                  if dependency not in versions:
+                      previous = require.setdefault(dependency, constraint)
+                      if previous != constraint:
+                          raise RuntimeError("Conflicting audit dev constraints: " + dependency)
+              for namespace, paths in package.get("autoload-dev", {}).get("psr-4", {}).items():
+                  paths = [paths] if isinstance(paths, str) else paths
+                  tests[namespace] = ["sources/" + name + "/" + path for path in paths]
+              for repository in package.get("repositories", []):
+                  if repository.get("type") == "vcs":
+                      repositories[repository["url"]] = repository
+          composer = {
+              "name": "componenta/auth3-audit-workspace", "type": "project",
+              "require": require, "minimum-stability": "dev", "prefer-stable": True,
+              "repositories": [{"type": "path", "url": "sources/*", "options": {
+                  "symlink": True, "versions": versions,
+              }}, *repositories.values()],
+              "autoload-dev": {"psr-4": tests},
+              "config": {"allow-plugins": {"pestphp/pest-plugin": True}},
+          }
+          (root / "composer.json").write_text(json.dumps(composer, indent=2) + "\n")
+          subprocess.run(["composer", "update", "--no-interaction", "--no-progress", "--prefer-dist"], cwd=root, check=True)
+          results = {}
+          logs = root / "verification"
+          logs.mkdir()
+          for name, package in packages.items():
+              directory = root / "sources" / name
+              (directory / "vendor").symlink_to("../../vendor", target_is_directory=True)
+              results[name] = {}
+              for label, command in {
+                  "tests": ["php", "vendor/bin/pest"] if "pestphp/pest" in package.get("require-dev", {}) else ["php", "vendor/bin/phpunit", "--configuration", "phpunit.xml.dist"],
+                  "phpstan": ["php", "vendor/bin/phpstan", "analyse", "src", "--level=max", "--no-progress"],
+              }.items():
+                  with (logs / (name + "-" + label + ".log")).open("w") as log:
+                      result = subprocess.run(command, cwd=directory, stdout=log, stderr=subprocess.STDOUT)
+                  results[name][label] = result.returncode
+                  print(name, label, result.returncode, flush=True)
+          with (logs / "composer-audit.json").open("w") as log:
+              audit = subprocess.run(["composer", "audit", "--format=json", "--no-interaction"], cwd=root, stdout=log, stderr=subprocess.STDOUT)
+          (logs / "results.json").write_text(json.dumps({"packages": results, "composer_audit": audit.returncode}, indent=2) + "\n")
+          # Preserve resolved dependencies and native modules for offline reproduction.
+          # No Composer home, checkout credentials or environment secrets are archived.
+          runtime = root / "runtime"
+          runtime.mkdir()
+          extension_dir = pathlib.Path(subprocess.check_output(["php", "-r", "echo ini_get('extension_dir');"], text=True))
+          for module in ["dom", "mbstring", "xml", "xmlreader", "xmlwriter", "pdo_sqlite", "sqlite3"]:
+              path = extension_dir / (module + ".so")
+              if path.is_file():
+                  shutil.copy2(path, runtime / path.name)
+          with tarfile.open(root / "auth3-verification.tar.gz", "w:gz") as archive:
+              for name in ["sources", "vendor", "runtime", "verification", "manifest.json", "composer.json", "composer.lock"]:
+                  archive.add(root / name, arcname=name)
+          if audit.returncode or any(code for item in results.values() for code in item.values()):
+              raise SystemExit(1)
+
+      - name: Preserve audit sources and verification evidence
+        if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: auth3-audit-sources
           path: |
             ${{ runner.temp }}/auth3-audit/auth3-sources.tar.gz
+            ${{ runner.temp }}/auth3-audit/auth3-verification.tar.gz
             ${{ runner.temp }}/auth3-audit/manifest.json
+            ${{ runner.temp }}/auth3-audit/verification/
           if-no-files-found: error
           retention-days: 7
