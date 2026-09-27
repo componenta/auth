@@ -1,0 +1,102 @@
+name: Auth 3 audit snapshot
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [auth-3]
+    paths: ['.github/workflows/audit-snapshot.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout audited core
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Collect immutable source snapshots
+        env:
+          SNAPSHOT_CORE_SHA: ${{ github.sha }}
+          SNAPSHOT_OUTPUT: ${{ runner.temp }}/auth3-audit
+        shell: python
+        run: |
+          import concurrent.futures
+          import hashlib
+          import json
+          import os
+          import pathlib
+          import subprocess
+          import tarfile
+          import tempfile
+
+          # Explicit scope: componenta/session is not an authentication package.
+          # This is source-review evidence, not a successful test/ASVS claim.
+          branches = {
+              "auth": "auth-3", "auth-app": "auth-3",
+              "auth-http": "main", "auth-session": "main",
+              "auth-session-database": "main", "auth-session-http": "main",
+              "auth-session-app": "main", "auth-password": "main",
+              "auth-remember-me": "main", "auth-token": "main",
+              "auth-magic-link": "main", "auth-jwt": "main",
+              "auth-otp": "main", "auth-webauthn": "main",
+              "auth-totp": "main", "auth-recovery-code": "main",
+          }
+          output = pathlib.Path(os.environ["SNAPSHOT_OUTPUT"])
+          output.mkdir(parents=True, exist_ok=True)
+          sources = output / "sources"
+          sources.mkdir()
+          core = pathlib.Path.cwd()
+
+          def git(*args):
+              return subprocess.check_output(["git", *args], text=True).strip()
+
+          def collect(item):
+              name, branch = item
+              with tempfile.TemporaryDirectory() as temporary:
+                  temporary = pathlib.Path(temporary)
+                  if name == "auth":
+                      repository = core
+                      sha = os.environ["SNAPSHOT_CORE_SHA"]
+                  else:
+                      repository = temporary / "checkout"
+                      subprocess.run([
+                          "git", "clone", "--depth=1", "--single-branch",
+                          "--branch", branch, "--",
+                          f"https://github.com/componenta/{name}.git", str(repository),
+                      ], check=True)
+                      sha = git("-C", str(repository), "rev-parse", "HEAD")
+                  archive = temporary / "source.tar"
+                  git("-C", str(repository), "archive", "--format=tar", "-o", str(archive), sha)
+                  destination = sources / name
+                  destination.mkdir()
+                  with tarfile.open(archive) as stream:
+                      stream.extractall(destination, filter="data")
+                  return name, {
+                      "repository": f"componenta/{name}", "branch": branch,
+                      "commit": sha,
+                      "tree": git("-C", str(repository), "rev-parse", f"{sha}^{{tree}}"),
+                      "archive_sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+                  }
+
+          with concurrent.futures.ThreadPoolExecutor(max_workers=4) as pool:
+              manifest = dict(sorted(pool.map(collect, branches.items())))
+          (output / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+          with tarfile.open(output / "auth3-sources.tar.gz", "w:gz") as archive:
+              archive.add(sources, arcname="sources")
+              archive.add(output / "manifest.json", arcname="manifest.json")
+          print(json.dumps(manifest, indent=2))
+
+      - name: Preserve audit sources and commit manifest
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: auth3-audit-sources
+          path: |
+            ${{ runner.temp }}/auth3-audit/auth3-sources.tar.gz
+            ${{ runner.temp }}/auth3-audit/manifest.json
+          if-no-files-found: error
+          retention-days: 7
