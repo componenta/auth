@@ -12,7 +12,46 @@ permissions:
 jobs:
   snapshot:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
+
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: auth_session_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: auth_session_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d auth_session_test"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      AUTH_SESSION_TEST_MYSQL_DSN: mysql:host=127.0.0.1;port=3306;dbname=auth_session_test
+      AUTH_SESSION_TEST_MYSQL_USER: root
+      AUTH_SESSION_TEST_MYSQL_PASSWORD: root
+      AUTH_SESSION_TEST_PG_DATABASE: auth_session_test
+      AUTH_SESSION_TEST_PG_HOST: 127.0.0.1
+      AUTH_SESSION_TEST_PG_PORT: '5432'
+      AUTH_SESSION_TEST_PG_USER: postgres
+      AUTH_SESSION_TEST_PG_PASSWORD: postgres
+
     steps:
       - name: Checkout audited core
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -96,7 +135,7 @@ jobs:
         with:
           php-version: '8.4'
           coverage: none
-          extensions: dom, mbstring, xml, xmlwriter, pdo_sqlite, sodium
+          extensions: dom, mbstring, xml, xmlwriter, pdo_sqlite, pdo_mysql, pdo_pgsql, sodium
           tools: composer:v2
 
       - name: Verify the captured package set together
@@ -151,9 +190,11 @@ jobs:
               (directory / "vendor").symlink_to("../../vendor", target_is_directory=True)
               results[name] = {}
               for label, command in {
-                  "tests": ["php", "vendor/bin/pest"] if "pestphp/pest" in package.get("require-dev", {}) else ["php", "vendor/bin/phpunit", "--configuration", "phpunit.xml.dist"],
+                  "tests": ["php", "vendor/bin/pest", "--test-directory=sources/" + name + "/tests", "--configuration=phpunit.xml.dist"] if "pestphp/pest" in package.get("require-dev", {}) else ["php", "vendor/bin/phpunit", "--configuration", "phpunit.xml.dist"],
                   "phpstan": ["php", "vendor/bin/phpstan", "analyse", "src", "--level=max", "--no-progress"],
               }.items():
+                  if label == "tests":
+                      command.extend(["--log-junit", str(logs / (name + "-junit.xml"))])
                   with (logs / (name + "-" + label + ".log")).open("w") as log:
                       result = subprocess.run(command, cwd=directory, stdout=log, stderr=subprocess.STDOUT)
                   results[name][label] = result.returncode
