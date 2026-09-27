@@ -22,7 +22,12 @@ New:
 - `IdentityProviderInterface`.
 
 Successful `AuthenticationResult` now requires explicit
-`AuthenticationEvidence`.
+`AuthenticationEvidence`. Use `$evidence->merge($proof)` when combining established
+methods and capabilities. It removes duplicates, preserves order, and enforces
+the evidence limits.
+
+`AuthenticatorConfigurationException` has been removed: Auth 3 no longer uses
+the Auth 2 configuration layer that required this exception.
 
 ## HTTP
 

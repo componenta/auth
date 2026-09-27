@@ -47,6 +47,25 @@ final readonly class AuthenticationEvidence implements \JsonSerializable
         return new self(['unknown']);
     }
 
+    /**
+     * Combines established evidence, preserving first-seen order and bounds.
+     * Neither input is modified; the result still allows at most 16 identifiers
+     * in each list after removing duplicates.
+     */
+    public function merge(self $other): self
+    {
+        return new self(
+            methods: array_values(array_unique([
+                ...$this->methods,
+                ...$other->methods,
+            ])),
+            capabilities: array_values(array_unique([
+                ...$this->capabilities,
+                ...$other->capabilities,
+            ])),
+        );
+    }
+
     public function hasMethod(string $method): bool
     {
         return in_array($method, $this->methods, true);
