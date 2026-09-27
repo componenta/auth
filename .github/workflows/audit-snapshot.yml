@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches: [auth-3]
-    paths: ['.github/workflows/audit-snapshot.yml']
+    paths: ['.github/workflows/audit-snapshot.yml', 'integration-tests/**']
 
 permissions:
   contents: read
@@ -216,6 +216,19 @@ jobs:
                   archive.add(root / name, arcname=name)
           if audit.returncode or any(code for item in results.values() for code in item.values()):
               raise SystemExit(1)
+
+      - name: Exercise real competing database transactions
+        if: success() || failure()
+        env:
+          SNAPSHOT_OUTPUT: ${{ runner.temp }}/auth3-audit
+        shell: bash
+        run: |
+          cd "$SNAPSHOT_OUTPUT"
+          test -f vendor/autoload.php
+          php vendor/bin/phpunit --no-configuration --bootstrap vendor/autoload.php \
+            sources/auth/integration-tests/StorageConcurrencyTest.php \
+            --fail-on-skipped --log-junit verification/storage-races-junit.xml \
+            2>&1 | tee verification/storage-races.log
 
       - name: Preserve audit sources and verification evidence
         if: always()
