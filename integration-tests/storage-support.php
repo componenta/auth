@@ -31,8 +31,8 @@ function database(string $engine): DatabaseInterface
 /** Separate process/connection; no inherited PDO sockets or timing-based success claims. */
 final class Worker
 {
-    private mixed $process;
-    private array $pipes;
+    private mixed $process = null;
+    private array $pipes = [];
     private string $buffer = '';
     public int $backendId;
 
@@ -47,11 +47,16 @@ final class Worker
         stream_set_blocking($this->pipes[1], false);
         stream_set_blocking($this->pipes[2], false);
         fwrite($this->pipes[0], json_encode($input, JSON_THROW_ON_ERROR) . "\n");
-        $event = $this->awaitEvent();
-        if (($event['event'] ?? null) !== 'ready') {
-            throw new \RuntimeException('Storage worker was not ready: ' . json_encode($event));
+        try {
+            $event = $this->awaitEvent();
+            if (($event['event'] ?? null) !== 'ready') {
+                throw new \RuntimeException('Storage worker was not ready: ' . json_encode($event));
+            }
+            $this->backendId = $event['backendId'];
+        } catch (\Throwable $error) {
+            $this->close();
+            throw $error;
         }
-        $this->backendId = $event['backendId'];
     }
 
     public function poll(): ?array
