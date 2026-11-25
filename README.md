@@ -93,6 +93,35 @@ state.
 Guards are not authorization policies. Roles and permissions remain application
 authorization concerns.
 
+## Events and decorator order
+
+Place lifecycle observation outside guard evaluation so the published outcome
+includes the final subject checks:
+
+```php
+$authenticator = new EventingAuthenticator(
+    new GuardedAuthenticator(new Authenticator(...$strategies), ...$guards),
+    new EventDispatcher($listeners, $logger),
+);
+```
+
+`EventingAuthenticator` publishes metadata through observational dispatch.
+Listener failures, provider failures and lazy-iterator failures are isolated;
+logging failures cannot replace the authentication result. Critical dispatch is
+an explicit separate operation and still propagates errors. Do not use lifecycle
+observers to enforce authentication policy or transaction integrity.
+
+`PriorityListenerProvider` matches concrete event classes exactly. Interface
+and abstract-class subscriptions are rejected when registered. Higher priorities
+run first, and equal priorities keep registration order.
+
+Handlers that create credentials must run admission checks before issuance.
+Wrapping a side-effecting strategy in `GuardedAuthenticator` does not roll back
+work that the strategy already committed.
+
+Built-in denial reasons expose only their code through JSON and debug output.
+Trusted code can still read audit attributes explicitly.
+
 ## Authentication sessions
 
 `componenta/auth-session` separates:

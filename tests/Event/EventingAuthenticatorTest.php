@@ -5,16 +5,20 @@ declare(strict_types=1);
 namespace Componenta\Auth\Tests\Event;
 
 use Componenta\Auth\AuthenticationEvidence;
+use Componenta\Auth\AuthenticationGuardInterface;
 use Componenta\Auth\AuthenticationResult;
 use Componenta\Auth\AuthenticatorInterface;
 use Componenta\Auth\Context;
+use Componenta\Auth\Denied\DeniedReason;
 use Componenta\Auth\Event\AuthenticationAttempted;
+use Componenta\Auth\Event\AuthenticationDenied;
 use Componenta\Auth\Event\AuthenticationSucceeded;
 use Componenta\Auth\Event\EventDispatcher;
 use Componenta\Auth\Event\EventInterface;
 use Componenta\Auth\Event\EventListenerInterface;
 use Componenta\Auth\Event\EventListenerProviderInterface;
 use Componenta\Auth\EventingAuthenticator;
+use Componenta\Auth\GuardedAuthenticator;
 use Componenta\Identity\IdentityInterface;
 use Componenta\Identity\Uuid;
 use Componenta\Identity\UuidInterface;
@@ -61,6 +65,30 @@ final class EventingAuthenticatorTest extends TestCase
             serialize($listener->collected),
         );
     }
+    public function testOuterEventingReportsTheFinalGuardDenial(): void
+    {
+        $inner = $this->createStub(AuthenticatorInterface::class);
+        $inner->method('attempt')->willReturn(new AuthenticationResult(
+            new EventingIdentityFixture(),
+            evidence: new AuthenticationEvidence(['password']),
+        ));
+        $guard = $this->createStub(AuthenticationGuardInterface::class);
+        $guard->method('check')->willReturn(new DeniedReason('account_disabled'));
+        $listener = new EventCollectorFixture();
+        $authenticator = new EventingAuthenticator(
+            new GuardedAuthenticator($inner, $guard),
+            new EventDispatcher(new EventCollectorProviderFixture($listener)),
+        );
+
+        $result = $authenticator->attempt(new EventCredentialFixture('secret'), new Context());
+
+        self::assertInstanceOf(DeniedReason::class, $result->subject);
+        self::assertCount(2, $listener->collected);
+        self::assertInstanceOf(AuthenticationAttempted::class, $listener->collected[0]);
+        self::assertInstanceOf(AuthenticationDenied::class, $listener->collected[1]);
+        self::assertSame('account_disabled', $listener->collected[1]->reason->code);
+    }
+
 }
 
 final readonly class EventCredentialFixture
@@ -81,7 +109,7 @@ final class EventingIdentityFixture implements IdentityInterface
 final class EventCollectorFixture implements EventListenerInterface
 {
     public array $events {
-        get => [AuthenticationAttempted::class, AuthenticationSucceeded::class];
+        get => [AuthenticationAttempted::class, AuthenticationSucceeded::class, AuthenticationDenied::class];
     }
 
     /** @var list<EventInterface> */
