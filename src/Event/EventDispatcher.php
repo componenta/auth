@@ -57,16 +57,20 @@ final readonly class EventDispatcher
         #[\SensitiveParameter]
         EventInterface $event,
     ): void {
-        foreach ($this->provider->provideFor($event) as $listener) {
-            if ($listener instanceof CriticalEventListenerInterface) {
-                continue;
-            }
+        try {
+            foreach ($this->provider->provideFor($event) as $listener) {
+                if ($listener instanceof CriticalEventListenerInterface) {
+                    continue;
+                }
 
-            try {
-                $listener->handleEvent($event);
-            } catch (\Throwable $e) {
-                $this->logFailure($event, $listener, $e, false);
+                try {
+                    $listener->handleEvent($event);
+                } catch (\Throwable $e) {
+                    $this->logFailure($event, $listener, $e, false);
+                }
             }
+        } catch (\Throwable $e) {
+            $this->logFailure($event, null, $e, false);
         }
     }
 
@@ -82,12 +86,16 @@ final readonly class EventDispatcher
         #[\SensitiveParameter]
         EventInterface $event,
     ): void {
-        foreach ($this->provider->provideFor($event) as $listener) {
-            try {
-                $listener->handleEvent($event);
-            } catch (\Throwable $e) {
-                $this->logFailure($event, $listener, $e, false);
+        try {
+            foreach ($this->provider->provideFor($event) as $listener) {
+                try {
+                    $listener->handleEvent($event);
+                } catch (\Throwable $e) {
+                    $this->logFailure($event, $listener, $e, false);
+                }
             }
+        } catch (\Throwable $e) {
+            $this->logFailure($event, null, $e, false);
         }
     }
 
@@ -95,7 +103,7 @@ final readonly class EventDispatcher
     private function logFailure(
         #[\SensitiveParameter]
         EventInterface $event,
-        EventListenerInterface $listener,
+        ?EventListenerInterface $listener,
         \Throwable $exception,
         bool $critical,
     ): void {
@@ -105,10 +113,13 @@ final readonly class EventDispatcher
 
         try {
             $this->logger->error(
-                'Auth event listener failed',
+                $listener === null
+                    ? 'Auth event listener provider failed'
+                    : 'Auth event listener failed',
                 [
                     'event' => $event::class,
-                    'listener' => $listener::class,
+                    'listener' => $listener === null ? null : $listener::class,
+                    'provider' => $this->provider::class,
                     'critical' => $critical,
                     'exception' => $exception,
                 ],
