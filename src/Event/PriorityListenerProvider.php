@@ -52,7 +52,11 @@ final class PriorityListenerProvider implements EventListenerProviderInterface
         }
 
         foreach ($events as $event) {
-            if (!is_a($event, EventInterface::class, true)) {
+            if (
+                !class_exists($event)
+                || !is_a($event, EventInterface::class, true)
+                || (new \ReflectionClass($event))->isAbstract()
+            ) {
                 throw new \InvalidArgumentException(sprintf(
                     'Auth event listener %s declares an invalid event type.',
                     $listener::class,

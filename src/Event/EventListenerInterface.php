@@ -7,7 +7,8 @@ namespace Componenta\Auth\Event;
 interface EventListenerInterface
 {
     /**
-     * Event class names handled by this listener.
+     * Concrete event class names handled by this listener.
+     * Subscriptions match the exact runtime class, without inheritance lookup.
      *
      * @var list<string>
      */
