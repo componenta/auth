@@ -6,19 +6,19 @@ namespace Componenta\Auth;
 
 final readonly class Context implements ContextInterface, \JsonSerializable
 {
-    /** @param array<string, mixed> $attributes */
+    /** @param array<array-key, mixed> $attributes */
     public function __construct(
         #[\SensitiveParameter]
         public array $attributes = [],
     ) {}
 
-    /** @return array{attributeKeys: list<string>} */
+    /** @return array{attributeKeys: list<array-key>} */
     public function __debugInfo(): array
     {
         return ['attributeKeys' => array_keys($this->attributes)];
     }
 
-    /** @return array{attributeKeys: list<string>} */
+    /** @return array{attributeKeys: list<array-key>} */
     #[\Override]
     public function jsonSerialize(): array
     {
@@ -45,7 +45,10 @@ final readonly class Context implements ContextInterface, \JsonSerializable
         #[\SensitiveParameter]
         mixed $value,
     ): static {
-        return new self([...$this->attributes, $key => $value]);
+        $attributes = $this->attributes;
+        $attributes[$key] = $value;
+
+        return new self($attributes);
     }
 
     #[\Override]
@@ -53,6 +56,11 @@ final readonly class Context implements ContextInterface, \JsonSerializable
         #[\SensitiveParameter]
         array $attributes,
     ): static {
-        return new self([...$this->attributes, ...$attributes]);
+        $merged = $this->attributes;
+        foreach ($attributes as $key => $value) {
+            $merged[$key] = $value;
+        }
+
+        return new self($merged);
     }
 }

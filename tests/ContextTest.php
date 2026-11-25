@@ -34,4 +34,28 @@ final class ContextTest extends TestCase
         self::assertStringContainsString('password', $json);
         self::assertStringContainsString('nullable', $json);
     }
+    public function testAddingAnAttributePreservesAnExistingNumericStringKey(): void
+    {
+        $context = (new Context())->withAttribute('42', 'original');
+
+        $next = $context->withAttribute('another', 'value');
+
+        self::assertSame('original', $next->getAttribute('42'));
+        self::assertSame('value', $next->getAttribute('another'));
+        self::assertFalse($context->hasAttribute('another'));
+    }
+
+    public function testMergingAttributesReplacesNumericStringKeysWithoutReindexing(): void
+    {
+        $context = (new Context())
+            ->withAttribute('42', 'original')
+            ->withAttribute('keep', 'unchanged');
+
+        $next = $context->withAttributes(['42' => 'replacement']);
+
+        self::assertSame('replacement', $next->getAttribute('42'));
+        self::assertSame(['42' => 'replacement', 'keep' => 'unchanged'], $next->attributes);
+        self::assertSame('original', $context->getAttribute('42'));
+    }
+
 }

@@ -8,7 +8,7 @@ interface ContextInterface
 {
     public const string EXTRACTOR = '__extractor';
 
-    /** @var array<string, mixed> */
+    /** @var array<array-key, mixed> */
     public array $attributes { get; }
 
     public function getAttribute(string $key, mixed $default = null): mixed;
@@ -21,7 +21,7 @@ interface ContextInterface
         mixed $value,
     ): static;
 
-    /** @param array<string, mixed> $attributes */
+    /** @param array<array-key, mixed> $attributes */
     public function withAttributes(
         #[\SensitiveParameter]
         array $attributes,
