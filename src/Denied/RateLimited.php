@@ -13,14 +13,21 @@ final class RateLimited implements DeniedReasonInterface, \JsonSerializable
         get => 'rate_limited';
     }
 
-    public function __construct(
-        public int $retryAfter,
-    ) {
-        if ($this->retryAfter < 0) {
-            throw new \InvalidArgumentException(
-                'Rate-limit retryAfter must be greater than or equal to zero.',
-            );
+    public int $retryAfter {
+        set {
+            if ($value < 0) {
+                throw new \InvalidArgumentException(
+                    'Rate-limit retryAfter must be greater than or equal to zero.',
+                );
+            }
+
+            $this->retryAfter = $value;
         }
+    }
+
+    public function __construct(int $retryAfter)
+    {
+        $this->retryAfter = $retryAfter;
     }
 
     /** @var array<string, mixed> */
