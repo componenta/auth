@@ -11,6 +11,7 @@ use Componenta\Auth\AuthenticatorInterface;
 use Componenta\Auth\Context;
 use Componenta\Auth\ContextInterface;
 use Componenta\Auth\Denied\DeniedReason;
+use Componenta\Auth\DeniedReasonInterface;
 use Componenta\Auth\GuardedAuthenticator;
 use Componenta\Identity\IdentityInterface;
 use Componenta\Identity\Uuid;
@@ -69,6 +70,26 @@ final class GuardedAuthenticatorTest extends TestCase
         );
         self::assertSame(0, $guard->checks);
     }
+    public function testFirstGuardDenialPreventsLaterGuardEffects(): void
+    {
+        $result = new AuthenticationResult(new GuardedIdentityFixture(), evidence: new AuthenticationEvidence(['password']));
+        $inner = $this->createStub(AuthenticatorInterface::class);
+        $inner->method('attempt')->willReturn($result);
+        $denial = new DeniedReason('disabled');
+        $first = $this->createStub(AuthenticationGuardInterface::class);
+        $first->method('check')->willReturn($denial);
+        $later = new class implements AuthenticationGuardInterface {
+            public int $checks = 0;
+            public function check(IdentityInterface $identity, AuthenticationEvidence $evidence): ?DeniedReasonInterface { ++$this->checks; return null; }
+        };
+
+        $observed = (new GuardedAuthenticator($inner, $first, $later))->attempt(new \stdClass(), new Context());
+
+        self::assertInstanceOf(DeniedReasonInterface::class, $observed->subject);
+        self::assertSame($denial->code, $observed->subject->code);
+        self::assertSame(0, $later->checks);
+    }
+
 }
 
 final readonly class FixedAuthenticatorFixture implements AuthenticatorInterface

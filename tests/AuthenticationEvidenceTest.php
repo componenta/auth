@@ -95,4 +95,22 @@ final class AuthenticationEvidenceTest extends TestCase
         self::assertSame(['unknown'], $evidence->methods);
         self::assertSame([], $evidence->capabilities);
     }
+    public function testMethodIdentifierAccepts128BytesAndRejects129(): void
+    {
+        $identifier = str_repeat('a', 128);
+        self::assertSame([$identifier], (new AuthenticationEvidence([$identifier]))->methods);
+        $this->expectException(\InvalidArgumentException::class);
+
+        new AuthenticationEvidence([$identifier . 'a']);
+    }
+
+    public function testCapabilityIdentifierAccepts128BytesAndRejects129(): void
+    {
+        $identifier = str_repeat('a', 128);
+        self::assertSame([$identifier], (new AuthenticationEvidence(['password'], [$identifier]))->capabilities);
+        $this->expectException(\InvalidArgumentException::class);
+
+        new AuthenticationEvidence(['password'], [$identifier . 'a']);
+    }
+
 }

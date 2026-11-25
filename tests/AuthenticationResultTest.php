@@ -101,6 +101,20 @@ final class AuthenticationResultTest extends TestCase
         );
         self::assertSame(['session'], $decoded['evidence']['methods'] ?? null);
     }
+    public function testDeniedResultCannotCarryCredentialPublication(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        new AuthenticationResult(new DeniedReason('denied'), transportPayload: new \stdClass());
+    }
+
+    public function testSuccessfulResultCannotContinueAuthenticationChain(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        new AuthenticationResult(new AuthenticationResultIdentityFixture(Uuid::fromString('018f6d5d-3f7a-7a9b-8c2f-123456789abc')), continueOnFailure: true, evidence: new AuthenticationEvidence(['password']));
+    }
+
 }
 
 final readonly class AuthenticationResultIdentityFixture implements IdentityInterface

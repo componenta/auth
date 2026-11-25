@@ -93,4 +93,17 @@ final class ContextTest extends TestCase
         self::assertSame('second', $context->getAttribute('state')->status);
     }
 
+    public function testAttributeBatchReplacementPreservesOriginalAndDistinguishesNullFromMissing(): void
+    {
+        $original = new Context(['old' => 1, 'replace' => 2]);
+
+        $updated = $original->withAttributes(['replace' => null, 'new' => 3]);
+
+        self::assertSame(['old' => 1, 'replace' => 2], $original->attributes);
+        self::assertSame(['old' => 1, 'replace' => null, 'new' => 3], $updated->attributes);
+        self::assertTrue($updated->hasAttribute('replace'));
+        self::assertNull($updated->getAttribute('replace', 'fallback'));
+        self::assertSame('fallback', $updated->getAttribute('missing', 'fallback'));
+    }
+
 }

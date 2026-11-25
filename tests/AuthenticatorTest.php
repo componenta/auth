@@ -85,6 +85,28 @@ final class AuthenticatorTest extends TestCase
         (new Authenticator(new AuthStrategyFixture(false, new AuthenticationResult(new DeniedReason('unused')))))
             ->attempt(new \stdClass(), new Context());
     }
+    public function testSuccessfulStrategyPreventsConsultingLaterStrategies(): void
+    {
+        $result = new AuthenticationResult(new class implements IdentityInterface { public UuidInterface $uuid { get => Uuid::fromString('018f6d5d-3f7a-7a9b-8c2f-123456789abc'); } }, evidence: new AuthenticationEvidence(['password']));
+        $first = new class($result) implements AuthenticationStrategyInterface {
+            public function __construct(private AuthenticationResult $result) {}
+            public function supports(object $payload, ContextInterface $context): bool { return true; }
+            public function attempt(object $payload, ContextInterface $context): AuthenticationResult { return $this->result; }
+        };
+        $later = new class implements AuthenticationStrategyInterface {
+            public int $consultations = 0;
+            public function supports(object $payload, ContextInterface $context): bool { ++$this->consultations; return true; }
+            public function attempt(object $payload, ContextInterface $context): AuthenticationResult { return new AuthenticationResult(new DeniedReason('later')); }
+        };
+
+        $observed = (new Authenticator($first, $later))->attempt(new \stdClass(), new Context());
+
+        self::assertInstanceOf(IdentityInterface::class, $observed->subject);
+        self::assertTrue($result->subject->uuid->equals($observed->subject->uuid));
+        self::assertSame($result->evidence?->jsonSerialize(), $observed->evidence?->jsonSerialize());
+        self::assertSame(0, $later->consultations);
+    }
+
 }
 
 final readonly class AuthStrategyFixture implements AuthenticationStrategyInterface
