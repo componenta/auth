@@ -113,7 +113,9 @@ observers to enforce authentication policy or transaction integrity.
 
 `PriorityListenerProvider` matches concrete event classes exactly. Interface
 and abstract-class subscriptions are rejected when registered. Higher priorities
-run first, and equal priorities keep registration order.
+run first, and equal priorities keep registration order. Class aliases and
+equivalent PHP class names (including a leading namespace separator) resolve to
+the same concrete class; this does not enable inheritance-based subscriptions.
 
 Handlers that create credentials must run admission checks before issuance.
 Wrapping a side-effecting strategy in `GuardedAuthenticator` does not roll back

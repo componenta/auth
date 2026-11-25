@@ -46,6 +46,45 @@ final class PriorityListenerProviderTest extends TestCase
         self::assertSame([$firstHigh, $secondHigh, $low], iterator_to_array($provider->provideFor($event), false));
     }
 
+    /** @return iterable<string, array{string}> */
+    public static function equivalentClassNames(): iterable
+    {
+        yield 'leading namespace separator' => ['\\' . AuthenticationAttempted::class];
+        yield 'different case' => [strtolower(AuthenticationAttempted::class)];
+        yield 'class alias' => [__NAMESPACE__ . '\\AttemptedAliasFixture'];
+    }
+
+    #[DataProvider('equivalentClassNames')]
+    public function testAcceptedNamesOfTheSameConcreteClassReachTheListener(string $eventType): void
+    {
+        $event = new AuthenticationAttempted('test', new \DateTimeImmutable('@1'));
+        $alias = __NAMESPACE__ . '\\AttemptedAliasFixture';
+        if (!class_exists($alias, false)) {
+            class_alias(AuthenticationAttempted::class, $alias);
+        }
+        $provider = new PriorityListenerProvider();
+        $listener = self::listener($eventType);
+        $provider->addListener($listener);
+
+        self::assertSame([$listener], iterator_to_array($provider->provideFor($event), false));
+    }
+
+    public function testExactClassMatchingDoesNotSubscribeToChildEvents(): void
+    {
+        $provider = new PriorityListenerProvider();
+        $listener = self::listener(ConcreteEventFixture::class);
+        $provider->addListener($listener);
+
+        self::assertSame([], iterator_to_array(
+            $provider->provideFor(new ChildEventFixture(new \DateTimeImmutable('@1'))),
+            false,
+        ));
+        self::assertSame([$listener], iterator_to_array(
+            $provider->provideFor(new ConcreteEventFixture(new \DateTimeImmutable('@1'))),
+            false,
+        ));
+    }
+
     private static function listener(string $eventType = AuthenticationAttempted::class): EventListenerInterface
     {
         return new readonly class($eventType) implements EventListenerInterface {
@@ -65,3 +104,10 @@ abstract class AbstractEventFixture implements EventInterface
 {
     public \DateTimeImmutable $timestamp;
 }
+
+class ConcreteEventFixture implements EventInterface
+{
+    public function __construct(public \DateTimeImmutable $timestamp) {}
+}
+
+final class ChildEventFixture extends ConcreteEventFixture {}

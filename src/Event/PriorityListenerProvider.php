@@ -32,8 +32,17 @@ final class PriorityListenerProvider implements EventListenerProviderInterface
 
         foreach ($this->listeners as $listeners) {
             foreach ($listeners as $listener) {
-                if (in_array($event::class, $listener->events, true)) {
-                    yield $listener;
+                foreach ($listener->events as $eventType) {
+                    if (
+                        $eventType === $event::class
+                        || (
+                            class_exists($eventType)
+                            && (new \ReflectionClass($eventType))->getName() === $event::class
+                        )
+                    ) {
+                        yield $listener;
+                        break;
+                    }
                 }
             }
         }
