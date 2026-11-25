@@ -58,4 +58,39 @@ final class ContextTest extends TestCase
         self::assertSame('original', $context->getAttribute('42'));
     }
 
+    public function testContextSnapshotDetachesAnInboundScalarReference(): void
+    {
+        $source = 'first';
+        $context = new Context(['request_id' => &$source]);
+
+        $source = 'second';
+
+        self::assertSame('first', $context->getAttribute('request_id'));
+    }
+
+    public function testCopiedAttributeArrayCannotMutateExistingContextScalar(): void
+    {
+        $source = 'first';
+        $context = new Context(['request_id' => &$source]);
+
+        $external = $context->attributes;
+        $external['request_id'] = 'second';
+
+        self::assertSame('first', $context->getAttribute('request_id'));
+    }
+
+    public function testOrdinaryInputArrayAndMutableObjectHaveSeparateIntendedSemantics(): void
+    {
+        $state = (object) ['status' => 'first'];
+        $source = ['request_id' => 'first', 'state' => $state];
+        $context = new Context($source);
+
+        $source['request_id'] = 'second';
+        $state->status = 'second';
+
+        self::assertSame('first', $context->getAttribute('request_id'));
+        self::assertSame($state, $context->getAttribute('state'));
+        self::assertSame('second', $context->getAttribute('state')->status);
+    }
+
 }

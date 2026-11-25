@@ -6,11 +6,21 @@ namespace Componenta\Auth;
 
 final readonly class Context implements ContextInterface, \JsonSerializable
 {
+    /** @var array<array-key, mixed> */
+    public array $attributes;
+
     /** @param array<array-key, mixed> $attributes */
     public function __construct(
         #[\SensitiveParameter]
-        public array $attributes = [],
-    ) {}
+        array $attributes = [],
+    ) {
+        $snapshot = [];
+        foreach ($attributes as $key => $value) {
+            $snapshot[$key] = $value;
+        }
+
+        $this->attributes = $snapshot;
+    }
 
     /** @return array{attributeKeys: list<array-key>} */
     public function __debugInfo(): array

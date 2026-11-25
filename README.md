@@ -72,6 +72,15 @@ There is no generic artifacts/result bag.
 Transport layers may provide request-local values such as a PSR-7 request or
 credential publication state.
 
+The top-level attribute map is a snapshot: later writes to the input array or
+its directly referenced entries do not replace stored values. String keys,
+including numeric strings, keep their PHP array-key identity when attributes
+are added or merged. Existing keys are replaced by `withAttributes()`.
+
+Attribute values are borrowed. Objects and references nested inside array
+values are not deep-cloned or frozen. Use immutable values for authentication
+policy; request-local transport state may intentionally remain mutable.
+
 Long-lived services, repositories and loggers remain constructor dependencies;
 `Context` is not a service locator.
 
