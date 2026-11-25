@@ -9,7 +9,7 @@ use Componenta\Auth\DeniedReasonInterface;
 /**
  * No authentication payload was provided.
  */
-final class Unauthorized implements DeniedReasonInterface
+final class Unauthorized implements DeniedReasonInterface, \JsonSerializable
 {
     public string $code {
         get => 'unauthorized';
@@ -17,7 +17,22 @@ final class Unauthorized implements DeniedReasonInterface
 
     /** @param array<string, mixed> $attributes */
     public function __construct(
+        #[\SensitiveParameter]
         public readonly array $attributes = []
     ) {
     }
+
+    /** @return array{code: string} */
+    public function __debugInfo(): array
+    {
+        return ['code' => $this->code];
+    }
+
+    /** @return array{code: string} */
+    #[\Override]
+    public function jsonSerialize(): array
+    {
+        return $this->__debugInfo();
+    }
+
 }
