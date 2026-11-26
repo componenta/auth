@@ -1,0 +1,752 @@
+{
+  "date": "2026-11-26",
+  "pass": 6,
+  "verified_at_utc": "2026-11-26T15:31:04.196941+00:00",
+  "source_files": 231,
+  "repositories": 17,
+  "active_packages": 16,
+  "runtime": {
+    "php": "8.4.28",
+    "phpunit": "12.5.33",
+    "pest": "4.7.8",
+    "phpstan": "2.3.7"
+  },
+  "totals": {
+    "tests": 564,
+    "assertions": 2578,
+    "errors": 0,
+    "failures": 0,
+    "skipped": 4,
+    "passed": 560,
+    "excluded": 2
+  },
+  "packages": [
+    {
+      "name": "auth",
+      "head": "5a3e79b14c260faf722adad9dbe082d4c43a3297",
+      "tree": "1155daab17d803d8cb2ebab66a9cdf825cbb94f7",
+      "source_files": 31,
+      "excluded": [],
+      "tests": 0,
+      "phpstan": 0,
+      "composer_validate": 0,
+      "diff_check": 0,
+      "junit": {
+        "tests": 67,
+        "assertions": 179,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "skips": [],
+      "src_tree": "3026f229cf36c2c25f2022dd0a974530865d7339",
+      "tests_tree": "3cdbafca329c75b040421c082fe33c3db06d4a8d"
+    },
+    {
+      "name": "auth-app",
+      "head": "df172cdc98cdffc80949c9a2cdaae586fd227658",
+      "tree": "af1d63a3367d0db70f140ed9a5348bfe6978b89e",
+      "source_files": 3,
+      "excluded": [],
+      "tests": 0,
+      "phpstan": 0,
+      "composer_validate": 0,
+      "diff_check": 0,
+      "junit": {
+        "tests": 11,
+        "assertions": 22,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "skips": [],
+      "src_tree": "39075571f85b7871258976c40a912f66c60d99cc",
+      "tests_tree": "e6d4988d61b539cfba0ec1b839557d1c7dfe2df7"
+    },
+    {
+      "name": "auth-http",
+      "head": "fac545c6ca7f2faf8dd752c1475d9b48701f34f9",
+      "tree": "83571037b037b77aff79997b2b799c6a1dd10c0c",
+      "source_files": 18,
+      "excluded": [],
+      "tests": 0,
+      "phpstan": 0,
+      "composer_validate": 0,
+      "diff_check": 0,
+      "junit": {
+        "tests": 56,
+        "assertions": 335,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "skips": [],
+      "src_tree": "4d1d436ad32549100d677a2faf30b2575f9b6159",
+      "tests_tree": "fa560047998267d1d2a2b8eaf2232a6a61a2c0c1"
+    },
+    {
+      "name": "auth-jwt",
+      "head": "f13f83ec6ad7e5c22d23fc3a0e2ffb2a8fd6f8d1",
+      "tree": "1029a47cef828781b9a5c825fd3a99edfc538689",
+      "source_files": 28,
+      "excluded": [],
+      "tests": 0,
+      "phpstan": 0,
+      "composer_validate": 0,
+      "diff_check": 0,
+      "junit": {
+        "tests": 34,
+        "assertions": 122,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "skips": [],
+      "src_tree": "7140df34fb23fec713cf6404a60883945572ab35",
+      "tests_tree": "d00ca6668442c0211e51483a2877789507272920"
+    },
+    {
+      "name": "auth-magic-link",
+      "head": "30abe166ccd524fa5261a2f452323ccae4e99415",
+      "tree": "77b2331b87afb56fc4030bf51412650292ba2ce4",
+      "source_files": 7,
+      "excluded": [],
+      "tests": 0,
+      "phpstan": 0,
+      "composer_validate": 0,
+      "diff_check": 0,
+      "junit": {
+        "tests": 15,
+        "assertions": 80,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "skips": [],
+      "src_tree": "23d9da210bfb359613c7e9d14072989eb04d0ff9",
+      "tests_tree": "2308307ab975330d3ea44b8ce3af3b7ea31ceb28"
+    },
+    {
+      "name": "auth-otp",
+      "head": "630b2609c6c542bbf827f1ca03503b8376304d40",
+      "tree": "8eb033570f3b84840bb77cdb664c44ceb896c6e0",
+      "source_files": 27,
+      "excluded": [
+        "LockWaitExpiryTest (2 cases; timing/lock-boundary work not resumed)"
+      ],
+      "tests": 0,
+      "phpstan": 0,
+      "composer_validate": 0,
+      "diff_check": 0,
+      "junit": {
+        "tests": 41,
+        "assertions": 334,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "skips": [],
+      "src_tree": "27d582a6bcfc730150321f2e4953505ac31f08b6",
+      "tests_tree": "a16c5f9e1578b123d42d28fb1764da6813c41b1a"
+    },
+    {
+      "name": "auth-password",
+      "head": "8e04a0ec6cd01ad54588fe6ca9c90d618b3b7e7e",
+      "tree": "993e6b1633c7557a5ab464e7a78fe1622768ebbe",
+      "source_files": 11,
+      "excluded": [],
+      "tests": 0,
+      "phpstan": 0,
+      "composer_validate": 0,
+      "diff_check": 0,
+      "junit": {
+        "tests": 14,
+        "assertions": 65,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "skips": [],
+      "src_tree": "9ade6e3ca0d30d24576f15534853b04b5b06f192",
+      "tests_tree": "55a4b6c08d55c1992a51947f958b55a81d53c311"
+    },
+    {
+      "name": "auth-recovery-code",
+      "head": "448f7913c2afdb88e8c5b769ab9ec971156b28e7",
+      "tree": "51182edb1cba9eb7834ead54b5b08db5c0440e9f",
+      "source_files": 8,
+      "excluded": [],
+      "tests": 0,
+      "phpstan": 0,
+      "composer_validate": 0,
+      "diff_check": 0,
+      "junit": {
+        "tests": 15,
+        "assertions": 59,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "skips": [],
+      "src_tree": "4f05c12b71817c0b5b82afd3e47f2ac766e744ce",
+      "tests_tree": "66b2316fbd9195878a3359581567f440e8ad7539"
+    },
+    {
+      "name": "auth-remember-me",
+      "head": "ace71d9d5a58fd5f9c1f1533beda5f994496ec71",
+      "tree": "481fafdea91559d552cf0f2fdd748bc47a3398b2",
+      "source_files": 15,
+      "excluded": [],
+      "tests": 0,
+      "phpstan": 0,
+      "composer_validate": 0,
+      "diff_check": 0,
+      "junit": {
+        "tests": 29,
+        "assertions": 176,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "skips": [],
+      "src_tree": "db0886e42589b0dd34a0b80d29e74f8c995c0891",
+      "tests_tree": "c3f721d2a545dcdab084d0011e4dfd00746cb55e"
+    },
+    {
+      "name": "auth-session",
+      "head": "cdc2106098a43f6895e209803c613ad4c69eb3b0",
+      "tree": "35c970e3a83437692f9840bf068bfa7844412b79",
+      "source_files": 20,
+      "excluded": [],
+      "tests": 0,
+      "phpstan": 0,
+      "composer_validate": 0,
+      "diff_check": 0,
+      "junit": {
+        "tests": 16,
+        "assertions": 53,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "skips": [],
+      "src_tree": "641c51206e22f37c3957cfe0e4a50a1119d77a97",
+      "tests_tree": "59a69cdb227e8723c84fdc66e4dcd6a590cf87d0"
+    },
+    {
+      "name": "auth-session-app",
+      "head": "5668a08e490d9d442f8d22afcb0133d3c7058b7d",
+      "tree": "ddd2ddf0d472e89cd33ccc55e4c464934a4a2132",
+      "source_files": 3,
+      "excluded": [],
+      "tests": 0,
+      "phpstan": 0,
+      "composer_validate": 0,
+      "diff_check": 0,
+      "junit": {
+        "tests": 13,
+        "assertions": 25,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "skips": [],
+      "src_tree": "9363392c1a1ae3f8407657e1bade90cdedfad6b8",
+      "tests_tree": "5c5aa5d2aa9bb1a6dc1473327e13c69692e356c2"
+    },
+    {
+      "name": "auth-session-database",
+      "head": "c715b274694f4a34dd4d051b7384ae3daf3880b0",
+      "tree": "de9bceb3a6262cf0a6a189842da4a4d4298381b4",
+      "source_files": 5,
+      "excluded": [],
+      "tests": 0,
+      "phpstan": 0,
+      "composer_validate": 0,
+      "diff_check": 0,
+      "junit": {
+        "tests": 43,
+        "assertions": 265,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 4
+      },
+      "skips": [
+        [
+          "testAuthenticationSessionLifecycle with data set \"mysql-8.4\"",
+          null
+        ],
+        [
+          "testAuthenticationSessionLifecycle with data set \"postgresql\"",
+          null
+        ],
+        [
+          "testPreAuthenticationIsOneTime with data set \"mysql-8.4\"",
+          null
+        ],
+        [
+          "testPreAuthenticationIsOneTime with data set \"postgresql\"",
+          null
+        ]
+      ],
+      "src_tree": "91948911d7cfa740d6a981084a1050fe858b0050",
+      "tests_tree": "d3064b397a18abcd3a8c80f7cacf0440185368a6"
+    },
+    {
+      "name": "auth-session-http",
+      "head": "ea2ae94912c5bc9751082c0eccce107c6e2ecad3",
+      "tree": "fa8f71e2c4090b78e950d0ef7bc509b493fe1c68",
+      "source_files": 17,
+      "excluded": [],
+      "tests": 0,
+      "phpstan": 0,
+      "composer_validate": 0,
+      "diff_check": 0,
+      "junit": {
+        "tests": 103,
+        "assertions": 300,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "skips": [],
+      "src_tree": "13407456ba894539c6b2ee9472512cadd4e04ada",
+      "tests_tree": "a347248fefbbe47785b4882611593caadde557ab"
+    },
+    {
+      "name": "auth-token",
+      "head": "4ef6afff101a9c1c1c8d85b388c116caf36de1f5",
+      "tree": "c6794c2baebe0fe4d77587c033ea47eabf6b929c",
+      "source_files": 10,
+      "excluded": [],
+      "tests": 0,
+      "phpstan": 0,
+      "composer_validate": 0,
+      "diff_check": 0,
+      "junit": {
+        "tests": 17,
+        "assertions": 67,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "skips": [],
+      "src_tree": "1b305ba949f469a948a3ab946655f7385c689879",
+      "tests_tree": "dfb49652e64e4e071a45f414403d1a36801b4215"
+    },
+    {
+      "name": "auth-totp",
+      "head": "eb2cce835932ba4d1c2de79e21f9d6cc690352c2",
+      "tree": "1d6a86bf72c6a44af2b8938f34bc670d2f4ee4a4",
+      "source_files": 10,
+      "excluded": [],
+      "tests": 0,
+      "phpstan": 0,
+      "composer_validate": 0,
+      "diff_check": 0,
+      "junit": {
+        "tests": 32,
+        "assertions": 90,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "skips": [],
+      "src_tree": "0b171e978866f4e370e1a42e791b2a8de38449b6",
+      "tests_tree": "2c7bcc0d381be686c191a1d0f7be7b63a330ff82"
+    },
+    {
+      "name": "auth-webauthn",
+      "head": "457c3683defb12e7154b99930a9483660292eb97",
+      "tree": "b15779fd082940e5ad187b19ab746f9990ab2197",
+      "source_files": 18,
+      "excluded": [],
+      "tests": 0,
+      "phpstan": 0,
+      "composer_validate": 0,
+      "diff_check": 0,
+      "junit": {
+        "tests": 58,
+        "assertions": 406,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "skips": [],
+      "src_tree": "1df55bde6c31cd41d55e9d10c36049395350833d",
+      "tests_tree": "26b4ea2ae1757a5efafb0f703c6ab73a73216506"
+    }
+  ],
+  "verification_sequence": "All 16 packages freshly checked after the reviewed WebAuthn fix was published. Subsequent auth report commit changes documentation only; source/tests trees identify tested content.",
+  "baseline": [
+    {
+      "repo": "auth",
+      "branch": "fix/auth-audit-2026-11-25",
+      "head": "5a3e79b14c260faf722adad9dbe082d4c43a3297",
+      "tree": "1155daab17d803d8cb2ebab66a9cdf825cbb94f7",
+      "upstream": "5a3e79b14c260faf722adad9dbe082d4c43a3297",
+      "divergence": "0\t0",
+      "status": "",
+      "changed_since_pass5": false
+    },
+    {
+      "repo": "auth-app",
+      "branch": "fix/auth-audit-2026-11-25",
+      "head": "df172cdc98cdffc80949c9a2cdaae586fd227658",
+      "tree": "af1d63a3367d0db70f140ed9a5348bfe6978b89e",
+      "upstream": "df172cdc98cdffc80949c9a2cdaae586fd227658",
+      "divergence": "0\t0",
+      "status": "",
+      "changed_since_pass5": false
+    },
+    {
+      "repo": "auth-http",
+      "branch": "fix/auth-audit-2026-11-25",
+      "head": "fac545c6ca7f2faf8dd752c1475d9b48701f34f9",
+      "tree": "83571037b037b77aff79997b2b799c6a1dd10c0c",
+      "upstream": "fac545c6ca7f2faf8dd752c1475d9b48701f34f9",
+      "divergence": "0\t0",
+      "status": "",
+      "changed_since_pass5": false
+    },
+    {
+      "repo": "auth-jwt",
+      "branch": "fix/auth-audit-2026-11-25",
+      "head": "f13f83ec6ad7e5c22d23fc3a0e2ffb2a8fd6f8d1",
+      "tree": "1029a47cef828781b9a5c825fd3a99edfc538689",
+      "upstream": "f13f83ec6ad7e5c22d23fc3a0e2ffb2a8fd6f8d1",
+      "divergence": "0\t0",
+      "status": "",
+      "changed_since_pass5": false
+    },
+    {
+      "repo": "auth-magic-link",
+      "branch": "fix/auth-audit-2026-11-25",
+      "head": "30abe166ccd524fa5261a2f452323ccae4e99415",
+      "tree": "77b2331b87afb56fc4030bf51412650292ba2ce4",
+      "upstream": "30abe166ccd524fa5261a2f452323ccae4e99415",
+      "divergence": "0\t0",
+      "status": "",
+      "changed_since_pass5": false
+    },
+    {
+      "repo": "auth-otp",
+      "branch": "fix/auth-audit-2026-11-25",
+      "head": "630b2609c6c542bbf827f1ca03503b8376304d40",
+      "tree": "8eb033570f3b84840bb77cdb664c44ceb896c6e0",
+      "upstream": "630b2609c6c542bbf827f1ca03503b8376304d40",
+      "divergence": "0\t0",
+      "status": "",
+      "changed_since_pass5": false
+    },
+    {
+      "repo": "auth-password",
+      "branch": "fix/auth-audit-2026-11-25",
+      "head": "8e04a0ec6cd01ad54588fe6ca9c90d618b3b7e7e",
+      "tree": "993e6b1633c7557a5ab464e7a78fe1622768ebbe",
+      "upstream": "8e04a0ec6cd01ad54588fe6ca9c90d618b3b7e7e",
+      "divergence": "0\t0",
+      "status": "",
+      "changed_since_pass5": false
+    },
+    {
+      "repo": "auth-recovery-code",
+      "branch": "fix/auth-audit-2026-11-25",
+      "head": "448f7913c2afdb88e8c5b769ab9ec971156b28e7",
+      "tree": "51182edb1cba9eb7834ead54b5b08db5c0440e9f",
+      "upstream": "448f7913c2afdb88e8c5b769ab9ec971156b28e7",
+      "divergence": "0\t0",
+      "status": "",
+      "changed_since_pass5": false
+    },
+    {
+      "repo": "auth-remember-me",
+      "branch": "fix/auth-audit-2026-11-25",
+      "head": "ace71d9d5a58fd5f9c1f1533beda5f994496ec71",
+      "tree": "481fafdea91559d552cf0f2fdd748bc47a3398b2",
+      "upstream": "ace71d9d5a58fd5f9c1f1533beda5f994496ec71",
+      "divergence": "0\t0",
+      "status": "",
+      "changed_since_pass5": false
+    },
+    {
+      "repo": "auth-session",
+      "branch": "fix/auth-audit-2026-11-25",
+      "head": "cdc2106098a43f6895e209803c613ad4c69eb3b0",
+      "tree": "35c970e3a83437692f9840bf068bfa7844412b79",
+      "upstream": "cdc2106098a43f6895e209803c613ad4c69eb3b0",
+      "divergence": "0\t0",
+      "status": "",
+      "changed_since_pass5": false
+    },
+    {
+      "repo": "auth-session-app",
+      "branch": "fix/auth-audit-2026-11-25",
+      "head": "5668a08e490d9d442f8d22afcb0133d3c7058b7d",
+      "tree": "ddd2ddf0d472e89cd33ccc55e4c464934a4a2132",
+      "upstream": "5668a08e490d9d442f8d22afcb0133d3c7058b7d",
+      "divergence": "0\t0",
+      "status": "",
+      "changed_since_pass5": false
+    },
+    {
+      "repo": "auth-session-csrf",
+      "branch": "main",
+      "head": "7ecf4f6a1fd7e9f085ba899d7b474fe027525849",
+      "tree": "15d9eeb79292ed7d524abecb066cc423968115ba",
+      "upstream": "7ecf4f6a1fd7e9f085ba899d7b474fe027525849",
+      "divergence": "0\t0",
+      "status": "",
+      "changed_since_pass5": false
+    },
+    {
+      "repo": "auth-session-database",
+      "branch": "fix/auth-audit-2026-11-25",
+      "head": "c715b274694f4a34dd4d051b7384ae3daf3880b0",
+      "tree": "de9bceb3a6262cf0a6a189842da4a4d4298381b4",
+      "upstream": "c715b274694f4a34dd4d051b7384ae3daf3880b0",
+      "divergence": "0\t0",
+      "status": "",
+      "changed_since_pass5": false
+    },
+    {
+      "repo": "auth-session-http",
+      "branch": "fix/auth-audit-2026-11-25",
+      "head": "ea2ae94912c5bc9751082c0eccce107c6e2ecad3",
+      "tree": "fa8f71e2c4090b78e950d0ef7bc509b493fe1c68",
+      "upstream": "ea2ae94912c5bc9751082c0eccce107c6e2ecad3",
+      "divergence": "0\t0",
+      "status": "",
+      "changed_since_pass5": false
+    },
+    {
+      "repo": "auth-token",
+      "branch": "fix/auth-audit-2026-11-25",
+      "head": "4ef6afff101a9c1c1c8d85b388c116caf36de1f5",
+      "tree": "c6794c2baebe0fe4d77587c033ea47eabf6b929c",
+      "upstream": "4ef6afff101a9c1c1c8d85b388c116caf36de1f5",
+      "divergence": "0\t0",
+      "status": "",
+      "changed_since_pass5": false
+    },
+    {
+      "repo": "auth-totp",
+      "branch": "fix/auth-audit-2026-11-25",
+      "head": "eb2cce835932ba4d1c2de79e21f9d6cc690352c2",
+      "tree": "1d6a86bf72c6a44af2b8938f34bc670d2f4ee4a4",
+      "upstream": "eb2cce835932ba4d1c2de79e21f9d6cc690352c2",
+      "divergence": "0\t0",
+      "status": "",
+      "changed_since_pass5": false
+    },
+    {
+      "repo": "auth-webauthn",
+      "branch": "fix/auth-audit-2026-11-25",
+      "head": "31b7d65514f12a1393cea121fea1f6b56ba88d26",
+      "tree": "7491772d3486d423d92605c2135dde38b757ea3f",
+      "upstream": "31b7d65514f12a1393cea121fea1f6b56ba88d26",
+      "divergence": "0\t0",
+      "status": "",
+      "changed_since_pass5": false
+    }
+  ],
+  "published_changes": {
+    "auth-webauthn": {
+      "head": "457c3683defb12e7154b99930a9483660292eb97",
+      "commits": [
+        {
+          "remote_sha": "457c3683defb12e7154b99930a9483660292eb97",
+          "tree_sha": "b15779fd082940e5ad187b19ab746f9990ab2197",
+          "message": "Fix known-user WebAuthn assertion validation"
+        }
+      ]
+    }
+  },
+  "review": {
+    "scopes_rotated": true,
+    "source_files_reread": {
+      "core_jwt": 59,
+      "factors": 54,
+      "sessions_tokens_otp": 62,
+      "http_remember_apps": 56
+    },
+    "skills": [
+      "design-software-interfaces",
+      "php-best-practices",
+      "php-testing"
+    ],
+    "method": "Public contract TDD: concrete RED, legitimate and rejection controls, minimal source fix, independent second review, GREEN.",
+    "fix_review": "Root and independent second reviewer approved the final four-file WebAuthn diff before commit.",
+    "other_new_confirmed_defects": 0
+  },
+  "composer_audit": {
+    "scope": "installed shared integration dependency graph",
+    "exit_code": 0,
+    "lock_sha256": "d00e604f7492d8312496a44b03e36fdfeb0f260809ad75bbd9f4c2a6d0895697",
+    "result": {
+      "advisories": [],
+      "abandoned": [],
+      "filter": [],
+      "cooldown": []
+    }
+  },
+  "production_fixes": [
+    {
+      "package": "auth-webauthn",
+      "commit": "457c3683defb12e7154b99930a9483660292eb97",
+      "new_tests": 13,
+      "classification": "Protocol interoperability / false refusal; no authentication bypass demonstrated.",
+      "issue": "Server-known user was inferred from the returned userHandle, causing valid known-user assertions with null handles to be rejected.",
+      "repair": "Use the stored ceremony subject as expected known user; preserve explicit rejection of a supplied empty handle.",
+      "api_changed": false,
+      "new_migration_required": false,
+      "red": {
+        "tests": 13,
+        "assertions": 121,
+        "failures": 3,
+        "errors": 0
+      },
+      "green": {
+        "tests": 13,
+        "assertions": 155,
+        "failures": 0,
+        "errors": 0
+      },
+      "green_package": {
+        "tests": 58,
+        "assertions": 406,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "real_components": [
+        "SQLite WebAuthn store",
+        "P-256 signatures",
+        "Codec",
+        "Validator",
+        "Service",
+        "options and reauthentication handlers",
+        "session issuer/admission/publisher"
+      ],
+      "controlled_port": "Session manager is mocked to verify its declared rotation protocol in the four HTTP cases.",
+      "primary_source": "https://www.w3.org/TR/webauthn-3/#sctn-verifying-assertion, section 7.2 step 6"
+    }
+  ],
+  "additional_checks": {
+    "token_clock_regression": {
+      "tests": 3,
+      "assertions": 23,
+      "exit_code": 0
+    },
+    "transport_composition": {
+      "kind": "One sequential local public-contract probe with real in-memory SQLite session and remember stores.",
+      "exit_code": 0,
+      "passed": 8,
+      "cases": [
+        {
+          "case": "control",
+          "pass": true,
+          "status": 204,
+          "endpoint": true,
+          "active_sessions": 1,
+          "remember_rows_before_validation": 2,
+          "failure": null
+        },
+        {
+          "case": "fallback",
+          "pass": true,
+          "status": 204,
+          "endpoint": true,
+          "active_sessions": 1,
+          "remember_rows_before_validation": 2,
+          "failure": null
+        },
+        {
+          "case": "hard_denial",
+          "pass": true,
+          "status": 401,
+          "endpoint": false,
+          "active_sessions": 0,
+          "remember_rows_before_validation": 0,
+          "failure": null
+        },
+        {
+          "case": "exhausted",
+          "pass": true,
+          "status": 401,
+          "endpoint": false,
+          "active_sessions": 0,
+          "remember_rows_before_validation": 0,
+          "failure": null
+        },
+        {
+          "case": "mismatch",
+          "pass": true,
+          "status": 401,
+          "endpoint": false,
+          "active_sessions": 0,
+          "remember_rows_before_validation": 0,
+          "failure": null
+        },
+        {
+          "case": "logout",
+          "pass": true,
+          "status": 204,
+          "endpoint": true,
+          "active_sessions": 0,
+          "remember_rows_before_validation": 0,
+          "failure": null
+        },
+        {
+          "case": "throw",
+          "pass": true,
+          "status": null,
+          "endpoint": false,
+          "active_sessions": 0,
+          "remember_rows_before_validation": 0,
+          "failure": "Second candidate failed."
+        },
+        {
+          "case": "publication_failure",
+          "pass": true,
+          "status": null,
+          "endpoint": true,
+          "active_sessions": 0,
+          "remember_rows_before_validation": 0,
+          "failure": "Publication failed."
+        }
+      ],
+      "helper_sha256": "17b587de6381995ea9214184f745dffd8eeeb4a5ec1307987c55574321411d59",
+      "not_in_phpunit_totals": true
+    }
+  },
+  "carried_deployment_requirement": {
+    "introduced_in_pass": 5,
+    "package": "auth-webauthn",
+    "table": "auth_webauthn_credentials",
+    "column": "revision",
+    "migration_path": "resources/migrations/2026-11-26-credential-revision/",
+    "deployment_order": "Apply matching migration before updated PHP code; adapt custom table/prefix; run once.",
+    "executed_migration": "SQLite existing-credential migration in the full WebAuthn suite",
+    "native_mysql_postgresql_executed": false
+  },
+  "limits": [
+    "Four native MySQL/PostgreSQL cases skipped; SQLite execution and schema reading do not establish native-engine behavior.",
+    "Two OTP LockWaitExpiryTest cases excluded from the 564 selected cases.",
+    "Previously auto-review-rejected dynamic JWT expiry/lock-wait investigation was not resumed or rerouted; related static observation remains unconfirmed.",
+    "New WebAuthn tests use real cryptography and SQLite, but no browser or hardware authenticator; HTTP session persistence is a controlled interface.",
+    "Eight additional composition checks are sequential, local, and distinct from the PHPUnit/Pest count.",
+    "Identity / Config 4 migration remains deferred by the user. Dependencies, public signatures, schemas and test thresholds are unchanged in this pass.",
+    "No fresh mutation score claimed in this pass; session HTTP production code unchanged."
+  ],
+  "retired_repository": {
+    "name": "auth-session-csrf",
+    "head": "7ecf4f6a1fd7e9f085ba899d7b474fe027525849",
+    "branch": "main",
+    "contents": [
+      "LICENSE",
+      "README.md"
+    ],
+    "executable_package": false
+  }
+}
