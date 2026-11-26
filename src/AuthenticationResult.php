@@ -19,6 +19,15 @@ final readonly class AuthenticationResult implements \JsonSerializable
         public bool $continueOnFailure = false,
         ?AuthenticationEvidence $evidence = null,
     ) {
+        if (
+            $this->subject instanceof IdentityInterface
+            && $this->subject instanceof DeniedReasonInterface
+        ) {
+            throw new \InvalidArgumentException(
+                'An authentication result subject cannot be both an identity and a denial reason.',
+            );
+        }
+
         if ($this->subject instanceof DeniedReasonInterface) {
             if (
                 $this->transportPayload !== null

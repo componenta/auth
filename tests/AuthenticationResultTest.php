@@ -7,7 +7,11 @@ namespace Componenta\Auth\Tests;
 use Componenta\Auth\AuthenticationEvidence;
 use Componenta\Auth\AuthenticationResult;
 use Componenta\Auth\AuthenticationStateInterface;
+use Componenta\Auth\AuthenticationStrategyInterface;
+use Componenta\Auth\Authenticator;
+use Componenta\Auth\Context;
 use Componenta\Auth\Denied\DeniedReason;
+use Componenta\Auth\DeniedReasonInterface;
 use Componenta\Identity\IdentityInterface;
 use Componenta\Identity\Uuid;
 use Componenta\Identity\UuidInterface;
@@ -46,6 +50,32 @@ final class AuthenticationResultTest extends TestCase
                 ),
             ),
         );
+    }
+
+    public function testAmbiguousSubjectCannotReachTheCallerAsSuccessWithoutEvidence(): void
+    {
+        $subject = new class implements IdentityInterface, DeniedReasonInterface {
+            public UuidInterface $uuid {
+                get => Uuid::fromString('018f6d5d-3f7a-7a9b-8c2f-123456789abc');
+            }
+
+            public string $code {
+                get => 'account_disabled';
+            }
+
+            public array $attributes {
+                get => [];
+            }
+        };
+        $strategy = $this->createStub(AuthenticationStrategyInterface::class);
+        $strategy->method('supports')->willReturn(true);
+        $strategy->method('attempt')->willReturnCallback(
+            static fn(): AuthenticationResult => new AuthenticationResult($subject),
+        );
+
+        $this->expectException(\InvalidArgumentException::class);
+
+        (new Authenticator($strategy))->attempt(new \stdClass(), new Context());
     }
 
     public function testAcceptsOneTypedAuthenticationStateObject(): void

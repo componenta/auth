@@ -59,6 +59,10 @@ return new AuthenticationResult(
 A successful result without `AuthenticationEvidence` is rejected. Auth 3 does
 not silently assign an assurance level from a role or method name.
 
+The subject must represent either an identity or a denial. A subject implementing
+both `IdentityInterface` and `DeniedReasonInterface` is rejected so every consumer
+observes the same outcome.
+
 A result may additionally carry:
 
 - one opaque `transportPayload` for an outer transport package;
