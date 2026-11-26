@@ -1,0 +1,615 @@
+{
+  "date": "2026-11-26",
+  "pass": 3,
+  "source_files": 231,
+  "runtime": {
+    "php": "8.4.28",
+    "phpunit": "12.5.33",
+    "pest": "4.7.8",
+    "phpstan": "2.3.7"
+  },
+  "totals": {
+    "tests": 490,
+    "assertions": 2039,
+    "errors": 0,
+    "failures": 0,
+    "skipped": 4,
+    "passed": 486,
+    "excluded": 2
+  },
+  "packages": [
+    {
+      "name": "auth",
+      "head": "271ebc4c16dd60067b37b659bd9ff1a8e2ef54e1",
+      "tree": "671abd97b4cccab67f93bfb43ffe23841172c922",
+      "source_files": 31,
+      "excluded": [],
+      "tests": 0,
+      "phpstan": 0,
+      "composer_validate": 0,
+      "diff_check": 0,
+      "junit": {
+        "tests": 67,
+        "assertions": 179,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "skips": []
+    },
+    {
+      "name": "auth-app",
+      "head": "df172cdc98cdffc80949c9a2cdaae586fd227658",
+      "tree": "af1d63a3367d0db70f140ed9a5348bfe6978b89e",
+      "source_files": 3,
+      "excluded": [],
+      "tests": 0,
+      "phpstan": 0,
+      "composer_validate": 0,
+      "diff_check": 0,
+      "junit": {
+        "tests": 11,
+        "assertions": 22,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "skips": []
+    },
+    {
+      "name": "auth-http",
+      "head": "787b8588ea9e78e1637232af26787ce27378ef8f",
+      "tree": "5674daff5846d19450985890a8c78f0b8c79e146",
+      "source_files": 18,
+      "excluded": [],
+      "tests": 0,
+      "phpstan": 0,
+      "composer_validate": 0,
+      "diff_check": 0,
+      "junit": {
+        "tests": 41,
+        "assertions": 196,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "skips": []
+    },
+    {
+      "name": "auth-jwt",
+      "head": "250895cceff39f1e6d465da0ea77912b075e8abb",
+      "tree": "d223cd65e594d65814eb144ad6cc63a9faab00cd",
+      "source_files": 28,
+      "excluded": [],
+      "tests": 0,
+      "phpstan": 0,
+      "composer_validate": 0,
+      "diff_check": 0,
+      "junit": {
+        "tests": 22,
+        "assertions": 71,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "skips": []
+    },
+    {
+      "name": "auth-magic-link",
+      "head": "30abe166ccd524fa5261a2f452323ccae4e99415",
+      "tree": "77b2331b87afb56fc4030bf51412650292ba2ce4",
+      "source_files": 7,
+      "excluded": [],
+      "tests": 0,
+      "phpstan": 0,
+      "composer_validate": 0,
+      "diff_check": 0,
+      "junit": {
+        "tests": 15,
+        "assertions": 80,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "skips": []
+    },
+    {
+      "name": "auth-otp",
+      "head": "630b2609c6c542bbf827f1ca03503b8376304d40",
+      "tree": "8eb033570f3b84840bb77cdb664c44ceb896c6e0",
+      "source_files": 27,
+      "excluded": [
+        "LockWaitExpiryTest (2 cases; timing/lock-boundary work not resumed)"
+      ],
+      "tests": 0,
+      "phpstan": 0,
+      "composer_validate": 0,
+      "diff_check": 0,
+      "junit": {
+        "tests": 41,
+        "assertions": 334,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "skips": []
+    },
+    {
+      "name": "auth-password",
+      "head": "8e04a0ec6cd01ad54588fe6ca9c90d618b3b7e7e",
+      "tree": "993e6b1633c7557a5ab464e7a78fe1622768ebbe",
+      "source_files": 11,
+      "excluded": [],
+      "tests": 0,
+      "phpstan": 0,
+      "composer_validate": 0,
+      "diff_check": 0,
+      "junit": {
+        "tests": 14,
+        "assertions": 65,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "skips": []
+    },
+    {
+      "name": "auth-recovery-code",
+      "head": "448f7913c2afdb88e8c5b769ab9ec971156b28e7",
+      "tree": "51182edb1cba9eb7834ead54b5b08db5c0440e9f",
+      "source_files": 8,
+      "excluded": [],
+      "tests": 0,
+      "phpstan": 0,
+      "composer_validate": 0,
+      "diff_check": 0,
+      "junit": {
+        "tests": 15,
+        "assertions": 59,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "skips": []
+    },
+    {
+      "name": "auth-remember-me",
+      "head": "7b60d8a95a84a661eae72aaf7a2944b2566d2508",
+      "tree": "97487608dcf8d4fcd1019e26553ace20f7442dfb",
+      "source_files": 15,
+      "excluded": [],
+      "tests": 0,
+      "phpstan": 0,
+      "composer_validate": 0,
+      "diff_check": 0,
+      "junit": {
+        "tests": 18,
+        "assertions": 121,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "skips": []
+    },
+    {
+      "name": "auth-session",
+      "head": "cdc2106098a43f6895e209803c613ad4c69eb3b0",
+      "tree": "35c970e3a83437692f9840bf068bfa7844412b79",
+      "source_files": 20,
+      "excluded": [],
+      "tests": 0,
+      "phpstan": 0,
+      "composer_validate": 0,
+      "diff_check": 0,
+      "junit": {
+        "tests": 16,
+        "assertions": 53,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "skips": []
+    },
+    {
+      "name": "auth-session-app",
+      "head": "5668a08e490d9d442f8d22afcb0133d3c7058b7d",
+      "tree": "ddd2ddf0d472e89cd33ccc55e4c464934a4a2132",
+      "source_files": 3,
+      "excluded": [],
+      "tests": 0,
+      "phpstan": 0,
+      "composer_validate": 0,
+      "diff_check": 0,
+      "junit": {
+        "tests": 13,
+        "assertions": 25,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "skips": []
+    },
+    {
+      "name": "auth-session-database",
+      "head": "c715b274694f4a34dd4d051b7384ae3daf3880b0",
+      "tree": "de9bceb3a6262cf0a6a189842da4a4d4298381b4",
+      "source_files": 5,
+      "excluded": [],
+      "tests": 0,
+      "phpstan": 0,
+      "composer_validate": 0,
+      "diff_check": 0,
+      "junit": {
+        "tests": 43,
+        "assertions": 265,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 4
+      },
+      "skips": [
+        [
+          "testAuthenticationSessionLifecycle with data set \"mysql-8.4\"",
+          null
+        ],
+        [
+          "testAuthenticationSessionLifecycle with data set \"postgresql\"",
+          null
+        ],
+        [
+          "testPreAuthenticationIsOneTime with data set \"mysql-8.4\"",
+          null
+        ],
+        [
+          "testPreAuthenticationIsOneTime with data set \"postgresql\"",
+          null
+        ]
+      ]
+    },
+    {
+      "name": "auth-session-http",
+      "head": "7fe52b43e6a909c54b519dacc01094b953cd99fb",
+      "tree": "2249e22a3ee6caa544b7317ab3ccc795bc008f7d",
+      "source_files": 17,
+      "excluded": [],
+      "tests": 0,
+      "phpstan": 0,
+      "composer_validate": 0,
+      "diff_check": 0,
+      "junit": {
+        "tests": 91,
+        "assertions": 211,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "skips": []
+    },
+    {
+      "name": "auth-token",
+      "head": "f30fed77ade007aac6f754dadf2553f97019c8d2",
+      "tree": "481136fe098a0beedcad28ce8a2fc2377c142b04",
+      "source_files": 10,
+      "excluded": [],
+      "tests": 0,
+      "phpstan": 0,
+      "composer_validate": 0,
+      "diff_check": 0,
+      "junit": {
+        "tests": 14,
+        "assertions": 44,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "skips": []
+    },
+    {
+      "name": "auth-totp",
+      "head": "eb2cce835932ba4d1c2de79e21f9d6cc690352c2",
+      "tree": "1d6a86bf72c6a44af2b8938f34bc670d2f4ee4a4",
+      "source_files": 10,
+      "excluded": [],
+      "tests": 0,
+      "phpstan": 0,
+      "composer_validate": 0,
+      "diff_check": 0,
+      "junit": {
+        "tests": 32,
+        "assertions": 90,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "skips": []
+    },
+    {
+      "name": "auth-webauthn",
+      "head": "0f27eb360aa8d355d0957d4f04392f229a81d47c",
+      "tree": "a5e14bc91be66f5e7c94004544c35317d31e8367",
+      "source_files": 18,
+      "excluded": [],
+      "tests": 0,
+      "phpstan": 0,
+      "composer_validate": 0,
+      "diff_check": 0,
+      "junit": {
+        "tests": 37,
+        "assertions": 224,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 0
+      },
+      "skips": []
+    }
+  ],
+  "publication": {
+    "auth": {
+      "head": "271ebc4c16dd60067b37b659bd9ff1a8e2ef54e1",
+      "commits": [
+        {
+          "local_sha": "ddafd5b6c274c0749e13691d14ea94f7439e8310",
+          "remote_sha": "271ebc4c16dd60067b37b659bd9ff1a8e2ef54e1",
+          "tree_sha": "671abd97b4cccab67f93bfb43ffe23841172c922",
+          "message": "Reject ambiguous authentication result subjects"
+        }
+      ]
+    },
+    "auth-session-database": {
+      "head": "c715b274694f4a34dd4d051b7384ae3daf3880b0",
+      "commits": [
+        {
+          "local_sha": "5ea311c504d74928659d3bf642a1249553c23e4d",
+          "remote_sha": "c715b274694f4a34dd4d051b7384ae3daf3880b0",
+          "tree_sha": "de9bceb3a6262cf0a6a189842da4a4d4298381b4",
+          "message": "Preserve subsecond session idle expiry during renewal"
+        }
+      ]
+    },
+    "auth-session-http": {
+      "head": "7fe52b43e6a909c54b519dacc01094b953cd99fb",
+      "commits": [
+        {
+          "local_sha": "28abcb290760f0d109bb7649637c4278d8bed66a",
+          "remote_sha": "7fe52b43e6a909c54b519dacc01094b953cd99fb",
+          "tree_sha": "2249e22a3ee6caa544b7317ab3ccc795bc008f7d",
+          "message": "Ignore invalid UTF-8 in optional session user-agent metadata"
+        }
+      ]
+    },
+    "auth-http": {
+      "head": "787b8588ea9e78e1637232af26787ce27378ef8f",
+      "commits": [
+        {
+          "local_sha": "06cda3966ca2409a4a60bfd6c706f675fac9192a",
+          "remote_sha": "787b8588ea9e78e1637232af26787ce27378ef8f",
+          "tree_sha": "5674daff5846d19450985890a8c78f0b8c79e146",
+          "message": "Compensate credentials when authentication request decoration fails"
+        }
+      ]
+    }
+  },
+  "git_verification_before_report": [
+    {
+      "repo": "auth",
+      "fetch_exit": 0,
+      "branch": "fix/auth-audit-2026-11-25",
+      "head": "271ebc4c16dd60067b37b659bd9ff1a8e2ef54e1",
+      "tree": "671abd97b4cccab67f93bfb43ffe23841172c922",
+      "status": "",
+      "divergence": "0\t0",
+      "new_commits": [
+        "271ebc4c16dd60067b37b659bd9ff1a8e2ef54e1 Reject ambiguous authentication result subjects"
+      ],
+      "configuration_changes": []
+    },
+    {
+      "repo": "auth-app",
+      "fetch_exit": 0,
+      "branch": "fix/auth-audit-2026-11-25",
+      "head": "df172cdc98cdffc80949c9a2cdaae586fd227658",
+      "tree": "af1d63a3367d0db70f140ed9a5348bfe6978b89e",
+      "status": "",
+      "divergence": "0\t0",
+      "new_commits": [],
+      "configuration_changes": []
+    },
+    {
+      "repo": "auth-http",
+      "fetch_exit": 0,
+      "branch": "fix/auth-audit-2026-11-25",
+      "head": "787b8588ea9e78e1637232af26787ce27378ef8f",
+      "tree": "5674daff5846d19450985890a8c78f0b8c79e146",
+      "status": "",
+      "divergence": "0\t0",
+      "new_commits": [
+        "787b8588ea9e78e1637232af26787ce27378ef8f Compensate credentials when authentication request decoration fails"
+      ],
+      "configuration_changes": []
+    },
+    {
+      "repo": "auth-jwt",
+      "fetch_exit": 0,
+      "branch": "fix/auth-audit-2026-11-25",
+      "head": "250895cceff39f1e6d465da0ea77912b075e8abb",
+      "tree": "d223cd65e594d65814eb144ad6cc63a9faab00cd",
+      "status": "",
+      "divergence": "0\t0",
+      "new_commits": [],
+      "configuration_changes": []
+    },
+    {
+      "repo": "auth-magic-link",
+      "fetch_exit": 0,
+      "branch": "fix/auth-audit-2026-11-25",
+      "head": "30abe166ccd524fa5261a2f452323ccae4e99415",
+      "tree": "77b2331b87afb56fc4030bf51412650292ba2ce4",
+      "status": "",
+      "divergence": "0\t0",
+      "new_commits": [],
+      "configuration_changes": []
+    },
+    {
+      "repo": "auth-otp",
+      "fetch_exit": 0,
+      "branch": "fix/auth-audit-2026-11-25",
+      "head": "630b2609c6c542bbf827f1ca03503b8376304d40",
+      "tree": "8eb033570f3b84840bb77cdb664c44ceb896c6e0",
+      "status": "",
+      "divergence": "0\t0",
+      "new_commits": [],
+      "configuration_changes": []
+    },
+    {
+      "repo": "auth-password",
+      "fetch_exit": 0,
+      "branch": "fix/auth-audit-2026-11-25",
+      "head": "8e04a0ec6cd01ad54588fe6ca9c90d618b3b7e7e",
+      "tree": "993e6b1633c7557a5ab464e7a78fe1622768ebbe",
+      "status": "",
+      "divergence": "0\t0",
+      "new_commits": [],
+      "configuration_changes": []
+    },
+    {
+      "repo": "auth-recovery-code",
+      "fetch_exit": 0,
+      "branch": "fix/auth-audit-2026-11-25",
+      "head": "448f7913c2afdb88e8c5b769ab9ec971156b28e7",
+      "tree": "51182edb1cba9eb7834ead54b5b08db5c0440e9f",
+      "status": "",
+      "divergence": "0\t0",
+      "new_commits": [],
+      "configuration_changes": []
+    },
+    {
+      "repo": "auth-remember-me",
+      "fetch_exit": 0,
+      "branch": "main",
+      "head": "7b60d8a95a84a661eae72aaf7a2944b2566d2508",
+      "tree": "97487608dcf8d4fcd1019e26553ace20f7442dfb",
+      "status": "",
+      "divergence": "0\t0",
+      "new_commits": [],
+      "configuration_changes": []
+    },
+    {
+      "repo": "auth-session",
+      "fetch_exit": 0,
+      "branch": "fix/auth-audit-2026-11-25",
+      "head": "cdc2106098a43f6895e209803c613ad4c69eb3b0",
+      "tree": "35c970e3a83437692f9840bf068bfa7844412b79",
+      "status": "",
+      "divergence": "0\t0",
+      "new_commits": [],
+      "configuration_changes": []
+    },
+    {
+      "repo": "auth-session-app",
+      "fetch_exit": 0,
+      "branch": "fix/auth-audit-2026-11-25",
+      "head": "5668a08e490d9d442f8d22afcb0133d3c7058b7d",
+      "tree": "ddd2ddf0d472e89cd33ccc55e4c464934a4a2132",
+      "status": "",
+      "divergence": "0\t0",
+      "new_commits": [],
+      "configuration_changes": []
+    },
+    {
+      "repo": "auth-session-csrf",
+      "fetch_exit": 0,
+      "branch": "main",
+      "head": "7ecf4f6a1fd7e9f085ba899d7b474fe027525849",
+      "tree": "15d9eeb79292ed7d524abecb066cc423968115ba",
+      "status": "",
+      "divergence": "0\t0",
+      "new_commits": [],
+      "configuration_changes": []
+    },
+    {
+      "repo": "auth-session-database",
+      "fetch_exit": 0,
+      "branch": "fix/auth-audit-2026-11-25",
+      "head": "c715b274694f4a34dd4d051b7384ae3daf3880b0",
+      "tree": "de9bceb3a6262cf0a6a189842da4a4d4298381b4",
+      "status": "",
+      "divergence": "0\t0",
+      "new_commits": [
+        "c715b274694f4a34dd4d051b7384ae3daf3880b0 Preserve subsecond session idle expiry during renewal"
+      ],
+      "configuration_changes": []
+    },
+    {
+      "repo": "auth-session-http",
+      "fetch_exit": 0,
+      "branch": "fix/auth-audit-2026-11-25",
+      "head": "7fe52b43e6a909c54b519dacc01094b953cd99fb",
+      "tree": "2249e22a3ee6caa544b7317ab3ccc795bc008f7d",
+      "status": "",
+      "divergence": "0\t0",
+      "new_commits": [
+        "7fe52b43e6a909c54b519dacc01094b953cd99fb Ignore invalid UTF-8 in optional session user-agent metadata"
+      ],
+      "configuration_changes": []
+    },
+    {
+      "repo": "auth-token",
+      "fetch_exit": 0,
+      "branch": "fix/auth-audit-2026-11-25",
+      "head": "f30fed77ade007aac6f754dadf2553f97019c8d2",
+      "tree": "481136fe098a0beedcad28ce8a2fc2377c142b04",
+      "status": "",
+      "divergence": "0\t0",
+      "new_commits": [],
+      "configuration_changes": []
+    },
+    {
+      "repo": "auth-totp",
+      "fetch_exit": 0,
+      "branch": "fix/auth-audit-2026-11-25",
+      "head": "eb2cce835932ba4d1c2de79e21f9d6cc690352c2",
+      "tree": "1d6a86bf72c6a44af2b8938f34bc670d2f4ee4a4",
+      "status": "",
+      "divergence": "0\t0",
+      "new_commits": [],
+      "configuration_changes": []
+    },
+    {
+      "repo": "auth-webauthn",
+      "fetch_exit": 0,
+      "branch": "fix/auth-audit-2026-11-25",
+      "head": "0f27eb360aa8d355d0957d4f04392f229a81d47c",
+      "tree": "a5e14bc91be66f5e7c94004544c35317d31e8367",
+      "status": "",
+      "divergence": "0\t0",
+      "new_commits": [],
+      "configuration_changes": []
+    }
+  ],
+  "composer_audit": {
+    "exit_code": 0,
+    "result": {
+      "advisories": [],
+      "abandoned": [],
+      "filter": [],
+      "cooldown": []
+    }
+  },
+  "mutation": {
+    "package": "auth-session-http",
+    "generated": 262,
+    "killed": 237,
+    "escaped": 25,
+    "uncovered": 0,
+    "timeouts": 0,
+    "msi": 90.45801526717557,
+    "covered_msi": 90.45801526717557,
+    "min_msi": 80,
+    "min_covered_msi": 80
+  },
+  "limitations": [
+    "Four native MySQL/PostgreSQL lifecycle tests skipped; SQLite tests executed.",
+    "Two OTP LockWaitExpiryTest cases excluded; earlier stopped JWT lock-wait investigation not resumed.",
+    "Identity/Config 4 migration deferred by user."
+  ],
+  "report_commit_changes_code": false
+}
