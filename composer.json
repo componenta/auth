@@ -5,8 +5,8 @@
     "license": "MIT",
     "require": {
         "php": "^8.4",
-        "componenta/clock": "^1.1.0",
-        "componenta/identity": "^1.0.1",
+        "componenta/clock": "^1.2.0",
+        "componenta/identity": "^1.1.1",
         "psr/clock": "^1.0",
         "psr/log": "^3.0"
     },
@@ -19,7 +19,8 @@
     "extra": {
         "branch-alias": {
             "dev-main": "2.1.x-dev",
-            "dev-auth-3": "3.0.x-dev"
+            "dev-auth-3": "3.0.x-dev",
+            "dev-release/auth-dependency-baseline-2026-11-26": "4.0.x-dev"
         }
     },
     "config": {
