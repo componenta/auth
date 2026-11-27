@@ -26,7 +26,7 @@
   "packages": [
     {
       "name": "auth",
-      "base_sha": "7dcd1ba510fc37a27043b40a87ca606c5298f03b",
+      "base_sha": "9a85ba81b820dd93b96bf2ae6f19dae1e7205e58",
       "php85_exit": 0,
       "php85": {
         "tests": 67,
@@ -57,11 +57,11 @@
         "psr/clock": "^1.0",
         "psr/log": "^3.0"
       },
-      "verified_source_commit": "7dcd1ba510fc37a27043b40a87ca606c5298f03b",
+      "verified_source_commit": "9a85ba81b820dd93b96bf2ae6f19dae1e7205e58",
       "source_tree_sha": "3026f229cf36c2c25f2022dd0a974530865d7339",
       "test_tree_sha": "3cdbafca329c75b040421c082fe33c3db06d4a8d",
       "verified_worktree_sha256": "236a4cb4b76e2bb3e4b632bb5999ee8cdd899148b0b3e67151349f82141f7ef6",
-      "verification": "Full suite rerun after JWT critical-header and TOTP persisted-model fixes on the refreshed Symfony 8.1.13 graph."
+      "verification": "Full suite, static analysis and manifest checks repeated in recheck4 on unchanged Auth sources after updating development-only justinrainbow/json-schema to 6.16.0; XML counts, worktree hashes and lock hashes independently cross-checked."
     },
     {
       "name": "auth-app",
@@ -92,7 +92,7 @@
       "source_tree_sha": "39075571f85b7871258976c40a912f66c60d99cc",
       "test_tree_sha": "e6d4988d61b539cfba0ec1b839557d1c7dfe2df7",
       "verified_worktree_sha256": "e69794c1300f2a01775df5c414de2b51c2b477ad8a17ddebb39579d9dc670463",
-      "verification": "Full suite rerun after JWT critical-header and TOTP persisted-model fixes on the refreshed Symfony 8.1.13 graph."
+      "verification": "Full suite, static analysis and manifest checks repeated in recheck4 on unchanged Auth sources after updating development-only justinrainbow/json-schema to 6.16.0; XML counts, worktree hashes and lock hashes independently cross-checked."
     },
     {
       "name": "auth-http",
@@ -133,11 +133,11 @@
       "source_tree_sha": "4d1d436ad32549100d677a2faf30b2575f9b6159",
       "test_tree_sha": "fa560047998267d1d2a2b8eaf2232a6a61a2c0c1",
       "verified_worktree_sha256": "821212529a9450ff1693ea98ba22f3b09fd1c01f6d6f60081ef6a97a9d468bfc",
-      "verification": "Full suite rerun after JWT critical-header and TOTP persisted-model fixes on the refreshed Symfony 8.1.13 graph."
+      "verification": "Full suite, static analysis and manifest checks repeated in recheck4 on unchanged Auth sources after updating development-only justinrainbow/json-schema to 6.16.0; XML counts, worktree hashes and lock hashes independently cross-checked."
     },
     {
       "name": "auth-jwt",
-      "base_sha": "28e9e1cb83bfdcd0ae3ab60c85b82731b1652325",
+      "base_sha": "eebb57e257e1478e2e92086b77fa3bf3907d89f1",
       "php85_exit": 0,
       "php85": {
         "tests": 47,
@@ -179,7 +179,7 @@
       "source_tree_sha": "9ef9e3ea1104d618e37386238b8353ddb3ae8a96",
       "test_tree_sha": "fa1da5ec76099def6e1bb03ca9dd48026a031386",
       "verified_worktree_sha256": "d8b949a4a8264bfdcb2e32316a648c0f7dd2072625fc1287536d53cf6f1b5133",
-      "verification": "Full suite rerun after JWT critical-header and TOTP persisted-model fixes on the refreshed Symfony 8.1.13 graph."
+      "verification": "Full suite, static analysis and manifest checks repeated in recheck4 on unchanged Auth sources after updating development-only justinrainbow/json-schema to 6.16.0; XML counts, worktree hashes and lock hashes independently cross-checked."
     },
     {
       "name": "auth-magic-link",
@@ -223,7 +223,7 @@
       "source_tree_sha": "23d9da210bfb359613c7e9d14072989eb04d0ff9",
       "test_tree_sha": "2308307ab975330d3ea44b8ce3af3b7ea31ceb28",
       "verified_worktree_sha256": "50a44bcc0bc1f366d6eaa2e697b6a4ed7f66c5fc57c53359c1d6b9f885de4307",
-      "verification": "Full suite rerun after JWT critical-header and TOTP persisted-model fixes on the refreshed Symfony 8.1.13 graph."
+      "verification": "Full suite, static analysis and manifest checks repeated in recheck4 on unchanged Auth sources after updating development-only justinrainbow/json-schema to 6.16.0; XML counts, worktree hashes and lock hashes independently cross-checked."
     },
     {
       "name": "auth-otp",
@@ -268,7 +268,7 @@
       "source_tree_sha": "284832e7025486d71e115221b012a6cd41ecdb43",
       "test_tree_sha": "5cf211e3a019c6287e5805b01d660a63a2569e7b",
       "verified_worktree_sha256": "7d86f93ea78f891b58f34e1fdadfc4a280952c20bf50e89ca8e51b0e80626c81",
-      "verification": "Full suite rerun after JWT critical-header and TOTP persisted-model fixes on the refreshed Symfony 8.1.13 graph."
+      "verification": "Full suite, static analysis and manifest checks repeated in recheck4 on unchanged Auth sources after updating development-only justinrainbow/json-schema to 6.16.0; XML counts, worktree hashes and lock hashes independently cross-checked."
     },
     {
       "name": "auth-password",
@@ -313,7 +313,7 @@
       "source_tree_sha": "9ade6e3ca0d30d24576f15534853b04b5b06f192",
       "test_tree_sha": "120086177f78e48ef45f49ffe54ca7a065db3b3e",
       "verified_worktree_sha256": "9b9ad1fcd8f7db52e70939c4ce48a6e2cb120bf098b475a304bdc5509eb765a2",
-      "verification": "Full suite rerun after JWT critical-header and TOTP persisted-model fixes on the refreshed Symfony 8.1.13 graph."
+      "verification": "Full suite, static analysis and manifest checks repeated in recheck4 on unchanged Auth sources after updating development-only justinrainbow/json-schema to 6.16.0; XML counts, worktree hashes and lock hashes independently cross-checked."
     },
     {
       "name": "auth-recovery-code",
@@ -357,7 +357,7 @@
       "source_tree_sha": "4f05c12b71817c0b5b82afd3e47f2ac766e744ce",
       "test_tree_sha": "66b2316fbd9195878a3359581567f440e8ad7539",
       "verified_worktree_sha256": "7a0aa36d8233f05e28abb1e317b45a835daca58c1502b14128b9c4b62496b6ac",
-      "verification": "Full suite rerun after JWT critical-header and TOTP persisted-model fixes on the refreshed Symfony 8.1.13 graph."
+      "verification": "Full suite, static analysis and manifest checks repeated in recheck4 on unchanged Auth sources after updating development-only justinrainbow/json-schema to 6.16.0; XML counts, worktree hashes and lock hashes independently cross-checked."
     },
     {
       "name": "auth-remember-me",
@@ -402,7 +402,7 @@
       "source_tree_sha": "da0e3e8d0c773f2999acc0552e4552c4540f38be",
       "test_tree_sha": "977dc2a3473347dcd927333936cbdcd32ea44d8d",
       "verified_worktree_sha256": "51853f61b3ca5d04d62c45e3075c6879a82cfec711702b8ec51921d5cee8e099",
-      "verification": "Full suite rerun after JWT critical-header and TOTP persisted-model fixes on the refreshed Symfony 8.1.13 graph."
+      "verification": "Full suite, static analysis and manifest checks repeated in recheck4 on unchanged Auth sources after updating development-only justinrainbow/json-schema to 6.16.0; XML counts, worktree hashes and lock hashes independently cross-checked."
     },
     {
       "name": "auth-session",
@@ -439,7 +439,7 @@
       "source_tree_sha": "641c51206e22f37c3957cfe0e4a50a1119d77a97",
       "test_tree_sha": "59a69cdb227e8723c84fdc66e4dcd6a590cf87d0",
       "verified_worktree_sha256": "0143a50de1178343bed39d85735dbd5b93a575afa8b3fbb2c2ce7385ea85b085",
-      "verification": "Full suite rerun after JWT critical-header and TOTP persisted-model fixes on the refreshed Symfony 8.1.13 graph."
+      "verification": "Full suite, static analysis and manifest checks repeated in recheck4 on unchanged Auth sources after updating development-only justinrainbow/json-schema to 6.16.0; XML counts, worktree hashes and lock hashes independently cross-checked."
     },
     {
       "name": "auth-session-app",
@@ -469,7 +469,7 @@
       "source_tree_sha": "9363392c1a1ae3f8407657e1bade90cdedfad6b8",
       "test_tree_sha": "5c5aa5d2aa9bb1a6dc1473327e13c69692e356c2",
       "verified_worktree_sha256": "62bb9dacfe9c1f118a31abae6303bfc8993526a5a170b123badc488d132c7edc",
-      "verification": "Full suite rerun after JWT critical-header and TOTP persisted-model fixes on the refreshed Symfony 8.1.13 graph."
+      "verification": "Full suite, static analysis and manifest checks repeated in recheck4 on unchanged Auth sources after updating development-only justinrainbow/json-schema to 6.16.0; XML counts, worktree hashes and lock hashes independently cross-checked."
     },
     {
       "name": "auth-session-database",
@@ -543,7 +543,7 @@
       "source_tree_sha": "2c4ff3f2b1f2f53bd447e8687bd0203de5b47138",
       "test_tree_sha": "1a4a531ebe23b713bfbd4707acbf3198957cb6ce",
       "verified_worktree_sha256": "635d81a8e4fc3f661ad0bd26117f4b77211c1ea3c6e2522365eb470ac6af61ff",
-      "verification": "Full suite rerun after JWT critical-header and TOTP persisted-model fixes on the refreshed Symfony 8.1.13 graph."
+      "verification": "Full suite, static analysis and manifest checks repeated in recheck4 on unchanged Auth sources after updating development-only justinrainbow/json-schema to 6.16.0; XML counts, worktree hashes and lock hashes independently cross-checked."
     },
     {
       "name": "auth-session-http",
@@ -588,7 +588,7 @@
       "source_tree_sha": "13407456ba894539c6b2ee9472512cadd4e04ada",
       "test_tree_sha": "a347248fefbbe47785b4882611593caadde557ab",
       "verified_worktree_sha256": "037be8c9228be5f9b0c73012c8c7259503c59d5dd971b3f1f293397edd1a8aeb",
-      "verification": "Full suite rerun after JWT critical-header and TOTP persisted-model fixes on the refreshed Symfony 8.1.13 graph."
+      "verification": "Full suite, static analysis and manifest checks repeated in recheck4 on unchanged Auth sources after updating development-only justinrainbow/json-schema to 6.16.0; XML counts, worktree hashes and lock hashes independently cross-checked."
     },
     {
       "name": "auth-token",
@@ -626,11 +626,11 @@
       "source_tree_sha": "9a4ab216656090ab64faa74c0d1984948e991eb6",
       "test_tree_sha": "3351a462d4c0d6d546f9d7f5789c8c5e689d423c",
       "verified_worktree_sha256": "ff1e54ba88aff9503fa2dc6a5391d1b88a558e0844595af256ee72b38df9523b",
-      "verification": "Full suite rerun after JWT critical-header and TOTP persisted-model fixes on the refreshed Symfony 8.1.13 graph."
+      "verification": "Full suite, static analysis and manifest checks repeated in recheck4 on unchanged Auth sources after updating development-only justinrainbow/json-schema to 6.16.0; XML counts, worktree hashes and lock hashes independently cross-checked."
     },
     {
       "name": "auth-totp",
-      "base_sha": "ea174a3bcb2b705e6e1065918d7f8826d80eb72b",
+      "base_sha": "624fcb15f2391a9e25863079b5833f8498cb4ed5",
       "php85_exit": 0,
       "php85": {
         "tests": 80,
@@ -672,7 +672,7 @@
       "source_tree_sha": "5cf445df0788eefb7945eabd8f0efaf7a06beddf",
       "test_tree_sha": "09fc61f01f3e59985f74d0b165f6a77aaabeb415",
       "verified_worktree_sha256": "346821523ce552547873fa8b666fee749b24277ae0bf17ae6ba7b9f4802f560b",
-      "verification": "Full suite rerun after JWT critical-header and TOTP persisted-model fixes on the refreshed Symfony 8.1.13 graph."
+      "verification": "Full suite, static analysis and manifest checks repeated in recheck4 on unchanged Auth sources after updating development-only justinrainbow/json-schema to 6.16.0; XML counts, worktree hashes and lock hashes independently cross-checked."
     },
     {
       "name": "auth-webauthn",
@@ -721,7 +721,7 @@
       "source_tree_sha": "c74ef135e056687ecbab6f2fa6caad54a1117dd6",
       "test_tree_sha": "68b05c7da3b2343978a5bb059620a9d83d81cd98",
       "verified_worktree_sha256": "94ba2e3b12ad927ea87a15c0640734fbe2e7b6a81240127045314a84db7e6d49",
-      "verification": "Full suite rerun after JWT critical-header and TOTP persisted-model fixes on the refreshed Symfony 8.1.13 graph."
+      "verification": "Full suite, static analysis and manifest checks repeated in recheck4 on unchanged Auth sources after updating development-only justinrainbow/json-schema to 6.16.0; XML counts, worktree hashes and lock hashes independently cross-checked."
     }
   ],
   "dependencies": [
@@ -906,7 +906,7 @@
         "infection/infection": "0.35.12",
         "infection/mutator": "0.4.1",
         "jean85/pretty-package-versions": "2.1.1",
-        "justinrainbow/json-schema": "6.15.1",
+        "justinrainbow/json-schema": "6.16.0",
         "marc-mabe/php-enum": "v4.7.2",
         "myclabs/deep-copy": "1.14.0",
         "nikic/php-parser": "v5.9.0",
@@ -957,7 +957,7 @@
         "thecodingmachine/safe": "v3.4.0",
         "theseer/tokenizer": "2.0.1"
       },
-      "lock_sha256": "d7ef3d5bf7625306d6fc99d7411438dc9d813aa00048ef29d5b255ac43979d03"
+      "lock_sha256": "4d505e57baadebc87ae61028fd52a8db01b06175f3cc51405cec3df7ef6e0f83"
     },
     "integration84": {
       "package_count": 125,
@@ -1041,7 +1041,7 @@
         "infection/infection": "0.35.12",
         "infection/mutator": "0.4.1",
         "jean85/pretty-package-versions": "2.1.1",
-        "justinrainbow/json-schema": "6.15.1",
+        "justinrainbow/json-schema": "6.16.0",
         "marc-mabe/php-enum": "v4.7.2",
         "myclabs/deep-copy": "1.14.0",
         "nikic/php-parser": "v5.9.0",
@@ -1092,7 +1092,7 @@
         "thecodingmachine/safe": "v3.4.0",
         "theseer/tokenizer": "2.0.1"
       },
-      "lock_sha256": "a7d9f0088e186a5970a24cdd31f0afa7b499cc7462c2ded727140bd3c7cc6423"
+      "lock_sha256": "aabc4473494c77d3f930ac9180048a45bcd05dd2a30b96a7591f89646cc33541"
     }
   },
   "mutation": {
@@ -1110,8 +1110,8 @@
       "mutationCodeCoverage": 100,
       "coveredCodeMsi": 90.84
     },
-    "status": "Historical first-pass result; no new mutation run in recheck3.",
-    "scope_note": "Session HTTP source/tests are unchanged. The shared dependency graph now includes five Symfony 8.1.13 patches; the fresh full-suite matrix covers that graph, while the historical mutation score does not claim a rerun on it."
+    "status": "Historical first-pass result; no new mutation run in recheck4.",
+    "scope_note": "Session HTTP source/tests are unchanged. The shared graph now contains five Symfony 8.1.13 patches and development-only justinrainbow/json-schema 6.16.0. The fresh full-suite matrix covers the final graph; the historical mutation score is not a rerun on it."
   },
   "fix_commits": {
     "auth-token": "58f0ba09cc96aeeeffc481ed501864f60e302fe0",
@@ -1145,7 +1145,7 @@
   "framework_integration_conflict": {
     "package": "componenta/skeleton",
     "ref": "refactor/unified-application-build-2026-11-27",
-    "commit": "41cb8e288eddd04adc134cb894527d4a0993ba7f",
+    "commit": "0f8e357557c23c7268e130dcd27fdb695324c529",
     "preset": "Full/Auth",
     "source_path": "installer/Installer.php",
     "requires": {
@@ -1154,7 +1154,7 @@
     "reason": "The Full preset automatically enables Auth; optional Auth in other HTTP presets uses the same legacy monolithic Auth 2 mapping.",
     "previous_app_dependency_conflict_resolved": true
   },
-  "source_commit_note": "verified_source_commit identifies the tested production/test trees and Composer manifest. For auth, source remains unchanged and this report is published by a later documentation-only commit. Test results were recorded before committing identical worktrees; verified_worktree_sha256 ties evidence to final contents. Reviewed local trees were compared to remotely created trees before branch updates.",
+  "source_commit_note": "verified_source_commit identifies the production/test trees and Composer manifest used in the final recheck4 matrix. Auth code and tests were unchanged in this pass; this report is published by a later documentation-only commit. verified_worktree_sha256, Git source/test tree SHAs and lock SHA-256 values bind results to the exact tested contents. Reviewed local trees are compared with remotely created trees before guarded branch publication.",
   "recheck": {
     "checked_at": "2026-11-27T15:52:40.626242+02:00",
     "timezone": "Europe/Kaliningrad",
@@ -1349,7 +1349,7 @@
   "app_integration": {
     "source": {
       "ref": "refactor/unified-application-build-2026-11-27",
-      "sha": "d2c1a5a0b41a343dcb408e165986203e1179e712",
+      "sha": "0e887ed8e14f7672483a021b196e97347f8b03d1",
       "version": "6.0.0",
       "constraints": {
         "php": "^8.5.13",
@@ -1366,7 +1366,7 @@
     },
     "skeleton": {
       "ref": "refactor/unified-application-build-2026-11-27",
-      "sha": "41cb8e288eddd04adc134cb894527d4a0993ba7f",
+      "sha": "0f8e357557c23c7268e130dcd27fdb695324c529",
       "version": "6.0.0",
       "constraints": {
         "componenta/app": "^6.0.0",
@@ -1400,7 +1400,7 @@
       "installer_source_line": 166
     },
     "proof": {
-      "checked_at": "2026-11-27T17:04:28.635267+02:00",
+      "checked_at": "2026-11-27T18:48:48.733808+02:00",
       "root_requires": {
         "componenta/auth": "4.0.0",
         "componenta/auth-app": "3.0.0",
@@ -1438,7 +1438,7 @@
         "cooldown": []
       },
       "smoke": {
-        "app_source": "d2c1a5a0b41a343dcb408e165986203e1179e712",
+        "app_source": "0e887ed8e14f7672483a021b196e97347f8b03d1",
         "php": "8.5.13",
         "passed": [
           "authenticated request",
@@ -1531,19 +1531,21 @@
         "symfony/uid": "v8.1.9",
         "web-auth/cose-lib": "4.8.2",
         "web-auth/webauthn-lib": "5.3.17",
-        "webmozart/assert": "2.5.1",
+        "webmozart/assert": "2.5.1"
+      },
+      "development_packages": {
         "nyholm/psr7": "1.8.3"
       },
       "no_ignored_constraints_or_platform": true,
       "no_replace": true,
-      "resolver": "Normal Composer update from no lock, ordinary transitive solver; no replace entries, artificial transitive root pins, platform ignores or security-policy bypass.",
+      "resolver": "Normal Composer update from no pre-existing lock, ordinary transitive solver; no replace, artificial transitive root pins, platform ignores or security-policy bypass.",
       "limitations": [
-        "Five targeted Auth/App request-ownership scenarios; not an exhaustive test of App build/deployment behavior or Skeleton installer.",
-        "Future internal versions are path-repository projections, not published stable tags.",
-        "Shared integration and integration84 were not modified by this agent."
+        "The five scenarios verify Auth composition and request ownership; they are not a complete App build/deploy, prepared-provider aliasing or Skeleton Full certification.",
+        "Path package future-version projections are a local compatibility proof, not evidence that stable tags have been published.",
+        "The only development package is the Nyholm PSR-7 test adapter; json-schema is absent."
       ],
       "tested_auth_heads": {
-        "auth": "7dcd1ba510fc37a27043b40a87ca606c5298f03b",
+        "auth": "9a85ba81b820dd93b96bf2ae6f19dae1e7205e58",
         "auth-app": "9b776f733734e637be78100471638211a81df64c",
         "auth-http": "a2bbbf099fe4ae07aacb499da9265f03115a14f6",
         "auth-jwt": "eebb57e257e1478e2e92086b77fa3bf3907d89f1",
@@ -1560,11 +1562,223 @@
         "auth-totp": "624fcb15f2391a9e25863079b5833f8498cb4ed5",
         "auth-webauthn": "82b5ec40f402518894c00941bcdabc03958010b8"
       },
-      "source_note": "Auth packages were linked from the same checked worktrees; final published hashes identify identical tested source contents. These five smokes exercise App configuration and Auth request ownership, not every package operation.",
+      "source_note": "The five existing smokes were repeated against exact App 0e887ed8 and the unchanged Auth sources recorded here. They verify App configuration, DI adapter composition and request ownership. The App provider-list change was reviewed; no new aliasing regression suite or full build/deploy or Skeleton installer run is claimed.",
       "app_verified_installed_source_files": 52,
-      "app_source_tree": "b62e797659a7fa881add4b9a4ed02afbec2cb2e0",
-      "lock_sha256": "a2339d85f636742c6d37232af0d37eb7cf957a001d8676708f70d31f5b6dcdc5",
-      "manifest_sha256": "c08c0fc0c9b13206f90a44e12a6d471a840de3df9525e23fd65e8cf317ad0cc7"
+      "app_installed_source_all_match": true,
+      "app_git_tree": "7b498e3d0527aa23191d397fa5211372374bdd2f",
+      "app_source_tree": "e1d624ff02c63cf3aea4f26b11642f8e9f5ca918",
+      "app_installed_source_sha256": [
+        {
+          "path": "composer.json",
+          "sha256": "fb0e4b7e7e48e31e78dc19af7812a83775b61eddd2b72622f6ec0646921ee2d6"
+        },
+        {
+          "path": "src/AppFactory.php",
+          "sha256": "783767ad06b5cec2f6f2c2a90ab2d948d1188e6fde42095d26b8e4cc0517299e"
+        },
+        {
+          "path": "src/AppFactoryInterface.php",
+          "sha256": "2974edbcd830748ee3e1ca72f0c06bdd47b47f8736de697603a7cab96554dd32"
+        },
+        {
+          "path": "src/AppInterface.php",
+          "sha256": "793c45def9b02a82776c555be835a9b304c6d6508d7e20f55ed529896a5b48cf"
+        },
+        {
+          "path": "src/Boot/Boot.php",
+          "sha256": "e90108036aa5cfb431dc4744999cb362ad1ceb0cd42f1228ef035b68e6b523f3"
+        },
+        {
+          "path": "src/Boot/BootContext.php",
+          "sha256": "1ad1a831751c88cec1483ec352a10c5819b95799f589e2c86aa9cf6120c4c654"
+        },
+        {
+          "path": "src/Boot/BootInvocation.php",
+          "sha256": "cfb49f16b52b4263d472172729860a02a3943b83a009c9a46a90058b15d8dc90"
+        },
+        {
+          "path": "src/Boot/BootInvocationRunner.php",
+          "sha256": "f84dd82f065786ead7f039a29e61a75149a475ece10204771f1d13165285fb68"
+        },
+        {
+          "path": "src/Boot/BootInvocationRunnerInterface.php",
+          "sha256": "abf2eeaad88b3a2338428f0dd0028bcee1526f307616ba44ec32908dfef48a89"
+        },
+        {
+          "path": "src/Boot/BootMethodInvocation.php",
+          "sha256": "1a2246ce50915d7dde78226b4e4e842fc96535bc452d27e5754bef547f519174"
+        },
+        {
+          "path": "src/Boot/BootMethodInvocationFactory.php",
+          "sha256": "87646a18ba568d76f18cb89a346bb1e45ae7381d0fc6bd2f37a4b2cc3046e9b1"
+        },
+        {
+          "path": "src/Boot/BootTargetAdapterInterface.php",
+          "sha256": "dbbc95a651aaec1293807bcda9f64b4c4692ac81b546f21ada98e3ba5d10f7fb"
+        },
+        {
+          "path": "src/Boot/BootTargetFactory.php",
+          "sha256": "565170684535863d41177068adef0785bddb0d9f49989ebb94990f83061d97d0"
+        },
+        {
+          "path": "src/Boot/BootTargetFactoryInterface.php",
+          "sha256": "44eedd0d91b20b724f268e893a3f2d4b12fe9618456f68560cfc59bf3e3a1c4a"
+        },
+        {
+          "path": "src/Boot/Bootloader.php",
+          "sha256": "680214c40f9915c66129d5795a00603986af9a92ee22754af06f660d4f010ee9"
+        },
+        {
+          "path": "src/Boot/BootloaderInterface.php",
+          "sha256": "a4b7d2eca2edf06a596027b55219713308e601dd8a272c8feb830aa3ffbc5931"
+        },
+        {
+          "path": "src/Boot/BootloaderProvider.php",
+          "sha256": "bd71c07296b170156974ecf30133d4e7dca77276d08d184fd90dc8abff608d2b"
+        },
+        {
+          "path": "src/Boot/BootloaderProviderInterface.php",
+          "sha256": "a991b939c7ec030e27af62a2027b3d0d812a01cd591bb883d0e699d89145c40a"
+        },
+        {
+          "path": "src/Boot/ClassDiscoveryBootloader.php",
+          "sha256": "34a200bca2fef5c1a5ba4037676c20db2c18bfa80740cf9112d1cc3bf2329e6b"
+        },
+        {
+          "path": "src/Boot/DateTimeBootloader.php",
+          "sha256": "8ba1a9ba8c656ce10e52879e66790cdc39a556399b170f20a59a605e14fac535"
+        },
+        {
+          "path": "src/Boot/ScopedBootloaderSupport.php",
+          "sha256": "513bfa5320308cd14ab30bf3eef4fd6db12f32982ab38524a34a0a097d3d0d4a"
+        },
+        {
+          "path": "src/Build/ApplicationBuildOrchestrator.php",
+          "sha256": "a862d3a1daca5cb72a1fa4ed9f81d63bbdf5855eb836ae4e4cc0790247429223"
+        },
+        {
+          "path": "src/Build/ApplicationBuildOrchestratorFactory.php",
+          "sha256": "9c26ee821ada769d9dca2ff2fb8fd44bbbf2035c58b1cc6c62053803887daf7a"
+        },
+        {
+          "path": "src/Build/ApplicationBuildRunner.php",
+          "sha256": "0746c777ee0ec315ee21ac3506709e5f887912f414a70e9576d3284cade476e5"
+        },
+        {
+          "path": "src/Build/ApplicationBuilderInterface.php",
+          "sha256": "02d4ac4ca2fdbc1a8d9f5b4089d1a00c9fbcbeef2607e197fbeba95347dfaf31"
+        },
+        {
+          "path": "src/Build/BootBuilder.php",
+          "sha256": "b5257434e6a12f95cc7ab9c049c984d958b90d498b409f2762ae0065ffafbb50"
+        },
+        {
+          "path": "src/Build/BootBuilderFactory.php",
+          "sha256": "ad26a6336e119b90715604a24b91aa3907da3c300005ed83739cbd23c48123c5"
+        },
+        {
+          "path": "src/Build/BuildContext.php",
+          "sha256": "92898ad68638154bb88c24473a01f41f9a990c79333df5e829f7916c6537b4e2"
+        },
+        {
+          "path": "src/Build/BuildStore.php",
+          "sha256": "78b49f54cbf6d17823c413aa3da23e4435c7add2e33bb7c10b8dcc084686acbc"
+        },
+        {
+          "path": "src/Build/ConfigProviderBuilder.php",
+          "sha256": "c6a39de4c903a51e3159d1e5174e5108e8af6944b46f96c13e0ca0997918164d"
+        },
+        {
+          "path": "src/Build/ConfigProviderBuilderFactory.php",
+          "sha256": "3bb22a8c1420aaa79032624ccd152b714b2e70329682ec87208acef09286dbe2"
+        },
+        {
+          "path": "src/Build/DiscoveryBuilder.php",
+          "sha256": "d06bc9bdb6780b6dcaf7cc682c0f0620b00da44550e5843b267edba4ba22f89e"
+        },
+        {
+          "path": "src/Build/DiscoveryBuilderFactory.php",
+          "sha256": "c3677aac9b45b9fdd81514a0b02ff1707c89f568ddac4066f86f64e776500de8"
+        },
+        {
+          "path": "src/Build/PhpMapFile.php",
+          "sha256": "c7318baf5bd96af769c0ff8648230dc5076761f16f27ce03ec25f4293f912c54"
+        },
+        {
+          "path": "src/Build/PreparedBuild.php",
+          "sha256": "963c7c0d8f5c621643ddfacdd9b462704a7f56019363234c6d3d5f6c25d020e9"
+        },
+        {
+          "path": "src/Config/AsConfig.php",
+          "sha256": "560480510b79c5c4d61e629d6679b2a3c6690dc12ef2dbd0e2bd1b0cc7e1bfd7"
+        },
+        {
+          "path": "src/Config/AttributeConfigProvider.php",
+          "sha256": "fade568e8464eb5da3968f1eedbc18793af8fdec6fcf979ee4d76ac2870bcfe9"
+        },
+        {
+          "path": "src/Config/ComposerPackageConfigProvider.php",
+          "sha256": "52128446639083f8a57da9ef77411bc6879dbdadeaef4d5a45319651c80f4177"
+        },
+        {
+          "path": "src/Config/ConfigDefinition.php",
+          "sha256": "4c38a510a803e83c7d45217452d900da0e00a13f3c38dc2925c685daa798ec33"
+        },
+        {
+          "path": "src/Config/ConfigDefinitionInterface.php",
+          "sha256": "ef2689bccd218023dd587c8c713a802955d7dcebd1f85e183f8c1fe1bd6e1e54"
+        },
+        {
+          "path": "src/Config/ConfigFactory.php",
+          "sha256": "0b68f4eaeed1563075d0d68d5b8efa796462a2bf3798d362e2a18b974d1fb2af"
+        },
+        {
+          "path": "src/Config/ConfigFactoryResult.php",
+          "sha256": "dec809a9f1893bd8d9eb7fa76004b932036e6e3d2cb7d6e18e7f04aa703c71e6"
+        },
+        {
+          "path": "src/Config/DiscoveryAwareConfigProviderInterface.php",
+          "sha256": "edba0545a48cc5d1518260a3284a41ac176008ccdc53e331267e2d0e7980ebc3"
+        },
+        {
+          "path": "src/Config/DiscoveryDefinition.php",
+          "sha256": "8979136f6102d13e1ad91c23a23ba38a426aeae1899b358383db6624c4b10d46"
+        },
+        {
+          "path": "src/Config/DiscoveryDefinitionInterface.php",
+          "sha256": "316c9698372115d0c9f42f2280f839e06ba2c18e908f6a69894893a39f36d6a4"
+        },
+        {
+          "path": "src/ConfigKey.php",
+          "sha256": "37d5d4c8613a469655024c3511ba47c7e52fbd4765338720a1ea612bb17512e9"
+        },
+        {
+          "path": "src/ConfigProvider.php",
+          "sha256": "19edf510e6e691c722670a8b33189392185d4e5d455803a5ba5566d658b16560"
+        },
+        {
+          "path": "src/Internal/AtomicFileWriter.php",
+          "sha256": "ce2cb881c80d62c307a920818f9dd9ad1c0a783086b53451f25959c4c1613efc"
+        },
+        {
+          "path": "src/Internal/BuildArtifact.php",
+          "sha256": "82c3e77002c3c312681497fbbda947c7ebe62307bab898403184e0d58e870086"
+        },
+        {
+          "path": "src/Runner.php",
+          "sha256": "ad674abe38ce0b71563e399630059c3b41618c92aa4610f2e644ea59d5153362"
+        },
+        {
+          "path": "src/Scope.php",
+          "sha256": "a4567ad3f0f6cabb7ff969048a747afe1eab0e136da4deea4412d71dd678856b"
+        },
+        {
+          "path": "src/functions.php",
+          "sha256": "8495bc96bd57e7e7336c9a4a57b8e5ca7b96b7f7bdb31e785ad9ee3a18788878"
+        }
+      ],
+      "lock_sha256": "d99a1825249940168c66073ac71ec4bb82f2b9e14a64aceb810350415bcedfdf",
+      "manifest_sha256": "5cf8bd50539e1f99e18f7fcb5e4ee1225629beb9c138da8c95a837636610887c"
     }
   },
   "initial_fix_commits": {
@@ -3023,5 +3237,2417 @@
     "mutation_note": "Session HTTP source/tests are unchanged. The shared dependency graph now includes five Symfony 8.1.13 patches; the fresh full-suite matrix covers that graph, while the historical mutation score does not claim a rerun on it.",
     "native_concurrency_tested": false,
     "full_matrix_results_sha256": "8bd5611c069f8307f6b1c428c49a0e0e058950e0fd374d59e7b72b83a0e97d41"
+  },
+  "recheck4": {
+    "checked_at": "2026-11-27T18:52:28.465957+02:00",
+    "timezone": "Europe/Kaliningrad",
+    "baseline_report_commit": "9a85ba81b820dd93b96bf2ae6f19dae1e7205e58",
+    "scope": "Repeated review of credential revocation, proof subject/purpose/binding, request publication ownership, reuse and failure contracts; bounded dependency and App integration refresh, then final whole-family verification.",
+    "confirmed_findings": [],
+    "auth_code_or_test_changes": false,
+    "auth_composer_manifest_changes": false,
+    "new_regression_cases": 0,
+    "public_api_or_schema_changes": false,
+    "release_targets_unchanged": true,
+    "previous_summary": {
+      "php85": {
+        "packages": 16,
+        "tests": 686,
+        "assertions": 3160,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 4,
+        "passed": 682
+      },
+      "php84": {
+        "packages": 14,
+        "tests": 662,
+        "assertions": 3113,
+        "errors": 0,
+        "failures": 0,
+        "skipped": 4,
+        "passed": 658
+      }
+    },
+    "previous_lock_sha256": {
+      "integration": "d7ef3d5bf7625306d6fc99d7411438dc9d813aa00048ef29d5b255ac43979d03",
+      "integration84": "a7d9f0088e186a5970a24cdd31f0afa7b499cc7462c2ded727140bd3c7cc6423"
+    },
+    "previous_app_proof": {
+      "app_source": {
+        "ref": "refactor/unified-application-build-2026-11-27",
+        "sha": "d2c1a5a0b41a343dcb408e165986203e1179e712",
+        "version": "6.0.0",
+        "constraints": {
+          "php": "^8.5.13",
+          "componenta/class-finder": "^2.2.0",
+          "componenta/config": "^4.0.0",
+          "componenta/di": "^6.0.0",
+          "componenta/path-resolver": "^1.0",
+          "componenta/reflection": "^3.0.0",
+          "componenta/scope": "^1.0",
+          "componenta/tokenizer": "^1.0",
+          "componenta/var-export": "^2.0",
+          "psr/container": "^2.0"
+        }
+      },
+      "skeleton_source": {
+        "ref": "refactor/unified-application-build-2026-11-27",
+        "sha": "41cb8e288eddd04adc134cb894527d4a0993ba7f",
+        "version": "6.0.0",
+        "constraints": {
+          "componenta/app": "^6.0.0",
+          "componenta/app-console": "^6.0.0",
+          "componenta/app-http": "^4.0.0",
+          "componenta/composer-plugin": "^2.0.0",
+          "componenta/config": "^4.0.0",
+          "componenta/di": "^6.0.0",
+          "componenta/error-handler-app": "^2.0.0",
+          "componenta/http": "^1.0",
+          "componenta/http-body-parsing-middleware": "^1.2.0",
+          "componenta/http-psr": "^1.2.0",
+          "componenta/http-psr-nyholm": "^1.2.0",
+          "componenta/interceptor": "^4.0.0",
+          "componenta/path-resolver": "^1.0",
+          "componenta/router": "^4.0.0",
+          "componenta/router-app": "^6.0.0",
+          "componenta/templater-app": "^1.3.0",
+          "componenta/validation": "^3.2.0",
+          "componenta/validation-app": "^4.0.0",
+          "ext-ctype": "*",
+          "ext-json": "*",
+          "ext-mbstring": "*",
+          "php": "^8.5.13",
+          "psr/container": "^2.0",
+          "symfony/console": "^7.4 || ^8.0"
+        },
+        "remaining_full_auth_preset_requirement": {
+          "componenta/auth": "^2.1.0"
+        },
+        "installer_source_line": 166
+      },
+      "checked_at": "2026-11-27T17:04:28.635267+02:00",
+      "smoke": {
+        "app_source": "d2c1a5a0b41a343dcb408e165986203e1179e712",
+        "php": "8.5.13",
+        "passed": [
+          "authenticated request",
+          "anonymous request after authentication",
+          "different authenticated request on same container",
+          "malformed attribute rejected: Componenta\\Identity\\IdentityInterface",
+          "malformed attribute rejected: Componenta\\Auth\\Session\\AuthSession"
+        ],
+        "count": 5
+      },
+      "lock_sha256": "a2339d85f636742c6d37232af0d37eb7cf957a001d8676708f70d31f5b6dcdc5"
+    },
+    "observation_boundaries": {
+      "remote_refs_completed_at": "2026-11-27T18:34:56.719223+02:00",
+      "runtime_registry_completed_at": "2026-11-27T18:35:13.328321+02:00",
+      "additional_json_schema_registry_check_at": "2026-11-27T18:44:14.098363+02:00",
+      "remote_snapshot_count": 1,
+      "note": "No second upstream snapshot after installation. Auth HEADs record the baseline before any recheck4 report publication; integration checks are tied to exact recorded sources and lock hashes."
+    },
+    "root_contract_review": {
+      "checked_at": "2026-11-27T18:38:16.363284+02:00",
+      "findings": [],
+      "reviewed": {
+        "auth": {
+          "commit": "9a85ba81b820dd93b96bf2ae6f19dae1e7205e58",
+          "files": {
+            "src/AuthenticationAdmission.php": "101ed0c6f2f8291d800af327f4d459d0d946f641c77afb396c3389a0af9edcca",
+            "src/GuardedAuthenticator.php": "bd8b94abdda2cdd29f21e5b463a4e81ef1cd18273d7692be6e73f19d12bd0546",
+            "src/EventingAuthenticator.php": "e49e97d8bd54c3e5ec64730013bb4a9cbd2dfed43f277e64d0f895c44b2ca95e",
+            "src/Authenticator.php": "00648ca2069326210b6643dd6d85552e0bd690c1b464d86333dbd066ccb1be9a",
+            "src/AuthenticationResult.php": "6b8584e0449d4d1228286124b176b4c672562f1e044ec5605f6817eb91054d83",
+            "src/Event/EventDispatcher.php": "fc21892d426a2ab81f75bf838fdd8e02df2350e42ca5869d7a99ce8367365398",
+            "src/Event/PriorityListenerProvider.php": "07d436f19067e644a7a0c1f6001423456c4521108b99a081595d0902578058a3"
+          }
+        },
+        "auth-http": {
+          "commit": "a2bbbf099fe4ae07aacb499da9265f03115a14f6",
+          "files": {
+            "src/CredentialTransportState.php": "86064aba9db4b3de3e43f0812c366fca87c97f99c2e99233abe408c30c80cf63",
+            "src/Middleware/AuthenticationMiddleware.php": "17acef26146393f10fcd654e51c53f01ba81dff94df32aa96059402a62543f26",
+            "src/Middleware/RequireAuthenticationMiddleware.php": "4307d4f099029530821b19b94774eb5861856a92294fab876ffea3ee71f5c2c5",
+            "src/Middleware/InvalidPayloadMiddleware.php": "8841403fdcc451e17fb0270c3c2c1014ed76a4d9997a97db378c739c6c17523c"
+          }
+        },
+        "auth-session": {
+          "commit": "c8b94cd9329ba63e75a00253cd111bc72f60c8a2",
+          "files": {
+            "src/AuthenticatedSessionIssuer.php": "a7b1e203080b519a03be63237d75b84716e9ff33a3870107bb0700b4465fef40",
+            "src/AuthSession.php": "2bfd7413e35799a9f07e50c48713c52884a50abecb747b28f489417709e15995",
+            "src/AssuranceRequirement.php": "e1a5c4751f568fd8aa3507decb6b83298348d4bf44291811efa5bd87b1e0a3dc",
+            "src/AuthSessionManagerInterface.php": "dad44dba6730c5d2730122ec6c9df800e4e5d27be55e0cd844e19765562c05f6",
+            "src/AuthSessionRegistryInterface.php": "02b4790b4143c5d16ae0d70a16878648c1e7e02da64bf900cdda013eaf327459",
+            "src/PreAuthenticationManagerInterface.php": "a7242a56d564624788e5d3350a287eda5eaafacd200334ab4f52dab83a208c65"
+          }
+        },
+        "auth-session-database": {
+          "commit": "788b2b1cd360b05ab340a30a6fd65b2db333ddaf",
+          "files": {
+            "src/DatabaseAuthSessionManager.php": "3e09661210fb0ccd75caab3e7c1f87cf7748fab75025bede3b37a1a7269e20b8"
+          }
+        },
+        "auth-session-http": {
+          "commit": "f4ff2542928bd44ea39b7249d676cfc15abcfcd9",
+          "files": {
+            "src/Csrf/AuthSessionCsrfTokenManager.php": "1cf031c73681221be69dc70627c774e54ece7c6bdbb724a8833320779d7e5bdf",
+            "src/Csrf/AuthSessionCsrfMiddleware.php": "9d781ba246f3bd39c53d0a761a94c9bafc6463f710f76a66c2cf9f962c72d13b",
+            "src/FactorManagementGuard.php": "b253a26a5d9fb65e651f4e290114a7fac50d4580cae1f0acea6eb7043c27e811",
+            "src/RequireSessionAssuranceMiddleware.php": "d0ed0f18f4c6803821bb1c8014051114ec9c7fa3aebe7bb3ce1adf43dd3814b8",
+            "src/AuthSessionLogoutHandler.php": "6672d6cf06b44e0096d0ef7a24d2962f1325446be7a8c5dcc566fb2d883a8da9",
+            "src/PreAuthenticationConsumer.php": "70efb9179f222649428de41a337ec2d666366a8a99ba89714600463d32087bc2",
+            "src/PreAuthenticationStartHandler.php": "2705daa515914d961d7ac9fdc867044376b5891551cfba7a7752a6adedd5c611",
+            "src/SessionAuthenticationStrategy.php": "c3fdc541c801f3d22b4f44ff7b66d936785c74bade1811d836935ed280473237",
+            "src/AuthSessionGrantPublisher.php": "487e705c1a5a8f232d8a5cd88bb3216be13f03580da84f191bbd5c404bce6081"
+          }
+        },
+        "auth-token": {
+          "commit": "58f0ba09cc96aeeeffc481ed501864f60e302fe0",
+          "files": {
+            "src/TokenRequestProcessor.php": "e160063c2764853c2e92fe9bdc5f4681952cad4fe93ca7ab596c489a0a210586"
+          }
+        }
+      },
+      "scope": "Source review of subject/credential generation binding, authoritative factor gate, revocation after rotation, request publication ownership and observer isolation.",
+      "checks": [
+        "Factor-management gate re-reads active session, checks UUID/subject/generation, bounds assurance age and invokes origin/token CSRF checks against authoritative state.",
+        "Tombstones do not authenticate and only permit revoking a successor during a stale logout; both live and tombstone lookups use the writer.",
+        "Rotation/touch use generation/CAS and existing rollback guards; subject-scoped revokeAll cannot revoke a different subject through exceptSessionId.",
+        "AuthenticationAdmission and SessionAuthenticationStrategy reject a provider identity whose UUID differs from the requested subject.",
+        "HTTP middleware drops previous concrete authentication state on denial or replacement; same-subject preserved state and candidate rollback follow documented ownership.",
+        "Observer and logger failures are isolated, while critical participants propagate failures before best-effort observation."
+      ],
+      "false_positive_filters": [
+        "A request fabricated with both an identity and a denial attribute is outside the mutually exclusive states produced by built-in authentication middleware; it does not establish a reachable bypass.",
+        "Routing method and middleware selection remain the documented application integration responsibility. A direct invocation of an unregistered logout handler is not an application-level exploit proof.",
+        "No guarantee of distributed atomicity between validation, arbitrary user callbacks and later revocation was invented.",
+        "No supported built-in strategy was found to register pending publication and then return soft denial; a custom strategy doing so is not sufficient evidence against the default public flow."
+      ]
+    },
+    "jwt_magic_password_webauthn_review": {
+      "checked_at": "2026-11-27T16:40:12.786502+00:00",
+      "pass": "recheck4",
+      "scope": [
+        "public proof revocation and replay",
+        "subject and purpose binding",
+        "JWT refresh families and compensation",
+        "WebAuthn ceremonies and credential lifecycle",
+        "normal denial or fail-closed propagation on dependency failure"
+      ],
+      "result": "No new confirmed defect in the reviewed public paths.",
+      "confirmed_findings": [],
+      "changed_repository_files": [],
+      "dependencies_modified": false,
+      "new_tests_added": false,
+      "packages": {
+        "auth-jwt": {
+          "baseline_sha": "eebb57e257e1478e2e92086b77fa3bf3907d89f1",
+          "branch": "fix/auth-dependency-audit-2026-11-27",
+          "git_status": "",
+          "all_baseline_hashes_unchanged": true,
+          "reviewed_files_sha256": {
+            "README.md": "84a7a984afdb19735bf8e75c6f3d875cb02d7e3e5bd2b74b93107a271a43fbe5",
+            "src/RefreshTokenStoreInterface.php": "f0d43f36194358893b7a022bcbbdc95619d4a324668f1567d447be7d4f6aa18e",
+            "src/RefreshTokenManager.php": "85b9a9811bd294c84102384c678fd6446ac3b51403e3d8e224b7753da6ca64cc",
+            "src/DatabaseRefreshTokenStore.php": "072cf88e7617fe49ed5714bd6f7fed0946d2aa3028d86f3c948a86af0f8c32dd",
+            "src/RefreshToken.php": "23a48e5f132c1cdffaad44fc33678e02de182b66eb2d6de8f9be09b25d4ab527",
+            "src/RefreshTokenRotationResult.php": "1f03334488dbc8892f4df2b1587ebf5794ca03796b207787a5ab9a9d6b90516a",
+            "src/RefreshHandler.php": "82e050332a006ee5c4e3bf76b676ad779e4869a6a18de71571b9fc949a598454",
+            "src/RevokeHandler.php": "51e4e2cd974bc38c27b4a54823609334369d49ded1ae5064e3d7a4d0a4a56299",
+            "src/TokenPairResponse.php": "bd6d274a5fce1a2bdaad20aa136b2def740d9d1c1361557d840b20d31e46e15d",
+            "src/TokenResponseBody.php": "8b4187e9d583c201dbb254a8d6b4df460aa34d0c98d487a9b9bbfada689d230b",
+            "src/JwtStrategy.php": "ec85b39e27fedea3440a4739cbcb9cd3ef9963c24ac68c16e091864141a74801",
+            "src/AccessTokenIssuer.php": "ef19c207d4a06f568aee91f2f1d635fac1d6446496ce4e667323299dc7113709",
+            "tests/RefreshTokenStoreTest.php": "0454d1823d99e12e346148c0de06931f14edc6de52b9bea041a756cd0f6d1329",
+            "tests/RefreshHandlerFailureTest.php": "9775e0588c3e337c0954db3331e046db1e61fff012b32929e1277426393158a7",
+            "tests/TokenResponsePublicationTest.php": "dd10a3dae67a2f2363f9050692ea0c61331affb235fb250474edf97df599f02e"
+          },
+          "validation": {
+            "tests": 11,
+            "assertions": 49,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "exit": 0,
+            "log": "auth-jwt-targeted-php85.log",
+            "junit": "auth-jwt-targeted-php85.xml",
+            "command_record": "auth-jwt-command.json"
+          }
+        },
+        "auth-magic-link": {
+          "baseline_sha": "a10110092d19d8c49c2011f1cdfdf9d3478c1e7e",
+          "branch": "fix/auth-dependency-audit-2026-11-27",
+          "git_status": "",
+          "all_baseline_hashes_unchanged": true,
+          "reviewed_files_sha256": {
+            "README.md": "6fb824a37e803d72308d41b1c99ad64dd04ee02949b91bbe9d0455a5f6ae86e7",
+            "src/MagicLinkStrategy.php": "121a352a010497e7f196ef789880e3434315b946a736b4cd2b16147d92c053d0",
+            "src/MagicLinkVerifyHandler.php": "14d080c96dd8c8530effb1a2c9e337afecd91ece4a191c86da8a31147ef89209",
+            "src/MagicLinkRequestHandler.php": "55299fc95822f61e4cbbd18900b13c919827cab12b5021e2b4a038b402c356f8",
+            "src/MagicLinkExtractor.php": "944ddf5dfb8f57e8d65e12f94bebed1d2d4277d087979607f47fb89e6676c0b0",
+            "src/MagicLinkPayload.php": "bb08498a0c53dca4eb6a7db1edb7e8b202a690218e464e877ee476b503172c65",
+            "tests/MagicLinkStrategyTest.php": "e2d5fcc2252d4a8008e4a68a51676e919e3f4565a42ff2fd150dc28360ca46f6",
+            "tests/MagicLinkRequestHandlerTest.php": "13704ace161bd009e27c587e2ccf96e72bcc5c0281089cfec03dbd3242390a4d",
+            "tests/LoginAdmissionTest.php": "d8a572342315986e3fa970c62ad2e6fd4a2ab499243dfb71b168f4caf49c69cc",
+            "tests/LoginTransportReplacementTest.php": "d68a62cb20a4879127fc98cad836a957c192876a6a85e84dacba531ae38f3bea"
+          },
+          "validation": {
+            "tests": 14,
+            "assertions": 76,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "exit": 0,
+            "log": "auth-magic-link-targeted-php85.log",
+            "junit": "auth-magic-link-targeted-php85.xml",
+            "command_record": "auth-magic-link-command.json"
+          }
+        },
+        "auth-password": {
+          "baseline_sha": "0e563af36db2ff2d683de547de6140cabe3b692c",
+          "branch": "fix/auth-dependency-audit-2026-11-27",
+          "git_status": "",
+          "all_baseline_hashes_unchanged": true,
+          "reviewed_files_sha256": {
+            "README.md": "09c2b96f42c2a73c88ea74ccb5127b725b602a0d8ce9ae686f312ce538394f6e",
+            "src/PasswordStrategy.php": "d6b0d567c31b72ee95413bd0cea33236dbb26611272f10f34669610da592aba1",
+            "src/PasswordLoginHandler.php": "741c3524ffb37532a21cc40ba28b8761d8e22f376bf7f55d1fa9e7408b733c6d",
+            "src/PasswordPayload.php": "8738a2e5d2adbb2375882e96f2de5f600fe54cf5a0ab9b784fc21ed2abbfbe48",
+            "src/PasswordExtractor.php": "4e7bee4fba29651ab6dd35a56f82b3aceb2dc0e145dc2286b2c894485e6184f6",
+            "src/PasswordReset/PasswordResetServiceInterface.php": "0d2c40d35989bfa92df22a76fe3730fb544450d7b2973ff50f4c3cfaff09ec59",
+            "src/PasswordReset/ForgotPasswordHandler.php": "bae7c28b7ef99c3211113bb275fdc272bd87177e218b9f4355980164bfcbf22b",
+            "src/PasswordReset/ResetPasswordHandler.php": "56cdd726e7f09fccdc643e1b425e8efb732dfe5eb80f1a4efbb4e4d30b730b9c",
+            "tests/PasswordStrategyTest.php": "00936e0a0f75d93ebf6adc33e8ae6bd8c31d944c490148082b9244863f13a610",
+            "tests/PasswordHasherIntegrationTest.php": "3c216a40f0708e9fca3ea1d58c6fb7ebe7c65967163efe13d45d2236ff52e45b",
+            "tests/PasswordResetHandlerTest.php": "e3d024c8edfdfec51e9ca081ba5dd8889fd90c322200a39cca6ee180908f09ef",
+            "tests/PasswordResetResponseBodyTest.php": "d198a877d3376c741d73a9c085638c91e31e9cc68dfe48590afefad4ada36905",
+            "tests/LoginAdmissionTest.php": "262f76bfde5a86dba0c5d3706b2233b490697aa75cfedbbbda58751740761852"
+          },
+          "validation": {
+            "tests": 17,
+            "assertions": 72,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "exit": 0,
+            "log": "auth-password-targeted-php85.log",
+            "junit": "auth-password-targeted-php85.xml",
+            "command_record": "auth-password-command.json"
+          }
+        },
+        "auth-webauthn": {
+          "baseline_sha": "82b5ec40f402518894c00941bcdabc03958010b8",
+          "branch": "fix/auth-dependency-audit-2026-11-27",
+          "git_status": "",
+          "all_baseline_hashes_unchanged": true,
+          "reviewed_files_sha256": {
+            "README.md": "45cf495b87e8888876a82eb88b665d0bdf4e50024149014c68fb2021ff8fbd33",
+            "src/WebAuthnStoreInterface.php": "66775af167d79ec2145b2a65376a5fe8a23a8a0518a4d0942395ae3d527dbd3d",
+            "src/WebAuthnCredential.php": "84bcba141f492c7ae8d914e2724262135ab25ea1dcc0af06c41585cd0b78080c",
+            "src/WebAuthnConfig.php": "981aa83fa62f1602eb2de8a809708d26e358161640424d24c06e7ad63b275dee",
+            "src/WebAuthnService.php": "2adeb425d09de1fb6788225277d9eb0a51f73795ba7edadb45377634920cc38b",
+            "src/WebAuthnAuthenticationAttempt.php": "f6722dd5494c29bd33b4e41770c6c82de8d9dc580aa8ad43db2bb7396a28b951",
+            "src/WebAuthnCeremony.php": "560640ec439a2904b890333dd17fae97f6f16971ab295177caf9ce927da6e317",
+            "src/WebAuthnValidator.php": "089fe126e21888ca0fa70b360855b24f059b7823ce3e6692eebbaec772bf0da4",
+            "src/WebAuthnCodec.php": "e46d08d4d922151cab97de039eeea02a4bce34705ef5bfd4a003747cd418e33b",
+            "src/WebAuthnEvidence.php": "058af367faf4e2ae7562abea19059e5cb870d8dbfb360473ae4d25e620a65df1",
+            "src/DatabaseWebAuthnStore.php": "bc8589954ae66d1d21a8b7858b9acd6a3ff60ad7f75828274939ca85b19e97a7",
+            "src/WebAuthnLoginVerifyHandler.php": "c4a3addc9159454f87af48aab0bd72732f759e06f40a59864485caf79bf913c4",
+            "src/WebAuthnReauthenticationHandler.php": "ea1727cee63b720ca5c4fca09df97a925a37df46576871634e7c24272f875dd7",
+            "src/WebAuthnRegistrationCompleteHandler.php": "d324ae8f6f364af550f3a4cea8614d012bfce1fafa4546fd22f53c9bc61fe3f6",
+            "src/WebAuthnReauthenticationOptionsHandler.php": "ab93a0f4b200c539862a56763dde9433b373f3901231081b853e989a8d32ea1e",
+            "src/WebAuthnLoginOptionsHandler.php": "37139a9f96d8437256a47718e17ec9f1eb46f39df3edd8cf2bda98a50fed49cf",
+            "src/WebAuthnRegistrationOptionsHandler.php": "959a445685e97062710012d37a75efe85b9867b20eb7d45879bb6cff0ad960bb",
+            "tests/AuthenticationUserHandleTest.php": "7bc48cf5294ec6b45a073c69a08e62f6aee4745ab755bbbf8efec5371bbf4cb2",
+            "tests/ChangedRowCredentialUpdateTest.php": "4998ebe4e5e119ba409537537ae09e4e7ba41fefbf6d298f13e2509aa7c1f908",
+            "tests/DatabaseWebAuthnStoreTest.php": "44c71c1731c849201778e4f3539f84f78e183d0b4f3b787495c46e5d4a98a5f5",
+            "tests/LoginAdmissionTest.php": "c2f85ec786bced06a2f85b90b8632953e6a8b3b7ec4e477b0b4bcdd16b578534",
+            "tests/RegistrationAuthorizationTest.php": "045c0ff5a1b1ecaf895275c576820008d6a47b4cdc67602273b5602a90378ef9",
+            "tests/LoginOptionsPublicationTest.php": "49e5f2d44ceb0107cec7fef97529880af2a8f04f4aa495d6d848046f5b16a060"
+          },
+          "validation": {
+            "tests": 33,
+            "assertions": 310,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "exit": 0,
+            "log": "auth-webauthn-targeted-php85.log",
+            "junit": "auth-webauthn-targeted-php85.xml",
+            "command_record": "auth-webauthn-command.json"
+          }
+        }
+      },
+      "contract_findings": {
+        "auth-jwt": [
+          "RefreshTokenManager validates bearer syntax before dispatch; DatabaseRefreshTokenStore serializes rotation and revocation through the family row, then rereads token state before claiming the old token.",
+          "Consumed nonexpired refresh proof compromises the complete family; family deadline caps every successor. JWT subject, issuer, audience, type and bounded evidence are checked before successful identity return.",
+          "RefreshHandler signs and allocates the response before rotation. Every fallible identity/guard/publication step after rotation is within the revocation compensation scope. TokenPairResponse also revokes a newly issued refresh grant if publication fails.",
+          "Revocation storage exceptions propagate as infrastructure failures. Access-token lifetime remains stateless as documented."
+        ],
+        "auth-magic-link": [
+          "MagicLinkStrategy compares payload binding to the pre-authentication transaction before consuming purpose magic_link with the exact binding; returned identity UUID must equal the consumed record subject.",
+          "MagicLinkVerifyHandler verifies the browser proof, consumes that exact pre-authentication transaction, performs final admission and only then publishes a fresh session. The extractor and verification handler accept POST.",
+          "MagicLinkRequestHandler prepares response body before durable grant issuance. Queue or header-publication failure consumes the created pre-authentication grant; a delivered link cannot bypass that browser binding.",
+          "The strategy consumes the one-time bearer but never queues transport publication itself."
+        ],
+        "auth-password": [
+          "PasswordStrategy uses the configured real verifier for both actual and dummy hashes, carries password/knowledge evidence and does not queue transport changes.",
+          "Browser login consumes its verified pre-authentication transaction before final session issue/publication. Final admission denial does not publish a session.",
+          "The reset service interface explicitly assigns consume/policy/password-change/long-lived-grant invalidation to the application service. The HTTP layer validates inputs and prepares success response before invoking that service.",
+          "Real Password2 controls reject a matching bcrypt prefix with an extra byte or NUL and accept the complete 72-byte value; stored Argon algorithms are honored."
+        ],
+        "auth-webauthn": [
+          "Registration and authentication use separate ceremony types. Registration checks subject and returned user handle and consumes the ceremony before insert.",
+          "Authentication verifies with the stored public key through the real WebAuthn validator. Known-subject and discoverable user-handle rules are distinguished; subject and browser-binding checks precede session issue.",
+          "Commit consumes a ceremony once and updates only the credential matching ID, subject and expected counter. A deleted credential, different subject and stale counter do not update. Separate valid zero-counter assertions can update successfully.",
+          "Login requires a nonnull matching pre-authentication binding; reauthentication requires a null binding and the current subject. A final admission denial does not publish a session.",
+          "Crypto/parser rejection returns null or false; persistence exceptions outside the intentionally boolean registration insertion path propagate before any session issue. Option-publication failure consumes the exact pre-authentication grant."
+        ]
+      },
+      "discarded_candidates": [
+        {
+          "candidate": "Restore an old WebAuthn key after delete/reinsert of the same credential ID",
+          "decision": "Not established as a defect of a supported public flow.",
+          "reason": "A stale commit could only match a replacement if credential ID, subject and expected counter are deliberately reused while changing the key. W3C expects globally unique credential IDs, normal creation generates a new ID, and the existing primary key blocks live duplicate insertion. No real replacement workflow requiring such a collision was found. No artificial trusted-store mutation or new CAS API was introduced."
+        },
+        {
+          "candidate": "Reject every second zero-counter WebAuthn update using storage revision",
+          "decision": "Rejected.",
+          "reason": "Independent single-use ceremonies may legitimately use authenticators with zero counters. The documented revision is a changed-row storage mechanism, not an authentication sequence token."
+        },
+        {
+          "candidate": "Refresh store must use a fresh internal clock after every blocking operation",
+          "decision": "Out of the stated store contract.",
+          "reason": "Public methods explicitly receive the caller-selected now; no live-clock guarantee or new clock dependency was invented."
+        },
+        {
+          "candidate": "Reset HTTP handler must atomically consume proof and revoke sessions",
+          "decision": "Owned by the application reset service.",
+          "reason": "PasswordResetServiceInterface explicitly assigns the complete transition to that implementation."
+        },
+        {
+          "candidate": "Authenticator needs checkpoints between these built-in strategy attempts",
+          "decision": "No supporting built-in publication path found.",
+          "reason": "JWT, Magic Link and Password strategies do not publish credential transport state before denial or success. An arbitrary custom strategy capable of mutation was not treated as a supported exploit."
+        },
+        {
+          "candidate": "Public attempt DTO construction or borrowed nested claims bypass validation",
+          "decision": "Trusted application ownership, not a new external proof-validation defect.",
+          "reason": "No new universal deep-copy or nonconstructible proof-token contract was imposed."
+        }
+      ],
+      "primary_sources_consulted": [
+        {
+          "url": "https://www.w3.org/TR/webauthn-3/",
+          "sections": [
+            "PublicKeyCredential identifier",
+            "6.3.2 authenticatorMakeCredential",
+            "7.1 Registering a New Credential",
+            "7.2 Verifying an Authentication Assertion"
+          ],
+          "used_for": "Assess the credential replacement hypothesis and credential-ID lifecycle, not a claim that arbitrary reused IDs are cryptographically impossible."
+        }
+      ],
+      "verification": {
+        "runtime": "PHP 8.5.13",
+        "runner": "PHPUnit 12.5.33",
+        "tests": 75,
+        "assertions": 507,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "all_exit_codes_zero": true,
+        "source_manifest": "source-baseline.json",
+        "all_source_hashes_unchanged_after_targeted_tests": true
+      },
+      "limitations": [
+        "The 75 targeted existing tests verify the reviewed paths; this is not a repeated broad compatibility gate. Root owns the final whole-family PHP 8.4/8.5 verification.",
+        "Database behavior here uses SQLite and existing deterministic test drivers; no native MySQL/PostgreSQL concurrency claim is made.",
+        "WebAuthn controls use local cryptographically valid signed assertion fixtures, not physical authenticator or browser interoperability tests.",
+        "No new RED/GREEN pair was created because no new supported-contract defect was confirmed."
+      ]
+    },
+    "otp_totp_recovery_remember_review": {
+      "scope": [
+        "auth-otp",
+        "auth-totp",
+        "auth-recovery-code",
+        "auth-remember-me"
+      ],
+      "status": "no_new_confirmed_defect",
+      "method": "Bounded read-only source and public-contract review. Existing test names were inspected as coverage context; no new tests or probes were executed in this subtask.",
+      "findings": [],
+      "changes": {
+        "src": false,
+        "tests": false,
+        "composer": false,
+        "vendor": false,
+        "docs": false,
+        "commits": false,
+        "pushes": false
+      },
+      "source_snapshot": {
+        "file": "source-snapshot.json",
+        "sha256": "4889ec051333f90da58afa053d26bfc499a74d9b6e9de5b0c879b732dfb57a1f"
+      },
+      "checks": [
+        {
+          "package": "auth-otp",
+          "invariant": "Proof scope and supersession",
+          "evidence": [
+            "src/OtpCodeMac.php",
+            "src/OtpChallengeManager.php",
+            "src/DatabaseOtpChallengeStore.php",
+            "src/OtpLoginVerifyHandler.php",
+            "src/OtpReauthenticationVerifyHandler.php",
+            "src/OtpStrategy.php"
+          ],
+          "conclusion": "Verifier includes challenge UUID and configured purpose. Store checks the supplied binding and atomically claims only an unconsumed challenge. Login binding comes from the verified pre-authentication transaction; reauthentication uses the current session UUID and checks both session/identity and result/identity subjects. New issue invalidates unconsumed challenges for the same subject, purpose and binding. Revoke retains issuance history."
+        },
+        {
+          "package": "auth-otp",
+          "invariant": "Delivery failure and repeated request",
+          "evidence": [
+            "src/OtpRequestProcessor.php",
+            "src/OtpLoginRequestHandler.php"
+          ],
+          "conclusion": "A delivery exception invokes revoke on the exact issued challenge. A request publication/queue exception consumes its exact pre-authentication grant. These paths do not promise atomicity across independently failing delivery, database and response systems."
+        },
+        {
+          "package": "auth-totp",
+          "invariant": "Subject binding, pending replacement and disable",
+          "evidence": [
+            "src/TotpKeyring.php",
+            "src/DatabaseTotpManager.php"
+          ],
+          "conclusion": "Authenticated-encryption associated data includes the subject UUID. Enrollment replaces pending fields without disabling the active factor. Activation claims the exact pending ciphertext; verification conditions include subject, active ciphertext/key/nonce and previous replay step. Disable deletes the entire subject row, including pending and active credentials. Operations linearized before a later disable are not required to be undone."
+        },
+        {
+          "package": "auth-totp",
+          "invariant": "Factor-management and reauthentication admission",
+          "evidence": [
+            "src/TotpEnrollmentStartHandler.php",
+            "src/TotpEnrollmentConfirmHandler.php",
+            "src/TotpReauthenticationHandler.php",
+            "../auth-session-http/src/FactorManagementGuard.php"
+          ],
+          "conclusion": "Enrollment handlers call the authoritative-session, bounded-assurance and CSRF guard before mutation. Reauthentication requires the presented identity and session to have the same subject. TOTP is a subject-bound factor; it does not promise that each numeric code is bound to one browser or HTTP purpose."
+        },
+        {
+          "package": "auth-recovery-code",
+          "invariant": "Subject isolation, regenerate/revoke and single consumption",
+          "evidence": [
+            "src/DatabaseRecoveryCodeManager.php",
+            "src/RecoveryCodeReauthenticationHandler.php",
+            "src/RecoveryCodeRegenerateHandler.php",
+            "UPGRADING.md",
+            "resources/schema/postgresql.sql",
+            "resources/schema/mysql-8.4.sql",
+            "resources/schema/sqlite.sql"
+          ],
+          "conclusion": "Consumption matches subject plus canonical code hash and unused state. Regeneration and revokeAll hold the durable subject lock; batch deletion/insertion is transactional. A successful consume before regeneration can linearize before it; an old batch is absent after regeneration. Duplicate regeneration responses may contain a superseded batch as explicitly documented. The HTTP regeneration guard precedes mutation."
+        },
+        {
+          "package": "auth-remember-me",
+          "invariant": "Rotation, revocation granularity and retry",
+          "evidence": [
+            "src/DatabaseRememberMeManager.php",
+            "src/RememberMeManagerInterface.php",
+            "src/RememberMeLogoutHandler.php"
+          ],
+          "conclusion": "Rotation claims selector/verifier/generation; binding also matches subject and previous session, with a writer-read idempotency check for an already bound generation. revokeRotation is generation-scoped, while revokeCredential intentionally revokes the stable selector and its successors. Session and subject revocations use their declared scopes. Logout clears the pending transport and revokes the linked/presented grant before invoking session logout."
+        },
+        {
+          "package": "auth-remember-me",
+          "invariant": "Soft denial cannot retain strategy-owned publication compensation",
+          "evidence": [
+            "src/RememberMeStrategy.php",
+            "src/RememberMeGrantPublisher.php",
+            "src/RememberMeSessionMiddleware.php"
+          ],
+          "conclusion": "Every continueOnFailure=true path precedes onDiscard registration. Missing/mismatched identity after rotation revokes that rotation before soft denial; failed revocation throws instead of returning a soft denial. After onDiscard registration, the strategy has only the successful AuthenticationResult return. The strategy itself never queues a publication. Deferred grant and session publication have request-owner discard compensation."
+        }
+      ],
+      "considered_but_not_promoted": [
+        {
+          "candidate": "OTP verified and consumed pre-authentication UUID are not compared again",
+          "reason": "The concrete DatabasePreAuthenticationManager binds the same immutable request credential/request-token pair to one UUID and has no public operation that reassigns that pair. Demonstrating a mismatch would require a nonconforming adapter, mutable request outside PSR expectations, or out-of-band storage tampering; no supported path was found."
+        },
+        {
+          "candidate": "Counting an invalid OTP submission after a concurrent consumption/revocation",
+          "reason": "The stale-read branch can still record an aggregate failed submission after its conditional per-challenge update affects no row. This does not admit a proof; no public promise was found that aggregate failed-submission counts exclude such attempts. No speculative concurrency test or change was added."
+        },
+        {
+          "candidate": "Previously accepted proof is not restored after a later downstream failure",
+          "reason": "Single-use proofs intentionally remain consumed after later admission/publication failure. Cross-resource atomicity or restoring a spent proof is not a declared guarantee. Response loss after TOTP enrollment or recovery batch regeneration is not treated as an authentication bypass."
+        },
+        {
+          "candidate": "Manually forged rotation state or imported/corrupted rows",
+          "reason": "Trusted manager/state interfaces and direct database write access are not HTTP proof boundaries. No new inconsistency beyond the previously fixed TOTP metadata validation was established."
+        }
+      ],
+      "limitations": [
+        "This is a source-review result at the exact recorded hashes, not a proof of absence of every defect.",
+        "No new behavioral tests, mutation run, native PostgreSQL/MySQL concurrency run or write-failure probe was performed in this subtask.",
+        "Earlier expiry, OTP mutex-retention and TOTP persisted-metadata fixes were not presented as new findings or freshly rerun evidence.",
+        "The root agent independently owns the final PHP 8.5/PHP 8.4 package matrix and report/publication verification.",
+        "Lifecycle claims assume the bundled adapters, valid schemas, configured trust boundaries, and ordinary database transaction semantics; no undeclared distributed atomicity is inferred."
+      ]
+    },
+    "targeted_existing_test_note": "75 tests / 507 assertions are an existing subset of the whole-family suite, run before the development update; not added to the 686/662 final matrix counts. The full matrix was subsequently rerun after the update.",
+    "dependency_review": {
+      "checked_at": "2026-11-27T18:48:48.733808+02:00",
+      "timezone": "Europe/Kaliningrad",
+      "status": "Completed bounded dependency and App verification. One compatible development update installed by root; no runtime version update required.",
+      "baseline": {
+        "auth_report_commit": "9a85ba81b820dd93b96bf2ae6f19dae1e7205e58",
+        "auth_publication_evidence": "verification/recheck3/final-publication-check.json",
+        "dependency_evidence": "dependency-analysis/recheck3/result.json"
+      },
+      "observation_boundaries": {
+        "remote_refs_completed_at": "2026-11-27T18:34:56.719223+02:00",
+        "runtime_registry_completed_at": "2026-11-27T18:35:13.328321+02:00",
+        "additional_json_schema_registry_check_at": "2026-11-27T18:44:14.098363+02:00",
+        "remote_snapshot_count": 1,
+        "note": "No second upstream snapshot after installation. Auth HEADs record the baseline before any recheck4 report publication; integration checks are tied to exact recorded sources and lock hashes."
+      },
+      "auth": {
+        "checked_count": 16,
+        "changed_count": 0,
+        "repositories": [
+          {
+            "name": "auth",
+            "ref": "fix/auth-dependency-audit-2026-11-27",
+            "baseline_sha": "9a85ba81b820dd93b96bf2ae6f19dae1e7205e58",
+            "sha": "9a85ba81b820dd93b96bf2ae6f19dae1e7205e58",
+            "head_changed": false,
+            "latest_stable_tag": "v3.0.0",
+            "changed_remote_refs": []
+          },
+          {
+            "name": "auth-app",
+            "ref": "fix/auth-dependency-audit-2026-11-27",
+            "baseline_sha": "9b776f733734e637be78100471638211a81df64c",
+            "sha": "9b776f733734e637be78100471638211a81df64c",
+            "head_changed": false,
+            "latest_stable_tag": "v2.0.1",
+            "changed_remote_refs": []
+          },
+          {
+            "name": "auth-http",
+            "ref": "fix/auth-dependency-audit-2026-11-27",
+            "baseline_sha": "a2bbbf099fe4ae07aacb499da9265f03115a14f6",
+            "sha": "a2bbbf099fe4ae07aacb499da9265f03115a14f6",
+            "head_changed": false,
+            "latest_stable_tag": "v1.0.0",
+            "changed_remote_refs": []
+          },
+          {
+            "name": "auth-jwt",
+            "ref": "fix/auth-dependency-audit-2026-11-27",
+            "baseline_sha": "eebb57e257e1478e2e92086b77fa3bf3907d89f1",
+            "sha": "eebb57e257e1478e2e92086b77fa3bf3907d89f1",
+            "head_changed": false,
+            "latest_stable_tag": "v1.0.0",
+            "changed_remote_refs": []
+          },
+          {
+            "name": "auth-magic-link",
+            "ref": "fix/auth-dependency-audit-2026-11-27",
+            "baseline_sha": "a10110092d19d8c49c2011f1cdfdf9d3478c1e7e",
+            "sha": "a10110092d19d8c49c2011f1cdfdf9d3478c1e7e",
+            "head_changed": false,
+            "latest_stable_tag": "v2.0.0",
+            "changed_remote_refs": []
+          },
+          {
+            "name": "auth-otp",
+            "ref": "fix/auth-dependency-audit-2026-11-27",
+            "baseline_sha": "72de7daaadcd3b11ca487ec4448e1b010a0c1d90",
+            "sha": "72de7daaadcd3b11ca487ec4448e1b010a0c1d90",
+            "head_changed": false,
+            "latest_stable_tag": "v2.0.1",
+            "changed_remote_refs": []
+          },
+          {
+            "name": "auth-password",
+            "ref": "fix/auth-dependency-audit-2026-11-27",
+            "baseline_sha": "0e563af36db2ff2d683de547de6140cabe3b692c",
+            "sha": "0e563af36db2ff2d683de547de6140cabe3b692c",
+            "head_changed": false,
+            "latest_stable_tag": "v2.0.0",
+            "changed_remote_refs": []
+          },
+          {
+            "name": "auth-recovery-code",
+            "ref": "fix/auth-dependency-audit-2026-11-27",
+            "baseline_sha": "3daf794d4f95acf55505983e514e22f83e5b4f7e",
+            "sha": "3daf794d4f95acf55505983e514e22f83e5b4f7e",
+            "head_changed": false,
+            "latest_stable_tag": "v2.0.0",
+            "changed_remote_refs": []
+          },
+          {
+            "name": "auth-remember-me",
+            "ref": "fix/auth-dependency-audit-2026-11-27",
+            "baseline_sha": "31c3a2163719bf11057efc37c3881a77ada0752a",
+            "sha": "31c3a2163719bf11057efc37c3881a77ada0752a",
+            "head_changed": false,
+            "latest_stable_tag": "v2.0.0",
+            "changed_remote_refs": []
+          },
+          {
+            "name": "auth-session",
+            "ref": "fix/auth-dependency-audit-2026-11-27",
+            "baseline_sha": "c8b94cd9329ba63e75a00253cd111bc72f60c8a2",
+            "sha": "c8b94cd9329ba63e75a00253cd111bc72f60c8a2",
+            "head_changed": false,
+            "latest_stable_tag": "v1.0.0",
+            "changed_remote_refs": []
+          },
+          {
+            "name": "auth-session-app",
+            "ref": "fix/auth-dependency-audit-2026-11-27",
+            "baseline_sha": "d5235a8ba2c83e066601276c9956548c79e55946",
+            "sha": "d5235a8ba2c83e066601276c9956548c79e55946",
+            "head_changed": false,
+            "latest_stable_tag": "v1.0.0",
+            "changed_remote_refs": []
+          },
+          {
+            "name": "auth-session-database",
+            "ref": "fix/auth-dependency-audit-2026-11-27",
+            "baseline_sha": "788b2b1cd360b05ab340a30a6fd65b2db333ddaf",
+            "sha": "788b2b1cd360b05ab340a30a6fd65b2db333ddaf",
+            "head_changed": false,
+            "latest_stable_tag": "v1.0.0",
+            "changed_remote_refs": []
+          },
+          {
+            "name": "auth-session-http",
+            "ref": "fix/auth-dependency-audit-2026-11-27",
+            "baseline_sha": "f4ff2542928bd44ea39b7249d676cfc15abcfcd9",
+            "sha": "f4ff2542928bd44ea39b7249d676cfc15abcfcd9",
+            "head_changed": false,
+            "latest_stable_tag": "v2.0.1",
+            "changed_remote_refs": []
+          },
+          {
+            "name": "auth-token",
+            "ref": "fix/auth-dependency-audit-2026-11-27",
+            "baseline_sha": "58f0ba09cc96aeeeffc481ed501864f60e302fe0",
+            "sha": "58f0ba09cc96aeeeffc481ed501864f60e302fe0",
+            "head_changed": false,
+            "latest_stable_tag": "v1.0.0",
+            "changed_remote_refs": []
+          },
+          {
+            "name": "auth-totp",
+            "ref": "fix/auth-dependency-audit-2026-11-27",
+            "baseline_sha": "624fcb15f2391a9e25863079b5833f8498cb4ed5",
+            "sha": "624fcb15f2391a9e25863079b5833f8498cb4ed5",
+            "head_changed": false,
+            "latest_stable_tag": "v2.0.0",
+            "changed_remote_refs": []
+          },
+          {
+            "name": "auth-webauthn",
+            "ref": "fix/auth-dependency-audit-2026-11-27",
+            "baseline_sha": "82b5ec40f402518894c00941bcdabc03958010b8",
+            "sha": "82b5ec40f402518894c00941bcdabc03958010b8",
+            "head_changed": false,
+            "latest_stable_tag": "v2.0.0",
+            "changed_remote_refs": []
+          }
+        ]
+      },
+      "selected_componenta_dependencies": {
+        "checked_count": 11,
+        "changed_count": 0,
+        "all_branch_and_tag_refs_unchanged": true,
+        "new_refactor_branches": [],
+        "repositories": [
+          {
+            "name": "arrayable",
+            "ref": "main",
+            "baseline_sha": "482acfddffa3b1b85e982d1bf4ab6c007d084a8a",
+            "sha": "482acfddffa3b1b85e982d1bf4ab6c007d084a8a",
+            "head_changed": false,
+            "latest_stable_tag": "v1.0.0",
+            "changed_remote_refs": []
+          },
+          {
+            "name": "caster",
+            "ref": "main",
+            "baseline_sha": "383455d00c5ab8a1067b4916e11d11dae7c4a58c",
+            "sha": "383455d00c5ab8a1067b4916e11d11dae7c4a58c",
+            "head_changed": false,
+            "latest_stable_tag": "v1.0.0",
+            "changed_remote_refs": []
+          },
+          {
+            "name": "clock",
+            "ref": "main",
+            "baseline_sha": "522a039f56e8312160e1e62ed1ae58c6c558bbaf",
+            "sha": "522a039f56e8312160e1e62ed1ae58c6c558bbaf",
+            "head_changed": false,
+            "latest_stable_tag": "v1.2.0",
+            "changed_remote_refs": []
+          },
+          {
+            "name": "config",
+            "ref": "main",
+            "baseline_sha": "4685e71d86500a7b51f4a773bb3022dd787fba7f",
+            "sha": "4685e71d86500a7b51f4a773bb3022dd787fba7f",
+            "head_changed": false,
+            "latest_stable_tag": "v4.0.0",
+            "changed_remote_refs": []
+          },
+          {
+            "name": "di",
+            "ref": "fix/callback-dependency-baseline-2026-11-26",
+            "baseline_sha": "e4f19ab9a9f6bd18da85fc52c8d478433a32baec",
+            "sha": "e4f19ab9a9f6bd18da85fc52c8d478433a32baec",
+            "head_changed": false,
+            "latest_stable_tag": "v5.0.7",
+            "changed_remote_refs": []
+          },
+          {
+            "name": "http-csrf-middleware",
+            "ref": "fix/middleware-security-audit",
+            "baseline_sha": "3648984ab056e3005fe7ac24cc01d2060e5f4bbc",
+            "sha": "3648984ab056e3005fe7ac24cc01d2060e5f4bbc",
+            "head_changed": false,
+            "latest_stable_tag": "v3.1.0",
+            "changed_remote_refs": []
+          },
+          {
+            "name": "identity",
+            "ref": "fix/callback-dependency-baseline-2026-11-26",
+            "baseline_sha": "3feb94e0d64956ecdf7b22abed4a8bd9f597abeb",
+            "sha": "3feb94e0d64956ecdf7b22abed4a8bd9f597abeb",
+            "head_changed": false,
+            "latest_stable_tag": "v1.1.0",
+            "changed_remote_refs": []
+          },
+          {
+            "name": "mimetype-detector",
+            "ref": "main",
+            "baseline_sha": "8d5cfff9616ad46bd0530cb73a0452a239dcd94e",
+            "sha": "8d5cfff9616ad46bd0530cb73a0452a239dcd94e",
+            "head_changed": false,
+            "latest_stable_tag": "v2.0.0",
+            "changed_remote_refs": []
+          },
+          {
+            "name": "password",
+            "ref": "refactor/value-contracts-2026-11-27",
+            "baseline_sha": "c19180794d84c62c0cfad888b93dd792780076fa",
+            "sha": "c19180794d84c62c0cfad888b93dd792780076fa",
+            "head_changed": false,
+            "latest_stable_tag": "v1.0.0",
+            "changed_remote_refs": []
+          },
+          {
+            "name": "reflection",
+            "ref": "main",
+            "baseline_sha": "f19a363e9e09a9d32f60c768f16e02fd8c93b631",
+            "sha": "f19a363e9e09a9d32f60c768f16e02fd8c93b631",
+            "head_changed": false,
+            "latest_stable_tag": "v3.0.0",
+            "changed_remote_refs": []
+          },
+          {
+            "name": "validation",
+            "ref": "main",
+            "baseline_sha": "183f5481b8df327747fbab35e3088b5330aa3546",
+            "sha": "183f5481b8df327747fbab35e3088b5330aa3546",
+            "head_changed": false,
+            "latest_stable_tag": "v3.2.0",
+            "changed_remote_refs": []
+          }
+        ]
+      },
+      "release_status": {
+        "auth": [
+          {
+            "package": "auth",
+            "target": "4.0.0",
+            "latest_stable_tag": "v3.0.0",
+            "target_tag_exists": false,
+            "remote_sha": "9a85ba81b820dd93b96bf2ae6f19dae1e7205e58"
+          },
+          {
+            "package": "auth-app",
+            "target": "3.0.0",
+            "latest_stable_tag": "v2.0.1",
+            "target_tag_exists": false,
+            "remote_sha": "9b776f733734e637be78100471638211a81df64c"
+          },
+          {
+            "package": "auth-http",
+            "target": "2.0.0",
+            "latest_stable_tag": "v1.0.0",
+            "target_tag_exists": false,
+            "remote_sha": "a2bbbf099fe4ae07aacb499da9265f03115a14f6"
+          },
+          {
+            "package": "auth-jwt",
+            "target": "2.0.0",
+            "latest_stable_tag": "v1.0.0",
+            "target_tag_exists": false,
+            "remote_sha": "eebb57e257e1478e2e92086b77fa3bf3907d89f1"
+          },
+          {
+            "package": "auth-magic-link",
+            "target": "3.0.0",
+            "latest_stable_tag": "v2.0.0",
+            "target_tag_exists": false,
+            "remote_sha": "a10110092d19d8c49c2011f1cdfdf9d3478c1e7e"
+          },
+          {
+            "package": "auth-otp",
+            "target": "3.0.0",
+            "latest_stable_tag": "v2.0.1",
+            "target_tag_exists": false,
+            "remote_sha": "72de7daaadcd3b11ca487ec4448e1b010a0c1d90"
+          },
+          {
+            "package": "auth-password",
+            "target": "3.0.0",
+            "latest_stable_tag": "v2.0.0",
+            "target_tag_exists": false,
+            "remote_sha": "0e563af36db2ff2d683de547de6140cabe3b692c"
+          },
+          {
+            "package": "auth-recovery-code",
+            "target": "3.0.0",
+            "latest_stable_tag": "v2.0.0",
+            "target_tag_exists": false,
+            "remote_sha": "3daf794d4f95acf55505983e514e22f83e5b4f7e"
+          },
+          {
+            "package": "auth-remember-me",
+            "target": "3.0.0",
+            "latest_stable_tag": "v2.0.0",
+            "target_tag_exists": false,
+            "remote_sha": "31c3a2163719bf11057efc37c3881a77ada0752a"
+          },
+          {
+            "package": "auth-session",
+            "target": "2.0.0",
+            "latest_stable_tag": "v1.0.0",
+            "target_tag_exists": false,
+            "remote_sha": "c8b94cd9329ba63e75a00253cd111bc72f60c8a2"
+          },
+          {
+            "package": "auth-session-app",
+            "target": "2.0.0",
+            "latest_stable_tag": "v1.0.0",
+            "target_tag_exists": false,
+            "remote_sha": "d5235a8ba2c83e066601276c9956548c79e55946"
+          },
+          {
+            "package": "auth-session-database",
+            "target": "2.0.0",
+            "latest_stable_tag": "v1.0.0",
+            "target_tag_exists": false,
+            "remote_sha": "788b2b1cd360b05ab340a30a6fd65b2db333ddaf"
+          },
+          {
+            "package": "auth-session-http",
+            "target": "3.0.0",
+            "latest_stable_tag": "v2.0.1",
+            "target_tag_exists": false,
+            "remote_sha": "f4ff2542928bd44ea39b7249d676cfc15abcfcd9"
+          },
+          {
+            "package": "auth-token",
+            "target": "1.0.1",
+            "latest_stable_tag": "v1.0.0",
+            "target_tag_exists": false,
+            "remote_sha": "58f0ba09cc96aeeeffc481ed501864f60e302fe0"
+          },
+          {
+            "package": "auth-totp",
+            "target": "3.0.0",
+            "latest_stable_tag": "v2.0.0",
+            "target_tag_exists": false,
+            "remote_sha": "624fcb15f2391a9e25863079b5833f8498cb4ed5"
+          },
+          {
+            "package": "auth-webauthn",
+            "target": "3.0.0",
+            "latest_stable_tag": "v2.0.0",
+            "target_tag_exists": false,
+            "remote_sha": "82b5ec40f402518894c00941bcdabc03958010b8"
+          }
+        ],
+        "prerequisites": [
+          {
+            "package": "componenta/di",
+            "target": "6.0.0",
+            "source_sha": "e4f19ab9a9f6bd18da85fc52c8d478433a32baec",
+            "ref": "fix/callback-dependency-baseline-2026-11-26",
+            "latest_stable_tag": "v5.0.7",
+            "target_tag_exists": false
+          },
+          {
+            "package": "componenta/identity",
+            "target": "1.1.1",
+            "source_sha": "3feb94e0d64956ecdf7b22abed4a8bd9f597abeb",
+            "ref": "fix/callback-dependency-baseline-2026-11-26",
+            "latest_stable_tag": "v1.1.0",
+            "target_tag_exists": false
+          },
+          {
+            "package": "componenta/password",
+            "target": "2.0.0",
+            "source_sha": "c19180794d84c62c0cfad888b93dd792780076fa",
+            "ref": "refactor/value-contracts-2026-11-27",
+            "latest_stable_tag": "v1.0.0",
+            "target_tag_exists": false
+          },
+          {
+            "package": "componenta/http-csrf-middleware",
+            "target": "4.0.0",
+            "source_sha": "3648984ab056e3005fe7ac24cc01d2060e5f4bbc",
+            "ref": "fix/middleware-security-audit",
+            "latest_stable_tag": "v3.1.0",
+            "target_tag_exists": false
+          }
+        ]
+      },
+      "semver": {
+        "future_targets_changed": false,
+        "auth_targets_unpublished": 16,
+        "dependency_prerequisites_unpublished": 4,
+        "app_future_target": "6.0.0",
+        "reason": "The current pass changes no Auth API or dependency requirement. The App provider-list ownership fix preserves its constructor API and belongs to the still-unpublished App 6.0.0 refactor. Do not increment hypothetical releases or treat path projections as published tags.",
+        "mimetype_detector_retained": "2.0.0"
+      },
+      "runtime_checks": {
+        "evidence": "dependency-analysis/recheck4/packagist-current.json",
+        "runtime_package_union_count": 82,
+        "path_projected_runtime_count": 28,
+        "registry_runtime_count": 54,
+        "all_installed_registry_runtime_versions_latest_stable_at_boundary": true,
+        "same_version_source_reference_changes": [],
+        "required_runtime_updates": [],
+        "auxiliary_development_checks": [
+          "nyholm/psr7",
+          "pestphp/pest",
+          "phpstan/phpstan",
+          "phpunit/phpunit",
+          "symfony/filesystem"
+        ],
+        "packages": [
+          {
+            "name": "brick/math",
+            "latest_stable": "1.0.0",
+            "source": {
+              "url": "https://github.com/brick/math.git",
+              "type": "git",
+              "reference": "2effe05d2177c451b86c6a073196a4034c02f211"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "componenta/class-finder",
+            "latest_stable": "v2.2.0",
+            "source": {
+              "url": "https://github.com/componenta/class-finder.git",
+              "type": "git",
+              "reference": "59cfaaa19b9c9c1abaf14464a007dbe9754162b4"
+            },
+            "roles": {
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "componenta/filter",
+            "latest_stable": "v2.1.0",
+            "source": {
+              "url": "https://github.com/componenta/filter.git",
+              "type": "git",
+              "reference": "92398eb3afb92933ae900d1798d67e32c9c98027"
+            },
+            "roles": {
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "componenta/iterator",
+            "latest_stable": "v1.1.2",
+            "source": {
+              "url": "https://github.com/componenta/iterator.git",
+              "type": "git",
+              "reference": "2c444d7fa46ab1472968a1976d77676367f9e0b7"
+            },
+            "roles": {
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "componenta/path-resolver",
+            "latest_stable": "v1.0.0",
+            "source": {
+              "url": "https://github.com/componenta/path-resolver.git",
+              "type": "git",
+              "reference": "777965c7458cf35c071793ba076f2d12372d9656"
+            },
+            "roles": {
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "componenta/scope",
+            "latest_stable": "v1.0.0",
+            "source": {
+              "url": "https://github.com/componenta/scope.git",
+              "type": "git",
+              "reference": "b6d44926ee69adfd1bc83cfa989262197c2159c4"
+            },
+            "roles": {
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "componenta/tokenizer",
+            "latest_stable": "v1.0.1",
+            "source": {
+              "url": "https://github.com/componenta/tokenizer.git",
+              "type": "git",
+              "reference": "f8d267055ec5ebb33d125da280091b9629fb080e"
+            },
+            "roles": {
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "componenta/var-export",
+            "latest_stable": "v2.0.0",
+            "source": {
+              "url": "https://github.com/componenta/var-export.git",
+              "type": "git",
+              "reference": "60d620dcbd6c3d38af7b3ee319bd947c9b5578be"
+            },
+            "roles": {
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "cycle/database",
+            "latest_stable": "2.24.0",
+            "source": {
+              "url": "https://github.com/cycle/database.git",
+              "type": "git",
+              "reference": "45fb043a3237d9452f282fc8b1d692a0fdb308ba"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "doctrine/deprecations",
+            "latest_stable": "1.2.0",
+            "source": {
+              "url": "https://github.com/doctrine/deprecations.git",
+              "type": "git",
+              "reference": "d2e16653a734c8784c1851ad68b02f997b53ca82"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "giggsey/libphonenumber-for-php",
+            "latest_stable": "9.0.44",
+            "source": {
+              "url": "https://github.com/giggsey/libphonenumber-for-php.git",
+              "type": "git",
+              "reference": "fd4063b9954c6ac452832573ab41d91c49ac799c"
+            },
+            "roles": {
+              "integration": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "giggsey/locale",
+            "latest_stable": "2.10.0",
+            "source": {
+              "url": "https://github.com/giggsey/Locale.git",
+              "type": "git",
+              "reference": "c13d22635eac0e51d1dcd7f09b99fd7475209a51"
+            },
+            "roles": {
+              "integration": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "lcobucci/jwt",
+            "latest_stable": "5.7.0",
+            "source": {
+              "url": "https://github.com/lcobucci/jwt.git",
+              "type": "git",
+              "reference": "d7e47accd18c44268e1dcf01eec19f24d6904862"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "nikic/php-parser",
+            "latest_stable": "v5.9.0",
+            "source": {
+              "url": "https://github.com/nikic/PHP-Parser.git",
+              "type": "git",
+              "reference": "9e33da9553fe7786f0962b35f4e4ecf01be89def"
+            },
+            "roles": {
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "paragonie/constant_time_encoding",
+            "latest_stable": "v3.1.5",
+            "source": {
+              "url": "https://github.com/paragonie/constant_time_encoding.git",
+              "type": "git",
+              "reference": "ceed38ba49d98b85808edfc4f04750ff61eb9739"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "phpdocumentor/reflection-common",
+            "latest_stable": "2.2.1",
+            "source": {
+              "url": "https://github.com/phpDocumentor/ReflectionCommon.git",
+              "type": "git",
+              "reference": "ee15a5a2022c8383906b225055e9496a6a5e6e3b"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "phpdocumentor/reflection-docblock",
+            "latest_stable": "6.0.3",
+            "source": {
+              "url": "https://github.com/phpDocumentor/ReflectionDocBlock.git",
+              "type": "git",
+              "reference": "7bae67520aa9f5ecc506d646810bd40d9da54582"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "phpdocumentor/type-resolver",
+            "latest_stable": "2.1.0",
+            "source": {
+              "url": "https://github.com/phpDocumentor/TypeResolver.git",
+              "type": "git",
+              "reference": "dbe2133bb23e2e33a6834f4ed417f24a1b167769"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "phpstan/phpdoc-parser",
+            "latest_stable": "2.4.2",
+            "source": {
+              "url": "https://github.com/phpstan/phpdoc-parser.git",
+              "type": "git",
+              "reference": "f80e753caa465ab4f93cb265ae32e2e8cb02c3f3"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "psr/clock",
+            "latest_stable": "1.0.0",
+            "source": {
+              "url": "https://github.com/php-fig/clock.git",
+              "type": "git",
+              "reference": "e41a24703d4560fd0acb709162f73b8adfc3aa0d"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "psr/container",
+            "latest_stable": "2.0.2",
+            "source": {
+              "url": "https://github.com/php-fig/container.git",
+              "type": "git",
+              "reference": "c71ecc56dfe541dbd90c5360474fbc405f8d5963"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "psr/event-dispatcher",
+            "latest_stable": "1.0.0",
+            "source": {
+              "url": "https://github.com/php-fig/event-dispatcher.git",
+              "type": "git",
+              "reference": "dbefd12671e8a14ec7f180cab83036ed26714bb0"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "psr/http-factory",
+            "latest_stable": "1.1.0",
+            "source": {
+              "url": "https://github.com/php-fig/http-factory.git",
+              "type": "git",
+              "reference": "2b4765fddfe3b508ac62f829e852b1501d3f6e8a"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "psr/http-message",
+            "latest_stable": "2.0",
+            "source": {
+              "url": "https://github.com/php-fig/http-message.git",
+              "type": "git",
+              "reference": "402d35bcb92c70c026d1a6a9883f06b2ead23d71"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "psr/http-server-handler",
+            "latest_stable": "1.0.2",
+            "source": {
+              "url": "https://github.com/php-fig/http-server-handler.git",
+              "type": "git",
+              "reference": "84c4fb66179be4caaf8e97bd239203245302e7d4"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "psr/http-server-middleware",
+            "latest_stable": "1.0.2",
+            "source": {
+              "url": "https://github.com/php-fig/http-server-middleware.git",
+              "type": "git",
+              "reference": "c1481f747daaa6a0782775cd6a8c26a1bf4a3829"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "psr/log",
+            "latest_stable": "3.0.2",
+            "source": {
+              "url": "https://github.com/php-fig/log.git",
+              "type": "git",
+              "reference": "f16e1d5863e37f8d8c2a01719f5b34baa2b714d3"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "spiral/core",
+            "latest_stable": "3.18.3",
+            "source": {
+              "url": "https://github.com/spiral/core.git",
+              "type": "git",
+              "reference": "d37b1a543ae60acf2b967e2803183ca26cd949ac"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "spiral/hmvc",
+            "latest_stable": "3.18.3",
+            "source": {
+              "url": "https://github.com/spiral/hmvc.git",
+              "type": "git",
+              "reference": "dcea90cdea0a4ea5225f892e40d26d179662b2a7"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "spiral/interceptors",
+            "latest_stable": "3.18.3",
+            "source": {
+              "url": "https://github.com/spiral/interceptors.git",
+              "type": "git",
+              "reference": "10f8160282619e8ce0ce07566c5c20df13282d0d"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "spiral/pagination",
+            "latest_stable": "3.18.3",
+            "source": {
+              "url": "https://github.com/spiral/pagination.git",
+              "type": "git",
+              "reference": "b4c3e6c15b4f1a0b176f40400e81483fd4bb860d"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "spiral/security",
+            "latest_stable": "3.18.3",
+            "source": {
+              "url": "https://github.com/spiral/security.git",
+              "type": "git",
+              "reference": "43b71b74d71a7487a6282f6f7db661bb1d33ea6b"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "spomky-labs/cbor-php",
+            "latest_stable": "3.4.2",
+            "source": {
+              "url": "https://github.com/Spomky-Labs/cbor-php.git",
+              "type": "git",
+              "reference": "8f5ea00a07ad529d20886505cdbeb2b9ac7bb2d6"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "spomky-labs/otphp",
+            "latest_stable": "11.5.1",
+            "source": {
+              "url": "https://github.com/Spomky-Labs/otphp.git",
+              "type": "git",
+              "reference": "16866d2206d6f0c0421294357da23a28b78852f7"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "spomky-labs/pki-framework",
+            "latest_stable": "1.6.3",
+            "source": {
+              "url": "https://github.com/Spomky-Labs/pki-framework.git",
+              "type": "git",
+              "reference": "792e909d4e387adffe3c4f404451c7d57a3d2022"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "symfony/clock",
+            "latest_stable": "v8.1.9",
+            "source": {
+              "url": "https://github.com/symfony/clock.git",
+              "type": "git",
+              "reference": "945ea3b64d6da9c1c2c354fe5c07b27455df6442"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "symfony/deprecation-contracts",
+            "latest_stable": "v3.8.1",
+            "source": {
+              "url": "https://github.com/symfony/deprecation-contracts.git",
+              "type": "git",
+              "reference": "feb1edf4e546af3b85c5caebe8359a20db230ca3"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "symfony/finder",
+            "latest_stable": "v8.1.13",
+            "source": {
+              "url": "https://github.com/symfony/finder.git",
+              "type": "git",
+              "reference": "5dc8602a3ad3430a97efb70f9d7e9f0aec1410dc"
+            },
+            "roles": {
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "symfony/polyfill-ctype",
+            "latest_stable": "v1.37.0",
+            "source": {
+              "url": "https://github.com/symfony/polyfill-ctype.git",
+              "type": "git",
+              "reference": "141046a8f9477948ff284fa65be2095baafb94f2"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "symfony/polyfill-intl-grapheme",
+            "latest_stable": "v1.43.3",
+            "source": {
+              "url": "https://github.com/symfony/polyfill-intl-grapheme.git",
+              "type": "git",
+              "reference": "5a8f33c87aeecffce24e721b5064fab05f4becf8"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "symfony/polyfill-intl-normalizer",
+            "latest_stable": "v1.43.0",
+            "source": {
+              "url": "https://github.com/symfony/polyfill-intl-normalizer.git",
+              "type": "git",
+              "reference": "ebd57ccc7edb93d632e184efbe7693d2517bab3b"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "symfony/polyfill-mbstring",
+            "latest_stable": "v1.43.3",
+            "source": {
+              "url": "https://github.com/symfony/polyfill-mbstring.git",
+              "type": "git",
+              "reference": "122889ed24dc000165bcbfd77ec412f15cbdfc6a"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "symfony/polyfill-php81",
+            "latest_stable": "v1.38.1",
+            "source": {
+              "url": "https://github.com/symfony/polyfill-php81.git",
+              "type": "git",
+              "reference": "6bfb9c766cacffbc8e118cb87217d08ed84e5cd7"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "symfony/polyfill-php83",
+            "latest_stable": "v1.43.0",
+            "source": {
+              "url": "https://github.com/symfony/polyfill-php83.git",
+              "type": "git",
+              "reference": "80ccff923a8d61f73ebe9da0aa94e25232f004ce"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "symfony/polyfill-uuid",
+            "latest_stable": "v1.43.0",
+            "source": {
+              "url": "https://github.com/symfony/polyfill-uuid.git",
+              "type": "git",
+              "reference": "b23ff8245cc5c4479ea2be3d0132d2e6dd433993"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "symfony/property-access",
+            "latest_stable": "v8.1.13",
+            "source": {
+              "url": "https://github.com/symfony/property-access.git",
+              "type": "git",
+              "reference": "feb1be8b51598b548cb18abe7f473980a3dbf80b"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "symfony/property-info",
+            "latest_stable": "v8.1.12",
+            "source": {
+              "url": "https://github.com/symfony/property-info.git",
+              "type": "git",
+              "reference": "db26e0db6bb2b548c25b48e3a407c43aaa0fcb1e"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "symfony/serializer",
+            "latest_stable": "v8.1.13",
+            "source": {
+              "url": "https://github.com/symfony/serializer.git",
+              "type": "git",
+              "reference": "64876a1e359955e31b7de07d795249e49bc4e7d0"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "symfony/string",
+            "latest_stable": "v8.1.13",
+            "source": {
+              "url": "https://github.com/symfony/string.git",
+              "type": "git",
+              "reference": "ff6a90fe4c4e0e4de484d07189aa25d6d7f447be"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "symfony/type-info",
+            "latest_stable": "v8.1.12",
+            "source": {
+              "url": "https://github.com/symfony/type-info.git",
+              "type": "git",
+              "reference": "3e38aea07b658dee29691be8f3c3510bee88782c"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "symfony/uid",
+            "latest_stable": "v8.1.9",
+            "source": {
+              "url": "https://github.com/symfony/uid.git",
+              "type": "git",
+              "reference": "cb487cf30380f0b0b090973bb9c0588193c06685"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "web-auth/cose-lib",
+            "latest_stable": "4.8.2",
+            "source": {
+              "url": "https://github.com/web-auth/cose-lib.git",
+              "type": "git",
+              "reference": "8849e8bf043a2d42d0bec5bda5db2469ad376148"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "web-auth/webauthn-lib",
+            "latest_stable": "5.3.17",
+            "source": {
+              "url": "https://github.com/web-auth/webauthn-lib.git",
+              "type": "git",
+              "reference": "7f38dbcf07cd22ec104fa6eb720df22eb4196b47"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          },
+          {
+            "name": "webmozart/assert",
+            "latest_stable": "2.5.1",
+            "source": {
+              "url": "https://github.com/webmozarts/assert.git",
+              "type": "git",
+              "reference": "e578132c01bd0c64108386ab20d8217cd175ddec"
+            },
+            "roles": {
+              "integration": "runtime",
+              "integration84": "runtime",
+              "dependency-analysis/recheck3/app-auth-graph": "runtime"
+            }
+          }
+        ],
+        "role_notes": "Symfony serializer/property-access/string are runtime in Auth graphs. Filesystem and Finder are development there; Finder is runtime in the separate App graph. Nyholm PSR-7 is a development test adapter. Filesystem and json-schema are absent from the App graph."
+      },
+      "dev_limitation": {
+        "constraints": {
+          "integration": {
+            "root_pest": "^4.0",
+            "root_phpunit": "^12.0",
+            "pest_installed": "v4.7.8",
+            "phpunit_installed": "12.5.33",
+            "pest_require_phpunit": "^12.5.33",
+            "pest_conflict_phpunit": ">12.5.33"
+          },
+          "integration84": {
+            "root_pest": "^4.0",
+            "root_phpunit": "^12.0",
+            "pest_installed": "v4.7.8",
+            "phpunit_installed": "12.5.33",
+            "pest_require_phpunit": "^12.5.33",
+            "pest_conflict_phpunit": ">12.5.33"
+          }
+        },
+        "pest_latest_stable": "v5.3.7",
+        "pest_latest_in_installed_major": "v4.7.8",
+        "phpunit_latest_stable": "13.4.8",
+        "phpunit_latest_in_installed_major": "12.5.45",
+        "decision": "Keep Pest 4.7.8 / PHPUnit 12.5.33 in the current graph: Pest requires ^12.5.33 but conflicts with >12.5.33. PHPUnit 12.5.45 and the newer Pest/PHPUnit majors are not currently permitted by this graph; do not call 12.5.33 globally latest or force a major migration.",
+        "normal_solver_evidence": "dependency-analysis/recheck4/dev-solver-check/result.json",
+        "normal_solver_exit_code": 0,
+        "json_schema_update": {
+          "from": "6.15.1",
+          "to": "6.16.0",
+          "role": "development only",
+          "source_sha": "17a3a7903640817c1a4878d7c71c0221f9b5de97",
+          "review": "dependency-analysis/recheck4/dev-json-schema-update.json",
+          "installed_in_both_shared_graphs_by_root": true
+        },
+        "dry_run_path_reference_only_changes": [
+          "componenta/auth",
+          "componenta/auth-jwt",
+          "componenta/auth-totp"
+        ],
+        "path_reference_note": "The dry-run also refreshed metadata for three already-current path sources at unchanged future versions; this is not a new runtime version release."
+      },
+      "app": {
+        "name": "app",
+        "ref": "refactor/unified-application-build-2026-11-27",
+        "baseline_sha": "d2c1a5a0b41a343dcb408e165986203e1179e712",
+        "sha": "0e887ed8e14f7672483a021b196e97347f8b03d1",
+        "head_changed": true,
+        "latest_stable_tag": "v5.0.0",
+        "changed_remote_refs": [
+          {
+            "ref": "refs/heads/refactor/unified-application-build-2026-11-27",
+            "before": "d2c1a5a0b41a343dcb408e165986203e1179e712",
+            "after": "0e887ed8e14f7672483a021b196e97347f8b03d1"
+          }
+        ],
+        "changed_files": [
+          "README.md",
+          "README.ru.md",
+          "src/Config/AttributeConfigProvider.php",
+          "tests/Config/AttributeConfigProviderTest.php"
+        ],
+        "production_change": "AttributeConfigProvider snapshots prepared provider-list elements so caller-owned PHP reference slots cannot mutate retained membership/order.",
+        "public_constructor_signature_changed": false,
+        "composer_require_unchanged": true,
+        "require": {
+          "php": "^8.5.13",
+          "componenta/class-finder": "^2.2.0",
+          "componenta/config": "^4.0.0",
+          "componenta/di": "^6.0.0",
+          "componenta/path-resolver": "^1.0",
+          "componenta/reflection": "^3.0.0",
+          "componenta/scope": "^1.0",
+          "componenta/tokenizer": "^1.0",
+          "componenta/var-export": "^2.0",
+          "psr/container": "^2.0"
+        },
+        "reason_for_rerun": "Config-provider ownership affects App composition; rerun the same five Auth request/composition scenarios on the exact new source.",
+        "proof": "dependency-analysis/recheck4/app-auth-graph/result.json"
+      },
+      "skeleton": {
+        "name": "skeleton",
+        "ref": "refactor/unified-application-build-2026-11-27",
+        "baseline_sha": "41cb8e288eddd04adc134cb894527d4a0993ba7f",
+        "sha": "0f8e357557c23c7268e130dcd27fdb695324c529",
+        "head_changed": true,
+        "latest_stable_tag": "v5.0.0",
+        "changed_remote_refs": [
+          {
+            "ref": "refs/heads/refactor/unified-application-build-2026-11-27",
+            "before": "41cb8e288eddd04adc134cb894527d4a0993ba7f",
+            "after": "0f8e357557c23c7268e130dcd27fdb695324c529"
+          }
+        ],
+        "changed_files": [
+          "docs/unified-build-verification.md"
+        ],
+        "production_change": false,
+        "manifest_and_installer": [
+          {
+            "path": "composer.json",
+            "unchanged": true,
+            "sha256": "20cf742637458b09bafba0cc6166d4470bb618381e8b87e668ea1a9dbfc0a66b"
+          },
+          {
+            "path": "installer/Installer.php",
+            "unchanged": true,
+            "sha256": "160367568082f42adb990b8f8f4e4d76155c1e52645a60797c2b805b05bdc1cf"
+          }
+        ],
+        "require": {
+          "componenta/app": "^6.0.0",
+          "componenta/app-console": "^6.0.0",
+          "componenta/app-http": "^4.0.0",
+          "componenta/composer-plugin": "^2.0.0",
+          "componenta/config": "^4.0.0",
+          "componenta/di": "^6.0.0",
+          "componenta/error-handler-app": "^2.0.0",
+          "componenta/http": "^1.0",
+          "componenta/http-body-parsing-middleware": "^1.2.0",
+          "componenta/http-psr": "^1.2.0",
+          "componenta/http-psr-nyholm": "^1.2.0",
+          "componenta/interceptor": "^4.0.0",
+          "componenta/path-resolver": "^1.0",
+          "componenta/router": "^4.0.0",
+          "componenta/router-app": "^6.0.0",
+          "componenta/templater-app": "^1.3.0",
+          "componenta/validation": "^3.2.0",
+          "componenta/validation-app": "^4.0.0",
+          "ext-ctype": "*",
+          "ext-json": "*",
+          "ext-mbstring": "*",
+          "php": "^8.5.13",
+          "psr/container": "^2.0",
+          "symfony/console": "^7.4 || ^8.0"
+        },
+        "full_auth_status": "Full enables Auth automatically, and both Full and the optional Auth selection in other HTTP presets still install the old monolithic componenta/auth ^2.1.0 mapping. Migration to the new split Auth packages remains outstanding.",
+        "full_auth_constraint": "^2.1.0",
+        "full_auth_migrated": false,
+        "full_auth_integration_certified": false
+      },
+      "integration": {
+        "app_auth": {
+          "evidence": "dependency-analysis/recheck4/app-auth-graph/result.json",
+          "app_sha": "0e887ed8e14f7672483a021b196e97347f8b03d1",
+          "installed_source_files_checked": 52,
+          "installed_source_all_match": true,
+          "smoke_cases_passed": 5,
+          "exit_codes": {
+            "composer": 0,
+            "smoke": 0,
+            "platform": 0,
+            "audit": 0
+          },
+          "lock_sha256": "d99a1825249940168c66073ac71ec4bb82f2b9e14a64aceb810350415bcedfdf",
+          "runtime_count": 82,
+          "development_count": 1,
+          "version_changes_from_previous": []
+        },
+        "shared_auth_graphs": {
+          "integration": {
+            "lock_sha256": "4d505e57baadebc87ae61028fd52a8db01b06175f3cc51405cec3df7ef6e0f83",
+            "runtime_count": 72,
+            "development_count": 62,
+            "json_schema": {
+              "version": "6.16.0",
+              "source": {
+                "type": "git",
+                "url": "https://github.com/jsonrainbow/json-schema.git",
+                "reference": "17a3a7903640817c1a4878d7c71c0221f9b5de97"
+              },
+              "role": "development"
+            },
+            "update_exit_code": 0,
+            "runtime_updates": []
+          },
+          "integration84": {
+            "lock_sha256": "aabc4473494c77d3f930ac9180048a45bcd05dd2a30b96a7591f89646cc33541",
+            "runtime_count": 63,
+            "development_count": 62,
+            "json_schema": {
+              "version": "6.16.0",
+              "source": {
+                "type": "git",
+                "url": "https://github.com/jsonrainbow/json-schema.git",
+                "reference": "17a3a7903640817c1a4878d7c71c0221f9b5de97"
+              },
+              "role": "development"
+            },
+            "update_exit_code": 0,
+            "runtime_updates": []
+          }
+        },
+        "shared_final_test_matrix": {
+          "status": "Completed and independently reconciled with XML, unchanged source hashes and final lock hashes.",
+          "checked_at": "2026-11-27T18:48:52.865473+02:00",
+          "summary": {
+            "php85": {
+              "packages": 16,
+              "tests": 686,
+              "assertions": 3160,
+              "errors": 0,
+              "failures": 0,
+              "skipped": 4,
+              "passed": 682
+            },
+            "php84": {
+              "packages": 14,
+              "tests": 662,
+              "assertions": 3113,
+              "errors": 0,
+              "failures": 0,
+              "skipped": 4,
+              "passed": 658
+            }
+          },
+          "results_sha256": "4d1a451104c0b5e06954b70c1ef2ea43be1b5e645444e555ec53d26d76d523a6"
+        },
+        "shared_graphs_or_repositories_modified_by_this_agent": false
+      },
+      "necessary_updates": [
+        {
+          "action": "Update current report App/Skeleton source SHAs and exact-source App proof",
+          "status": "Evidence ready in recheck4"
+        },
+        {
+          "action": "Install compatible justinrainbow/json-schema 6.16.0 development update in both Auth graphs",
+          "status": "Completed by root; exact sources and lock hashes verified"
+        },
+        {
+          "action": "Publish four prerequisite release tags and planned Auth tags before claiming stable-registry installability",
+          "status": "Still outstanding; no tag publication performed by this review"
+        },
+        {
+          "action": "Migrate Skeleton Full/optional Auth mapping from monolithic ^2.1.0 to the split packages",
+          "status": "Still outstanding; separate integration scope"
+        }
+      ],
+      "artifact_hashes": {
+        "dependency-analysis/recheck4/remote-refs.json": "41cffa5b1b4e71f7ac2a873593dfed2d510bf000809bd317dc6d381b249794d8",
+        "dependency-analysis/recheck4/packagist-current.json": "d91004defc2efce456772c0e277900b18384cf36ac41bfef1e92c03ff1a7064a",
+        "dependency-analysis/recheck4/release-status.json": "b6e94895f15a678fdb6dca0773858253ea7e2a31fae4a8c9c32643f54c97069e",
+        "dependency-analysis/recheck4/app-upstream.diff": "32d44dcca85ea4c960029ed5c8b9b9375d144ca813f1bbe91a121abb9f4c97bb",
+        "dependency-analysis/recheck4/skeleton-upstream.diff": "fd0cd36d2339cb445a92521325bb6bd7f62956bd5dc86822f7808a081cd91a5a",
+        "dependency-analysis/recheck4/dev-json-schema-update.json": "bac8e431cf514b7c7d89142b24ef5198032a9ed97237c97f6b77350c1e678c64",
+        "dependency-analysis/recheck4/app-auth-graph/result.json": "2f7fc946fcc9566a8e82c6824fc157d410ea936ab6dc11a6d11c96795248a66f"
+      },
+      "finalized_at": "2026-11-27T18:48:52+02:00"
+    },
+    "development_updates": [
+      {
+        "environment": "integration",
+        "exit": 0,
+        "command": [
+          "/workspace/scratch/8dd1305a1e10/runtime85/bin/php",
+          "/workspace/scratch/9f7f729c09ba/runtime/composer.phar",
+          "update",
+          "justinrainbow/json-schema",
+          "--no-scripts",
+          "--no-interaction",
+          "--no-progress"
+        ],
+        "changes": [
+          {
+            "name": "justinrainbow/json-schema",
+            "role": "packages-dev",
+            "from": "6.15.1",
+            "to": "6.16.0",
+            "source": {
+              "type": "git",
+              "url": "https://github.com/jsonrainbow/json-schema.git",
+              "reference": "17a3a7903640817c1a4878d7c71c0221f9b5de97"
+            }
+          }
+        ],
+        "lock_sha256": "4d505e57baadebc87ae61028fd52a8db01b06175f3cc51405cec3df7ef6e0f83",
+        "path_reference_metadata_updates": [
+          {
+            "name": "componenta/auth",
+            "version": "4.0.0",
+            "old_dist_reference": "7dcd1ba510fc37a27043b40a87ca606c5298f03b",
+            "new_dist_reference": "9a85ba81b820dd93b96bf2ae6f19dae1e7205e58",
+            "installed_source_unchanged": true
+          },
+          {
+            "name": "componenta/auth-jwt",
+            "version": "2.0.0",
+            "old_dist_reference": "28e9e1cb83bfdcd0ae3ab60c85b82731b1652325",
+            "new_dist_reference": "eebb57e257e1478e2e92086b77fa3bf3907d89f1",
+            "installed_source_unchanged": true
+          },
+          {
+            "name": "componenta/auth-totp",
+            "version": "3.0.0",
+            "old_dist_reference": "ea174a3bcb2b705e6e1065918d7f8826d80eb72b",
+            "new_dist_reference": "624fcb15f2391a9e25863079b5833f8498cb4ed5",
+            "installed_source_unchanged": true
+          }
+        ],
+        "lock_operations": {
+          "installs": 0,
+          "updates": 4,
+          "removals": 0
+        },
+        "note": "One external library version update plus three refreshed path-package dist references at unchanged versions. Linked Auth production/test contents were already the verified current worktrees and remained unchanged."
+      },
+      {
+        "environment": "integration84",
+        "exit": 0,
+        "command": [
+          "/workspace/scratch/a6908b8e24eb/implementation/runtime84/bin/php",
+          "/workspace/scratch/9f7f729c09ba/runtime/composer.phar",
+          "update",
+          "justinrainbow/json-schema",
+          "--no-scripts",
+          "--no-interaction",
+          "--no-progress"
+        ],
+        "changes": [
+          {
+            "name": "justinrainbow/json-schema",
+            "role": "packages-dev",
+            "from": "6.15.1",
+            "to": "6.16.0",
+            "source": {
+              "type": "git",
+              "url": "https://github.com/jsonrainbow/json-schema.git",
+              "reference": "17a3a7903640817c1a4878d7c71c0221f9b5de97"
+            }
+          }
+        ],
+        "lock_sha256": "aabc4473494c77d3f930ac9180048a45bcd05dd2a30b96a7591f89646cc33541",
+        "path_reference_metadata_updates": [
+          {
+            "name": "componenta/auth",
+            "version": "4.0.0",
+            "old_dist_reference": "7dcd1ba510fc37a27043b40a87ca606c5298f03b",
+            "new_dist_reference": "9a85ba81b820dd93b96bf2ae6f19dae1e7205e58",
+            "installed_source_unchanged": true
+          },
+          {
+            "name": "componenta/auth-jwt",
+            "version": "2.0.0",
+            "old_dist_reference": "28e9e1cb83bfdcd0ae3ab60c85b82731b1652325",
+            "new_dist_reference": "eebb57e257e1478e2e92086b77fa3bf3907d89f1",
+            "installed_source_unchanged": true
+          },
+          {
+            "name": "componenta/auth-totp",
+            "version": "3.0.0",
+            "old_dist_reference": "ea174a3bcb2b705e6e1065918d7f8826d80eb72b",
+            "new_dist_reference": "624fcb15f2391a9e25863079b5833f8498cb4ed5",
+            "installed_source_unchanged": true
+          }
+        ],
+        "lock_operations": {
+          "installs": 0,
+          "updates": 4,
+          "removals": 0
+        },
+        "note": "One external library version update plus three refreshed path-package dist references at unchanged versions. Linked Auth production/test contents were already the verified current worktrees and remained unchanged."
+      }
+    ],
+    "development_update_source_review": {
+      "checked_at": "2026-11-27T18:44:14.098363+02:00",
+      "name": "justinrainbow/json-schema",
+      "role": "development in shared Auth graphs; absent from App projection",
+      "previous_version": "6.15.1",
+      "candidate_version": "6.16.0",
+      "previous_source": {
+        "type": "git",
+        "url": "https://github.com/jsonrainbow/json-schema.git",
+        "reference": "24021a898c17193ed7c2111b5fbf1c6486ae85ff"
+      },
+      "source": {
+        "url": "https://github.com/jsonrainbow/json-schema.git",
+        "type": "git",
+        "reference": "17a3a7903640817c1a4878d7c71c0221f9b5de97"
+      },
+      "dist": {
+        "url": "https://api.github.com/repos/jsonrainbow/json-schema/zipball/17a3a7903640817c1a4878d7c71c0221f9b5de97",
+        "type": "zip",
+        "shasum": "",
+        "reference": "17a3a7903640817c1a4878d7c71c0221f9b5de97"
+      },
+      "require": {
+        "php": "^7.2 || ^8.0",
+        "ext-filter": "*",
+        "ext-json": "*",
+        "marc-mabe/php-enum": "^4.4"
+      },
+      "require_changed": false,
+      "compare_url": "https://api.github.com/repos/jsonrainbow/json-schema/compare/24021a898c17193ed7c2111b5fbf1c6486ae85ff...17a3a7903640817c1a4878d7c71c0221f9b5de97",
+      "compare_status": "ahead",
+      "total_commits": 9,
+      "changed_files": [
+        "CHANGELOG.md",
+        "composer.json",
+        "src/JsonSchema/ConstraintError.php",
+        "src/JsonSchema/Constraints/Drafts/Draft07/FormatConstraint.php",
+        "src/JsonSchema/Constraints/Drafts/Draft2019/DependenciesConstraint.php",
+        "src/JsonSchema/Constraints/Drafts/Draft2019/Draft2019Constraint.php",
+        "src/JsonSchema/Constraints/Drafts/Draft2019/Factory.php",
+        "src/JsonSchema/Constraints/Drafts/Draft2019/FormatConstraint.php",
+        "src/JsonSchema/Constraints/Drafts/Draft2019/UnevaluatedItemsConstraint.php",
+        "tests/Constraints/Draft07/FormatConstraintTest.php",
+        "tests/Constraints/Draft2019/DependenciesConstraintTest.php",
+        "tests/Constraints/Draft2019/FormatConstraintTest.php",
+        "tests/Constraints/Drafts/Draft2019/UnevaluatedItemsTest.php",
+        "tests/JsonSchemaTestSuiteTest.php"
+      ],
+      "source_metadata_response_sha256": "47fc83b8c72e8718c35302e97c096cab777c2bc6c01db2b6ad15a90b63e37298",
+      "consumers": [
+        {
+          "name": "infection/infection",
+          "scope": "packages-dev",
+          "require": "^6.0"
+        }
+      ],
+      "review": {
+        "reviewed_at": "2026-11-27T18:48:48.733808+02:00",
+        "decision": "Compatible development-only update for the observed Auth graphs; no runtime Auth/App dependency change.",
+        "production_diff_summary": [
+          "Add relative-json-pointer validation in Draft-07 and Draft 2019-09.",
+          "Add unevaluatedItems and compatibility dependencies validation in Draft 2019-09.",
+          "Replace an undefined-function failure for idn-hostname without ext-intl with a clear JsonSchema RuntimeException; add optional ext-intl suggestion.",
+          "Add constraint error enum values/messages. No removed public methods or changed public signatures observed in the diff; package requirements are unchanged."
+        ],
+        "consumer_compatibility": {
+          "consumer": "infection/infection",
+          "require": "^6.0",
+          "role": "packages-dev",
+          "schema_draft": "Draft-07",
+          "observed_formats": [
+            "regex",
+            "uri"
+          ],
+          "new_keywords_or_formats_used_by_infection_schemas": false,
+          "evidence": [
+            "integration/vendor/infection/infection/composer.json",
+            "integration/vendor/infection/infection/resources/schema.json",
+            "integration/vendor/infection/infection/resources/mutation-testing-report-schema.json"
+          ]
+        },
+        "limits": "Static source/consumer review and ordinary Composer resolution; no independent full json-schema suite or Infection mutation run. Root owns the shared dependency update and final Auth gates.",
+        "compare_artifact_sha256": "46e8ac948132d3d68de797cb55322e9af9a9a770fb7bcd3f4482a893b363c5c1",
+        "package_metadata_sha256": "867c99b124de1e9a45ee7f3190317eb66d8ba1c170b3d3921a9a4127706c2db7"
+      },
+      "shared_installation_evidence": "verification/recheck4/dependency-updates.json",
+      "shared_installation": [
+        {
+          "environment": "integration",
+          "exit": 0,
+          "command": [
+            "/workspace/scratch/8dd1305a1e10/runtime85/bin/php",
+            "/workspace/scratch/9f7f729c09ba/runtime/composer.phar",
+            "update",
+            "justinrainbow/json-schema",
+            "--no-scripts",
+            "--no-interaction",
+            "--no-progress"
+          ],
+          "changes": [
+            {
+              "name": "justinrainbow/json-schema",
+              "role": "packages-dev",
+              "from": "6.15.1",
+              "to": "6.16.0",
+              "source": {
+                "type": "git",
+                "url": "https://github.com/jsonrainbow/json-schema.git",
+                "reference": "17a3a7903640817c1a4878d7c71c0221f9b5de97"
+              }
+            }
+          ],
+          "lock_sha256": "4d505e57baadebc87ae61028fd52a8db01b06175f3cc51405cec3df7ef6e0f83"
+        },
+        {
+          "environment": "integration84",
+          "exit": 0,
+          "command": [
+            "/workspace/scratch/a6908b8e24eb/implementation/runtime84/bin/php",
+            "/workspace/scratch/9f7f729c09ba/runtime/composer.phar",
+            "update",
+            "justinrainbow/json-schema",
+            "--no-scripts",
+            "--no-interaction",
+            "--no-progress"
+          ],
+          "changes": [
+            {
+              "name": "justinrainbow/json-schema",
+              "role": "packages-dev",
+              "from": "6.15.1",
+              "to": "6.16.0",
+              "source": {
+                "type": "git",
+                "url": "https://github.com/jsonrainbow/json-schema.git",
+                "reference": "17a3a7903640817c1a4878d7c71c0221f9b5de97"
+              }
+            }
+          ],
+          "lock_sha256": "aabc4473494c77d3f930ac9180048a45bcd05dd2a30b96a7591f89646cc33541"
+        }
+      ]
+    },
+    "fresh_app_smoke_count": 5,
+    "matrix_verification": {
+      "checked_at": "2026-11-27T18:48:52.865473+02:00",
+      "packages": 16,
+      "all_source_hashes_unchanged_during_matrix": true,
+      "all_lock_hashes_unchanged_during_matrix": true,
+      "all_recorded_gates_exit_zero": true,
+      "xml_counts_match_results": true,
+      "summary": {
+        "php85": {
+          "packages": 16,
+          "tests": 686,
+          "assertions": 3160,
+          "errors": 0,
+          "failures": 0,
+          "skipped": 4,
+          "passed": 682
+        },
+        "php84": {
+          "packages": 14,
+          "tests": 662,
+          "assertions": 3113,
+          "errors": 0,
+          "failures": 0,
+          "skipped": 4,
+          "passed": 658
+        }
+      },
+      "lock_sha256": {
+        "integration": "4d505e57baadebc87ae61028fd52a8db01b06175f3cc51405cec3df7ef6e0f83",
+        "integration84": "aabc4473494c77d3f930ac9180048a45bcd05dd2a30b96a7591f89646cc33541"
+      },
+      "source_snapshots": [
+        {
+          "name": "auth",
+          "verified_source_commit": "9a85ba81b820dd93b96bf2ae6f19dae1e7205e58",
+          "source_tree_sha": "3026f229cf36c2c25f2022dd0a974530865d7339",
+          "test_tree_sha": "3cdbafca329c75b040421c082fe33c3db06d4a8d",
+          "verified_worktree_sha256": "236a4cb4b76e2bb3e4b632bb5999ee8cdd899148b0b3e67151349f82141f7ef6"
+        },
+        {
+          "name": "auth-app",
+          "verified_source_commit": "9b776f733734e637be78100471638211a81df64c",
+          "source_tree_sha": "39075571f85b7871258976c40a912f66c60d99cc",
+          "test_tree_sha": "e6d4988d61b539cfba0ec1b839557d1c7dfe2df7",
+          "verified_worktree_sha256": "e69794c1300f2a01775df5c414de2b51c2b477ad8a17ddebb39579d9dc670463"
+        },
+        {
+          "name": "auth-http",
+          "verified_source_commit": "a2bbbf099fe4ae07aacb499da9265f03115a14f6",
+          "source_tree_sha": "4d1d436ad32549100d677a2faf30b2575f9b6159",
+          "test_tree_sha": "fa560047998267d1d2a2b8eaf2232a6a61a2c0c1",
+          "verified_worktree_sha256": "821212529a9450ff1693ea98ba22f3b09fd1c01f6d6f60081ef6a97a9d468bfc"
+        },
+        {
+          "name": "auth-jwt",
+          "verified_source_commit": "eebb57e257e1478e2e92086b77fa3bf3907d89f1",
+          "source_tree_sha": "9ef9e3ea1104d618e37386238b8353ddb3ae8a96",
+          "test_tree_sha": "fa1da5ec76099def6e1bb03ca9dd48026a031386",
+          "verified_worktree_sha256": "d8b949a4a8264bfdcb2e32316a648c0f7dd2072625fc1287536d53cf6f1b5133"
+        },
+        {
+          "name": "auth-magic-link",
+          "verified_source_commit": "a10110092d19d8c49c2011f1cdfdf9d3478c1e7e",
+          "source_tree_sha": "23d9da210bfb359613c7e9d14072989eb04d0ff9",
+          "test_tree_sha": "2308307ab975330d3ea44b8ce3af3b7ea31ceb28",
+          "verified_worktree_sha256": "50a44bcc0bc1f366d6eaa2e697b6a4ed7f66c5fc57c53359c1d6b9f885de4307"
+        },
+        {
+          "name": "auth-otp",
+          "verified_source_commit": "72de7daaadcd3b11ca487ec4448e1b010a0c1d90",
+          "source_tree_sha": "284832e7025486d71e115221b012a6cd41ecdb43",
+          "test_tree_sha": "5cf211e3a019c6287e5805b01d660a63a2569e7b",
+          "verified_worktree_sha256": "7d86f93ea78f891b58f34e1fdadfc4a280952c20bf50e89ca8e51b0e80626c81"
+        },
+        {
+          "name": "auth-password",
+          "verified_source_commit": "0e563af36db2ff2d683de547de6140cabe3b692c",
+          "source_tree_sha": "9ade6e3ca0d30d24576f15534853b04b5b06f192",
+          "test_tree_sha": "120086177f78e48ef45f49ffe54ca7a065db3b3e",
+          "verified_worktree_sha256": "9b9ad1fcd8f7db52e70939c4ce48a6e2cb120bf098b475a304bdc5509eb765a2"
+        },
+        {
+          "name": "auth-recovery-code",
+          "verified_source_commit": "3daf794d4f95acf55505983e514e22f83e5b4f7e",
+          "source_tree_sha": "4f05c12b71817c0b5b82afd3e47f2ac766e744ce",
+          "test_tree_sha": "66b2316fbd9195878a3359581567f440e8ad7539",
+          "verified_worktree_sha256": "7a0aa36d8233f05e28abb1e317b45a835daca58c1502b14128b9c4b62496b6ac"
+        },
+        {
+          "name": "auth-remember-me",
+          "verified_source_commit": "31c3a2163719bf11057efc37c3881a77ada0752a",
+          "source_tree_sha": "da0e3e8d0c773f2999acc0552e4552c4540f38be",
+          "test_tree_sha": "977dc2a3473347dcd927333936cbdcd32ea44d8d",
+          "verified_worktree_sha256": "51853f61b3ca5d04d62c45e3075c6879a82cfec711702b8ec51921d5cee8e099"
+        },
+        {
+          "name": "auth-session",
+          "verified_source_commit": "c8b94cd9329ba63e75a00253cd111bc72f60c8a2",
+          "source_tree_sha": "641c51206e22f37c3957cfe0e4a50a1119d77a97",
+          "test_tree_sha": "59a69cdb227e8723c84fdc66e4dcd6a590cf87d0",
+          "verified_worktree_sha256": "0143a50de1178343bed39d85735dbd5b93a575afa8b3fbb2c2ce7385ea85b085"
+        },
+        {
+          "name": "auth-session-app",
+          "verified_source_commit": "d5235a8ba2c83e066601276c9956548c79e55946",
+          "source_tree_sha": "9363392c1a1ae3f8407657e1bade90cdedfad6b8",
+          "test_tree_sha": "5c5aa5d2aa9bb1a6dc1473327e13c69692e356c2",
+          "verified_worktree_sha256": "62bb9dacfe9c1f118a31abae6303bfc8993526a5a170b123badc488d132c7edc"
+        },
+        {
+          "name": "auth-session-database",
+          "verified_source_commit": "788b2b1cd360b05ab340a30a6fd65b2db333ddaf",
+          "source_tree_sha": "2c4ff3f2b1f2f53bd447e8687bd0203de5b47138",
+          "test_tree_sha": "1a4a531ebe23b713bfbd4707acbf3198957cb6ce",
+          "verified_worktree_sha256": "635d81a8e4fc3f661ad0bd26117f4b77211c1ea3c6e2522365eb470ac6af61ff"
+        },
+        {
+          "name": "auth-session-http",
+          "verified_source_commit": "f4ff2542928bd44ea39b7249d676cfc15abcfcd9",
+          "source_tree_sha": "13407456ba894539c6b2ee9472512cadd4e04ada",
+          "test_tree_sha": "a347248fefbbe47785b4882611593caadde557ab",
+          "verified_worktree_sha256": "037be8c9228be5f9b0c73012c8c7259503c59d5dd971b3f1f293397edd1a8aeb"
+        },
+        {
+          "name": "auth-token",
+          "verified_source_commit": "58f0ba09cc96aeeeffc481ed501864f60e302fe0",
+          "source_tree_sha": "9a4ab216656090ab64faa74c0d1984948e991eb6",
+          "test_tree_sha": "3351a462d4c0d6d546f9d7f5789c8c5e689d423c",
+          "verified_worktree_sha256": "ff1e54ba88aff9503fa2dc6a5391d1b88a558e0844595af256ee72b38df9523b"
+        },
+        {
+          "name": "auth-totp",
+          "verified_source_commit": "624fcb15f2391a9e25863079b5833f8498cb4ed5",
+          "source_tree_sha": "5cf445df0788eefb7945eabd8f0efaf7a06beddf",
+          "test_tree_sha": "09fc61f01f3e59985f74d0b165f6a77aaabeb415",
+          "verified_worktree_sha256": "346821523ce552547873fa8b666fee749b24277ae0bf17ae6ba7b9f4802f560b"
+        },
+        {
+          "name": "auth-webauthn",
+          "verified_source_commit": "82b5ec40f402518894c00941bcdabc03958010b8",
+          "source_tree_sha": "c74ef135e056687ecbab6f2fa6caad54a1117dd6",
+          "test_tree_sha": "68b05c7da3b2343978a5bb059620a9d83d81cd98",
+          "verified_worktree_sha256": "94ba2e3b12ad927ea87a15c0640734fbe2e7b6a81240127045314a84db7e6d49"
+        }
+      ],
+      "results_sha256": "4d1a451104c0b5e06954b70c1ef2ea43be1b5e645444e555ec53d26d76d523a6"
+    },
+    "full_matrix_results_sha256": "4d1a451104c0b5e06954b70c1ef2ea43be1b5e645444e555ec53d26d76d523a6",
+    "native_database_concurrency_tested": false,
+    "hardware_webauthn_tested": false,
+    "new_mutation_run": false,
+    "limitations": [
+      "No new supported-contract defect was confirmed; this bounded review is not a proof that no defects exist.",
+      "Four native MySQL/PostgreSQL tests remain skipped per runtime; SQLite and deterministic driver tests passed.",
+      "The historical write-failure probes and mutation result from prior passes are not relabeled as new recheck4 executions.",
+      "Future version projections are not published tags. Four prerequisite releases and the Skeleton Auth mapping remain outstanding.",
+      "Registry freshness is bound to the recorded observation times; Pest/PHPUnit majors were not migrated and the Pest patch cap is explicit."
+    ]
   }
 }
