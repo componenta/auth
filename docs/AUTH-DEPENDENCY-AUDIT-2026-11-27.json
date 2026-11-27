@@ -6,27 +6,27 @@
   "summary": {
     "php85": {
       "packages": 16,
-      "tests": 633,
-      "assertions": 2878,
+      "tests": 653,
+      "assertions": 2999,
       "errors": 0,
       "failures": 0,
       "skipped": 4,
-      "passed": 629
+      "passed": 649
     },
     "php84": {
       "packages": 14,
-      "tests": 609,
-      "assertions": 2831,
+      "tests": 629,
+      "assertions": 2952,
       "errors": 0,
       "failures": 0,
       "skipped": 4,
-      "passed": 605
+      "passed": 625
     }
   },
   "packages": [
     {
       "name": "auth",
-      "base_sha": "bd740de4d766cd01fdac716be125d93369e3de88",
+      "base_sha": "a760769031131fae3af3ecef8e33be77e1d9c8d2",
       "php85_exit": 0,
       "php85": {
         "tests": 67,
@@ -57,11 +57,11 @@
         "psr/clock": "^1.0",
         "psr/log": "^3.0"
       },
-      "verified_source_commit": "bd740de4d766cd01fdac716be125d93369e3de88",
+      "verified_source_commit": "a760769031131fae3af3ecef8e33be77e1d9c8d2",
       "source_tree_sha": "3026f229cf36c2c25f2022dd0a974530865d7339",
       "test_tree_sha": "3cdbafca329c75b040421c082fe33c3db06d4a8d",
       "verified_worktree_sha256": "236a4cb4b76e2bb3e4b632bb5999ee8cdd899148b0b3e67151349f82141f7ef6",
-      "verification": "full rerun after expiry recheck"
+      "verification": "Full suite rerun after rotation and OTP mutex fixes."
     },
     {
       "name": "auth-app",
@@ -92,7 +92,7 @@
       "source_tree_sha": "39075571f85b7871258976c40a912f66c60d99cc",
       "test_tree_sha": "e6d4988d61b539cfba0ec1b839557d1c7dfe2df7",
       "verified_worktree_sha256": "e69794c1300f2a01775df5c414de2b51c2b477ad8a17ddebb39579d9dc670463",
-      "verification": "full rerun after expiry recheck"
+      "verification": "Full suite rerun after rotation and OTP mutex fixes."
     },
     {
       "name": "auth-http",
@@ -133,7 +133,7 @@
       "source_tree_sha": "4d1d436ad32549100d677a2faf30b2575f9b6159",
       "test_tree_sha": "fa560047998267d1d2a2b8eaf2232a6a61a2c0c1",
       "verified_worktree_sha256": "821212529a9450ff1693ea98ba22f3b09fd1c01f6d6f60081ef6a97a9d468bfc",
-      "verification": "full rerun after expiry recheck"
+      "verification": "Full suite rerun after rotation and OTP mutex fixes."
     },
     {
       "name": "auth-jwt",
@@ -179,7 +179,7 @@
       "source_tree_sha": "7140df34fb23fec713cf6404a60883945572ab35",
       "test_tree_sha": "d00ca6668442c0211e51483a2877789507272920",
       "verified_worktree_sha256": "8198faac7e23f24921316d2968abbdc7338f3270c4d04ff1d65281f5b403fd5b",
-      "verification": "full rerun after expiry recheck"
+      "verification": "Full suite rerun after rotation and OTP mutex fixes."
     },
     {
       "name": "auth-magic-link",
@@ -223,15 +223,15 @@
       "source_tree_sha": "23d9da210bfb359613c7e9d14072989eb04d0ff9",
       "test_tree_sha": "2308307ab975330d3ea44b8ce3af3b7ea31ceb28",
       "verified_worktree_sha256": "50a44bcc0bc1f366d6eaa2e697b6a4ed7f66c5fc57c53359c1d6b9f885de4307",
-      "verification": "full rerun after expiry recheck"
+      "verification": "Full suite rerun after rotation and OTP mutex fixes."
     },
     {
       "name": "auth-otp",
-      "base_sha": "ce458fcee84295093d94df04c89f42e9005b1331",
+      "base_sha": "bbe3830440abe301763850fc7d270810820b5edb",
       "php85_exit": 0,
       "php85": {
-        "tests": 49,
-        "assertions": 370,
+        "tests": 52,
+        "assertions": 386,
         "errors": 0,
         "failures": 0,
         "skipped": 0,
@@ -242,8 +242,8 @@
       "diff_check_exit": 0,
       "php84_exit": 0,
       "php84": {
-        "tests": 49,
-        "assertions": 370,
+        "tests": 52,
+        "assertions": 386,
         "errors": 0,
         "failures": 0,
         "skipped": 0,
@@ -264,11 +264,11 @@
         "psr/http-message": "^2.0",
         "psr/http-server-handler": "^1.0"
       },
-      "verified_source_commit": "bbe3830440abe301763850fc7d270810820b5edb",
-      "source_tree_sha": "094bde3e4ae2e42c5ea58a230078147187049064",
-      "test_tree_sha": "756fd1fe4ac7ed3846f4dbfa0f4eaad4c89c67fa",
-      "verified_worktree_sha256": "40bfe983501792bab9cec2eeda27174187b34e81ef1e3ee7f562b293a81e70d2",
-      "verification": "full rerun after expiry recheck"
+      "verified_source_commit": "72de7daaadcd3b11ca487ec4448e1b010a0c1d90",
+      "source_tree_sha": "284832e7025486d71e115221b012a6cd41ecdb43",
+      "test_tree_sha": "5cf211e3a019c6287e5805b01d660a63a2569e7b",
+      "verified_worktree_sha256": "7d86f93ea78f891b58f34e1fdadfc4a280952c20bf50e89ca8e51b0e80626c81",
+      "verification": "Full suite rerun after rotation and OTP mutex fixes."
     },
     {
       "name": "auth-password",
@@ -313,7 +313,7 @@
       "source_tree_sha": "9ade6e3ca0d30d24576f15534853b04b5b06f192",
       "test_tree_sha": "120086177f78e48ef45f49ffe54ca7a065db3b3e",
       "verified_worktree_sha256": "9b9ad1fcd8f7db52e70939c4ce48a6e2cb120bf098b475a304bdc5509eb765a2",
-      "verification": "full rerun after expiry recheck"
+      "verification": "Full suite rerun after rotation and OTP mutex fixes."
     },
     {
       "name": "auth-recovery-code",
@@ -357,11 +357,11 @@
       "source_tree_sha": "4f05c12b71817c0b5b82afd3e47f2ac766e744ce",
       "test_tree_sha": "66b2316fbd9195878a3359581567f440e8ad7539",
       "verified_worktree_sha256": "7a0aa36d8233f05e28abb1e317b45a835daca58c1502b14128b9c4b62496b6ac",
-      "verification": "full rerun after expiry recheck"
+      "verification": "Full suite rerun after rotation and OTP mutex fixes."
     },
     {
       "name": "auth-remember-me",
-      "base_sha": "56247b9276bd974e7c6859ff90636f2557ee4e55",
+      "base_sha": "31c3a2163719bf11057efc37c3881a77ada0752a",
       "php85_exit": 0,
       "php85": {
         "tests": 38,
@@ -402,7 +402,7 @@
       "source_tree_sha": "da0e3e8d0c773f2999acc0552e4552c4540f38be",
       "test_tree_sha": "977dc2a3473347dcd927333936cbdcd32ea44d8d",
       "verified_worktree_sha256": "51853f61b3ca5d04d62c45e3075c6879a82cfec711702b8ec51921d5cee8e099",
-      "verification": "full rerun after expiry recheck"
+      "verification": "Full suite rerun after rotation and OTP mutex fixes."
     },
     {
       "name": "auth-session",
@@ -439,7 +439,7 @@
       "source_tree_sha": "641c51206e22f37c3957cfe0e4a50a1119d77a97",
       "test_tree_sha": "59a69cdb227e8723c84fdc66e4dcd6a590cf87d0",
       "verified_worktree_sha256": "0143a50de1178343bed39d85735dbd5b93a575afa8b3fbb2c2ce7385ea85b085",
-      "verification": "full rerun after expiry recheck"
+      "verification": "Full suite rerun after rotation and OTP mutex fixes."
     },
     {
       "name": "auth-session-app",
@@ -469,15 +469,15 @@
       "source_tree_sha": "9363392c1a1ae3f8407657e1bade90cdedfad6b8",
       "test_tree_sha": "5c5aa5d2aa9bb1a6dc1473327e13c69692e356c2",
       "verified_worktree_sha256": "62bb9dacfe9c1f118a31abae6303bfc8993526a5a170b123badc488d132c7edc",
-      "verification": "full rerun after expiry recheck"
+      "verification": "Full suite rerun after rotation and OTP mutex fixes."
     },
     {
       "name": "auth-session-database",
-      "base_sha": "194db5d7838b52e4dd1b84c0910c4ea17b25caa6",
+      "base_sha": "b5967229f49a582e85e746eaf56eb491678e291e",
       "php85_exit": 0,
       "php85": {
-        "tests": 50,
-        "assertions": 288,
+        "tests": 67,
+        "assertions": 393,
         "errors": 0,
         "failures": 0,
         "skipped": 4,
@@ -505,8 +505,8 @@
       "diff_check_exit": 0,
       "php84_exit": 0,
       "php84": {
-        "tests": 50,
-        "assertions": 288,
+        "tests": 67,
+        "assertions": 393,
         "errors": 0,
         "failures": 0,
         "skipped": 4,
@@ -529,6 +529,18 @@
           }
         ]
       },
+      "phpstan_attempts": [
+        {
+          "log": "auth-session-database-phpstan.log",
+          "exit": 1,
+          "reason": "Default purity assumption incorrectly remembered the earlier clock reading."
+        },
+        {
+          "log": "auth-session-database-phpstan-corrected.log",
+          "exit": 0,
+          "correction": "Document now() as @phpstan-impure: clock readings may change between calls. No ignore, baseline or global rule reduction."
+        }
+      ],
       "selected_ref": "release/auth-dependency-baseline-2026-11-26",
       "target_version": "2.0.0",
       "require": {
@@ -539,11 +551,12 @@
         "cycle/database": "^2.22",
         "psr/clock": "^1.0"
       },
-      "verified_source_commit": "b5967229f49a582e85e746eaf56eb491678e291e",
-      "source_tree_sha": "3d441e393e4fe277b7afc9ea54e6a631664647eb",
-      "test_tree_sha": "456f65c0383611953d24f47d2e4e2d86223507f6",
-      "verified_worktree_sha256": "43fe4f988b914301f0a96a92d686f302abe0d51cfd4d53087c6d89da612cefcb",
-      "verification": "full rerun after expiry recheck"
+      "verified_source_commit": "788b2b1cd360b05ab340a30a6fd65b2db333ddaf",
+      "source_tree_sha": "2c4ff3f2b1f2f53bd447e8687bd0203de5b47138",
+      "test_tree_sha": "1a4a531ebe23b713bfbd4707acbf3198957cb6ce",
+      "verified_worktree_sha256": "635d81a8e4fc3f661ad0bd26117f4b77211c1ea3c6e2522365eb470ac6af61ff",
+      "verification": "Full suite rerun after rotation and OTP mutex fixes.",
+      "verification_note": "After the full suite, a PHPDoc-only @phpstan-impure declaration documented the nondeterministic clock reading. PHPStan was rerun successfully; PHP execution is unchanged."
     },
     {
       "name": "auth-session-http",
@@ -588,11 +601,11 @@
       "source_tree_sha": "13407456ba894539c6b2ee9472512cadd4e04ada",
       "test_tree_sha": "a347248fefbbe47785b4882611593caadde557ab",
       "verified_worktree_sha256": "037be8c9228be5f9b0c73012c8c7259503c59d5dd971b3f1f293397edd1a8aeb",
-      "verification": "full rerun after expiry recheck"
+      "verification": "Full suite rerun after rotation and OTP mutex fixes."
     },
     {
       "name": "auth-token",
-      "base_sha": "a6297467ed3abd5ebb01a94a86b7025fe65f84f2",
+      "base_sha": "58f0ba09cc96aeeeffc481ed501864f60e302fe0",
       "php85_exit": 0,
       "php85": {
         "tests": 26,
@@ -626,11 +639,11 @@
       "source_tree_sha": "9a4ab216656090ab64faa74c0d1984948e991eb6",
       "test_tree_sha": "3351a462d4c0d6d546f9d7f5789c8c5e689d423c",
       "verified_worktree_sha256": "ff1e54ba88aff9503fa2dc6a5391d1b88a558e0844595af256ee72b38df9523b",
-      "verification": "full rerun after expiry recheck"
+      "verification": "Full suite rerun after rotation and OTP mutex fixes."
     },
     {
       "name": "auth-totp",
-      "base_sha": "c91f96c5bf46bbf10c1c97c493f82db78b12bbb1",
+      "base_sha": "ea174a3bcb2b705e6e1065918d7f8826d80eb72b",
       "php85_exit": 0,
       "php85": {
         "tests": 60,
@@ -672,11 +685,11 @@
       "source_tree_sha": "236dd1912dd32a49b14553bbdebcfcf04220a2b7",
       "test_tree_sha": "bd5f54cc63a315563971ca92eca4095ce3151064",
       "verified_worktree_sha256": "245bedf23db0b8259e42d11cbdd0f2fdf8a28a3c1be5eb12ebd4cac95cc6088a",
-      "verification": "full rerun after expiry recheck"
+      "verification": "Full suite rerun after rotation and OTP mutex fixes."
     },
     {
       "name": "auth-webauthn",
-      "base_sha": "09c7683eb023b68a49a0676f11c73dde1fdbfc23",
+      "base_sha": "82b5ec40f402518894c00941bcdabc03958010b8",
       "php85_exit": 0,
       "php85": {
         "tests": 61,
@@ -721,7 +734,7 @@
       "source_tree_sha": "c74ef135e056687ecbab6f2fa6caad54a1117dd6",
       "test_tree_sha": "68b05c7da3b2343978a5bb059620a9d83d81cd98",
       "verified_worktree_sha256": "94ba2e3b12ad927ea87a15c0640734fbe2e7b6a81240127045314a84db7e6d49",
-      "verification": "full rerun after expiry recheck"
+      "verification": "Full suite rerun after rotation and OTP mutex fixes."
     }
   ],
   "dependencies": [
@@ -1106,8 +1119,12 @@
     }
   },
   "fix_commits": {
-    "auth-token": "2d7257e403aad0cfc4db3e9ac2958f370a45c9b3",
-    "auth-session-database": "733e1deeb1d7b61a6561f2cf001e36bd0769076c"
+    "auth-token": "58f0ba09cc96aeeeffc481ed501864f60e302fe0",
+    "auth-session-database": "788b2b1cd360b05ab340a30a6fd65b2db333ddaf",
+    "auth-otp": "72de7daaadcd3b11ca487ec4448e1b010a0c1d90",
+    "auth-remember-me": "31c3a2163719bf11057efc37c3881a77ada0752a",
+    "auth-totp": "ea174a3bcb2b705e6e1065918d7f8826d80eb72b",
+    "auth-webauthn": "82b5ec40f402518894c00941bcdabc03958010b8"
   },
   "native_database_checks": {
     "status": "not_executed",
@@ -1539,5 +1556,479 @@
       },
       "app_verified_installed_source_files": 52
     }
+  },
+  "initial_fix_commits": {
+    "auth-token": "2d7257e403aad0cfc4db3e9ac2958f370a45c9b3",
+    "auth-session-database": "733e1deeb1d7b61a6561f2cf001e36bd0769076c"
+  },
+  "recheck2": {
+    "checked_at": "2026-11-27T16:19:51.503369+02:00",
+    "timezone": "Europe/Kaliningrad",
+    "scope": "All 16 Auth package branches, current dependency refs and targeted credential/state consistency review.",
+    "before_heads": {
+      "auth": "a760769031131fae3af3ecef8e33be77e1d9c8d2",
+      "auth-app": "9b776f733734e637be78100471638211a81df64c",
+      "auth-http": "a2bbbf099fe4ae07aacb499da9265f03115a14f6",
+      "auth-jwt": "28e9e1cb83bfdcd0ae3ab60c85b82731b1652325",
+      "auth-magic-link": "a10110092d19d8c49c2011f1cdfdf9d3478c1e7e",
+      "auth-otp": "bbe3830440abe301763850fc7d270810820b5edb",
+      "auth-password": "0e563af36db2ff2d683de547de6140cabe3b692c",
+      "auth-recovery-code": "3daf794d4f95acf55505983e514e22f83e5b4f7e",
+      "auth-remember-me": "31c3a2163719bf11057efc37c3881a77ada0752a",
+      "auth-session": "c8b94cd9329ba63e75a00253cd111bc72f60c8a2",
+      "auth-session-app": "d5235a8ba2c83e066601276c9956548c79e55946",
+      "auth-session-database": "b5967229f49a582e85e746eaf56eb491678e291e",
+      "auth-session-http": "f4ff2542928bd44ea39b7249d676cfc15abcfcd9",
+      "auth-token": "58f0ba09cc96aeeeffc481ed501864f60e302fe0",
+      "auth-totp": "ea174a3bcb2b705e6e1065918d7f8826d80eb72b",
+      "auth-webauthn": "82b5ec40f402518894c00941bcdabc03958010b8"
+    },
+    "dependencies": {
+      "checked_at": "2026-11-27T16:05:26.939313+02:00",
+      "timezone": "Europe/Kaliningrad",
+      "conclusion": "No dependency changes, newly published target tags, stale Auth constraints or SemVer corrections found. No dependency source replacement or broad retest required.",
+      "auth": {
+        "count": 16,
+        "all_published_heads_unchanged": true,
+        "heads": {
+          "auth": "a760769031131fae3af3ecef8e33be77e1d9c8d2",
+          "auth-app": "9b776f733734e637be78100471638211a81df64c",
+          "auth-http": "a2bbbf099fe4ae07aacb499da9265f03115a14f6",
+          "auth-jwt": "28e9e1cb83bfdcd0ae3ab60c85b82731b1652325",
+          "auth-magic-link": "a10110092d19d8c49c2011f1cdfdf9d3478c1e7e",
+          "auth-otp": "bbe3830440abe301763850fc7d270810820b5edb",
+          "auth-password": "0e563af36db2ff2d683de547de6140cabe3b692c",
+          "auth-recovery-code": "3daf794d4f95acf55505983e514e22f83e5b4f7e",
+          "auth-remember-me": "31c3a2163719bf11057efc37c3881a77ada0752a",
+          "auth-session": "c8b94cd9329ba63e75a00253cd111bc72f60c8a2",
+          "auth-session-app": "d5235a8ba2c83e066601276c9956548c79e55946",
+          "auth-session-database": "b5967229f49a582e85e746eaf56eb491678e291e",
+          "auth-session-http": "f4ff2542928bd44ea39b7249d676cfc15abcfcd9",
+          "auth-token": "58f0ba09cc96aeeeffc481ed501864f60e302fe0",
+          "auth-totp": "ea174a3bcb2b705e6e1065918d7f8826d80eb72b",
+          "auth-webauthn": "82b5ec40f402518894c00941bcdabc03958010b8"
+        }
+      },
+      "dependencies": {
+        "count": 11,
+        "all_selected_heads_unchanged": true,
+        "unreleased_targets": [
+          {
+            "package": "componenta/di",
+            "version": "6.0.0",
+            "tag_exists": false,
+            "latest_tag": "v5.0.7",
+            "source": "e4f19ab9a9f6bd18da85fc52c8d478433a32baec"
+          },
+          {
+            "package": "componenta/identity",
+            "version": "1.1.1",
+            "tag_exists": false,
+            "latest_tag": "v1.1.0",
+            "source": "3feb94e0d64956ecdf7b22abed4a8bd9f597abeb"
+          },
+          {
+            "package": "componenta/password",
+            "version": "2.0.0",
+            "tag_exists": false,
+            "latest_tag": "v1.0.0",
+            "source": "c19180794d84c62c0cfad888b93dd792780076fa"
+          },
+          {
+            "package": "componenta/http-csrf-middleware",
+            "version": "4.0.0",
+            "tag_exists": false,
+            "latest_tag": "v3.1.0",
+            "source": "3648984ab056e3005fe7ac24cc01d2060e5f4bbc"
+          }
+        ],
+        "heads": {
+          "config": "4685e71d86500a7b51f4a773bb3022dd787fba7f",
+          "di": "e4f19ab9a9f6bd18da85fc52c8d478433a32baec",
+          "clock": "522a039f56e8312160e1e62ed1ae58c6c558bbaf",
+          "identity": "3feb94e0d64956ecdf7b22abed4a8bd9f597abeb",
+          "password": "c19180794d84c62c0cfad888b93dd792780076fa",
+          "http-csrf-middleware": "3648984ab056e3005fe7ac24cc01d2060e5f4bbc",
+          "reflection": "f19a363e9e09a9d32f60c768f16e02fd8c93b631",
+          "validation": "183f5481b8df327747fbab35e3088b5330aa3546",
+          "mimetype-detector": "8d5cfff9616ad46bd0530cb73a0452a239dcd94e",
+          "caster": "383455d00c5ab8a1067b4916e11d11dae7c4a58c",
+          "arrayable": "482acfddffa3b1b85e982d1bf4ab6c007d084a8a"
+        }
+      },
+      "integration": {
+        "heads": {
+          "app": "f7cbfacf8e3f6759cdcbc971d753d1a9f13add0c",
+          "skeleton": "1d5789bb8f90e48f9f989a89cbbc9716e07c12eb"
+        },
+        "all_selected_heads_unchanged": true,
+        "app_constraints_unchanged": true,
+        "skeleton_full_auth_preset": {
+          "source": "1d5789bb8f90e48f9f989a89cbbc9716e07c12eb",
+          "path": "installer/Installer.php",
+          "line": 166,
+          "requires": {
+            "componenta/auth": "^2.1.0"
+          },
+          "status": "Still selects old monolithic Auth; prior remaining integration task unchanged."
+        },
+        "previous_app_smoke_reused": {
+          "count": 5,
+          "reason": "Exact App/Auth adapter sources and dependency versions unchanged; no rerun needed."
+        }
+      },
+      "packagist": [
+        {
+          "name": "cycle/database",
+          "latest_stable": "2.24.0",
+          "unchanged": true,
+          "production": true
+        },
+        {
+          "name": "lcobucci/jwt",
+          "latest_stable": "5.7.0",
+          "unchanged": true,
+          "production": true
+        },
+        {
+          "name": "spomky-labs/otphp",
+          "latest_stable": "11.5.1",
+          "unchanged": true,
+          "production": true
+        },
+        {
+          "name": "web-auth/webauthn-lib",
+          "latest_stable": "5.3.17",
+          "unchanged": true,
+          "production": true
+        },
+        {
+          "name": "symfony/serializer",
+          "latest_stable": "v8.1.12",
+          "unchanged": true,
+          "production": true
+        },
+        {
+          "name": "nyholm/psr7",
+          "latest_stable": "1.8.3",
+          "unchanged": true,
+          "production": true
+        },
+        {
+          "name": "psr/http-factory",
+          "latest_stable": "1.1.0",
+          "unchanged": true,
+          "production": true
+        },
+        {
+          "name": "psr/http-message",
+          "latest_stable": "2.0",
+          "unchanged": true,
+          "production": true
+        },
+        {
+          "name": "psr/clock",
+          "latest_stable": "1.0.0",
+          "unchanged": true,
+          "production": true
+        },
+        {
+          "name": "psr/log",
+          "latest_stable": "3.0.2",
+          "unchanged": true,
+          "production": true
+        },
+        {
+          "name": "phpunit/phpunit",
+          "latest_stable": "13.4.8",
+          "unchanged": true,
+          "production": false
+        },
+        {
+          "name": "pestphp/pest",
+          "latest_stable": "v5.3.7",
+          "unchanged": true,
+          "production": false
+        },
+        {
+          "name": "phpstan/phpstan",
+          "latest_stable": "2.3.7",
+          "unchanged": true,
+          "production": false
+        }
+      ],
+      "mimetype_detector_versions": {
+        "integration": "2.0.0",
+        "integration84": null
+      },
+      "semver": {
+        "auth_token": "1.0.1",
+        "auth_session_database": "2.0.0",
+        "auth_otp_totp_remember_me_webauthn": "3.0.0",
+        "targets_unchanged": true,
+        "reason": "Published target tags remain absent, and the current branch changes preserve declared public signatures or are already assigned the next incompatible dependency generation."
+      },
+      "limitations": [
+        "No new native MySQL/PostgreSQL execution in this dependency-only pass.",
+        "Latest PHPUnit13/Pest5 major lines do not force a test-framework migration in this production dependency task.",
+        "Sources were read at the recorded time; future upstream changes require a fresh check."
+      ]
+    },
+    "new_regression_cases": 20,
+    "red_failures_on_original_source": 10,
+    "red_errors_on_original_source": 2,
+    "new_cases_reproducing_original_defects": 12,
+    "fixes": [
+      {
+        "package": "auth-session-database",
+        "operations": [
+          "rotate"
+        ],
+        "regression_tests": 17,
+        "red_failures": 10,
+        "red_errors": 0,
+        "green_assertions": 105,
+        "test_file": "tests/RotationExpiryTest.php",
+        "result": "Recheck original idle/absolute deadlines after UPDATE and before COMMIT; rollback credential generation and tombstone on expiry or clock failure, preserving the caller savepoint. Timely mutation remains valid if only COMMIT acknowledgement is delayed.",
+        "extra_queries": 0,
+        "locking_changes": false,
+        "commit": "788b2b1cd360b05ab340a30a6fd65b2db333ddaf"
+      },
+      {
+        "package": "auth-otp",
+        "operations": [
+          "verify",
+          "issue"
+        ],
+        "regression_tests": 3,
+        "red_failures": 0,
+        "red_errors": 2,
+        "green_assertions": 16,
+        "test_file": "tests/BudgetLockRetentionTest.php",
+        "result": "Reset successful-proof failure budgets with UPDATE, preserving the mutex row across a competing no-op INSERT / lock UPDATE acquisition.",
+        "classification": "Availability / synchronization lifecycle; no authentication bypass demonstrated.",
+        "storage_impact": "One budget/mutex row remains per used subject+purpose pair, including successful proofs. No TTL pruning; challenge cleanup does not delete mutex rows. SQL locks end with the transaction.",
+        "extra_queries": 0,
+        "commit": "72de7daaadcd3b11ca487ec4448e1b010a0c1d90"
+      }
+    ],
+    "independent_review": {
+      "schema_version": 1,
+      "reviewed_at_utc": "2026-11-27T14:18:04.768795+00:00",
+      "reviewed_at_europe_kaliningrad": "2026-11-27T16:18:04.768795+02:00",
+      "reviewer": "/root/current_dependencies",
+      "scope": "Independent read-only review of the final rotation expiry guard and OTP budget mutex retention change; production source was not edited by this reviewer.",
+      "decision": "approve_both_minimal_corrections",
+      "blocking_findings": [],
+      "reviewed_files": [
+        {
+          "path": "repos/auth-session-database/src/DatabaseAuthSessionManager.php",
+          "sha256": "3e09661210fb0ccd75caab3e7c1f87cf7748fab75025bede3b37a1a7269e20b8"
+        },
+        {
+          "path": "repos/auth-session-database/tests/RotationExpiryTest.php",
+          "sha256": "166ece1da01b6d57edf3ee40a43f943d2e6fa8ceb1a624ee9a9e2c2a5aa32cfb"
+        },
+        {
+          "path": "repos/auth-session-database/tests/Support/DelayedWriteSqliteDriver.php",
+          "sha256": "7a586525f9289242048706691a2595a11bdd65bafec36a1b2f56d1306adb7bc1"
+        },
+        {
+          "path": "repos/auth-otp/src/DatabaseOtpChallengeStore.php",
+          "sha256": "cc052599225b6c8d89ada047872e33f7cd75fcce0b54c4a3607fff138b9db453"
+        },
+        {
+          "path": "repos/auth-otp/tests/BudgetLockRetentionTest.php",
+          "sha256": "a5322495fa09495c642132901a36f0cc58704726ff80801cf945fd362ab5e7c9"
+        },
+        {
+          "path": "repos/auth-otp/README.md",
+          "sha256": "61941e3dad3e3fda825fa15b9175af7743a5af9ac251e2a6bb53b47bff6d5ff2"
+        },
+        {
+          "path": "repos/auth-session-database/README.md",
+          "sha256": "68dcc914805c4662cdec8d2c741eafa171255f8c148c40c77ba7dafed01c469e"
+        }
+      ],
+      "repository_heads_at_review": {
+        "auth-session-database": "788b2b1cd360b05ab340a30a6fd65b2db333ddaf",
+        "auth-otp": "72de7daaadcd3b11ca487ec4448e1b010a0c1d90"
+      },
+      "rotation": {
+        "decision": "approve",
+        "changed_behavior": "After successful conditional UPDATE and before transaction commit, re-evaluate the selected original row against a fresh clock; reject with the existing InvalidArgumentException when idle or absolute expiry has been reached.",
+        "atomicity": "Existing transaction wrapper rolls back both new generation and old credential tombstone on guard rejection or a clock exception. Nested savepoint rejection preserves unrelated work in the caller transaction.",
+        "negative_control": "A timely UPDATE followed by late commit acknowledgement remains accepted. Checking the original expiry after commit would reject an already timely rotation; retain the three reason-specific controls.",
+        "concurrent_touch": "A touch committed after the initial SELECT can make the selected original deadline stale, so the guard can reject conservatively. The initial check already has this snapshot limitation; the contract does not guarantee rotation success across all simultaneous touches. No authentication extension is granted by this rejection.",
+        "locking_decision": "Do not introduce FOR UPDATE or another SELECT for this confirmed expiry defect. Added locking would change contention/order semantics. In particular do not lock rowByUuid globally: it also serves isGrantCurrent and find.",
+        "phpstan_contract": "The final @phpstan-impure annotation on now() accurately expresses advancing clock observations. It changes no PHP runtime behavior and avoids relying on repeated-call result caching in static analysis.",
+        "source_locations": [
+          "repos/auth-session-database/src/DatabaseAuthSessionManager.php:229",
+          "repos/auth-session-database/src/DatabaseAuthSessionManager.php:377",
+          "repos/auth-session-database/src/DatabaseAuthSessionManager.php:575",
+          "repos/auth-session-database/src/DatabaseAuthSessionManager.php:663"
+        ],
+        "red": {
+          "evidence": "verification/recheck2/rotation-final-red.xml",
+          "tests": 17,
+          "assertions": 59,
+          "errors": 0,
+          "failures": 10,
+          "skipped": 0
+        },
+        "green": {
+          "evidence": "verification/recheck2/rotation-green.xml",
+          "tests": 17,
+          "assertions": 105,
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0
+        },
+        "static_analysis_evidence": "verification/recheck2/final/auth-session-database-phpstan-corrected.log"
+      },
+      "otp": {
+        "decision": "approve",
+        "changed_behavior": "On successful challenge claim, reset failures to zero and window_started_at to the refreshed verification time by UPDATE while preserving the subject/purpose mutex row and lock_version.",
+        "failure_path_addressed": "Deleting the row after another operation has passed its INSERT ON CONFLICT DO NOTHING but before its mutex UPDATE can make that UPDATE affect zero rows and throw Could not acquire OTP budget lock. Retaining the row removes that deletion boundary for both issuance and verification.",
+        "window_semantics": "Success resets counters and starts a fresh fixed budget window at successful verification time. Old deletion recreated the window on a later acquire; retaining and explicitly resetting the window provides the promised successful-proof budget reset without erasing the mutex. Issuance already creates the initial window, so the contract does not promise anchoring every window to the first failed attempt.",
+        "retention": "At most one live row per distinct used subject_uuid/purpose pair under the composite primary key. This is a cardinality bound per pair, not a global storage bound or TTL purge. Challenge cleanup does not delete budget rows, as README now states. The retained row holds counters and coordination state, not OTP codes; the SQL row lock ends at transaction end.",
+        "cleanup_recommendation": "Do not add general expiry deletion of mutex rows as part of this patch: deleting rows while acquisitions are in flight would reintroduce the race. Any future subject-lifecycle purge needs explicit coordination.",
+        "test_review": "The tests exercise observable successful proof, budget reset, both pending-operation cases, and one-time consumption. Logger callback deterministically models an interleaving and asserts that the boundary was reached; it does not emulate native separate-connection contention.",
+        "source_locations": [
+          "repos/auth-otp/src/DatabaseOtpChallengeStore.php:201",
+          "repos/auth-otp/src/DatabaseOtpChallengeStore.php:249",
+          "repos/auth-otp/src/DatabaseOtpChallengeStore.php:297",
+          "repos/auth-otp/README.md:31",
+          "repos/auth-otp/resources/schema/postgresql.sql:1"
+        ],
+        "red": {
+          "evidence": "methods-analysis/recheck2/otp-budget-red.log",
+          "tests": 3,
+          "errors": 2,
+          "failures": 0
+        },
+        "green_php85": {
+          "evidence": "verification/recheck2/final/auth-otp-php85.xml",
+          "tests": 3,
+          "assertions": 16,
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0
+        },
+        "green_php84": {
+          "evidence": "verification/recheck2/final/auth-otp-php84.xml",
+          "tests": 3,
+          "assertions": 16,
+          "errors": 0,
+          "failures": 0,
+          "skipped": 0
+        },
+        "focused_green_evidence": "methods-analysis/recheck2/otp-budget-green.log",
+        "postgresql_static_corroboration": {
+          "kind": "Source-based corroboration, not native concurrency verification",
+          "url": "https://raw.githubusercontent.com/postgres/postgres/REL_17_STABLE/src/backend/executor/nodeModifyTable.c",
+          "content_sha256": "d936f10db6aa4b426d746889600874edae724073589d33f9178b4ce1aeda9144",
+          "lines": "1087-1104",
+          "observation": "The existing-conflict DO NOTHING branch performs the visibility check then returns, unlike the DO UPDATE tuple-update path; this supports the interleaving without claiming every database/isolation level has identical behavior.",
+          "official_documentation": "https://www.postgresql.org/docs/17/sql-insert.html"
+        }
+      },
+      "verification_provenance": "This reviewer inspected source, final test artifacts, XML counts and logs; no broad or focused PHP suite was re-executed by this reviewer. Runtime executions belong to the parent/other agent and are independently read here.",
+      "aggregate_gate_evidence": "verification/recheck2/verified-summary.json",
+      "remaining_limits": [
+        "No native cross-connection PostgreSQL concurrency run or lock certification. SQLite Cycle compilation strips FOR UPDATE and cannot establish native row-lock ordering.",
+        "Concurrent touch may cause conservative rotation rejection under a stale selected row, as described above.",
+        "OTP budget rows have per-pair cardinality retention and no automatic TTL cleanup."
+      ],
+      "dependency_recheck_evidence": "dependency-analysis/recheck2/result.json"
+    },
+    "method_consistency_review": {
+      "scope": [
+        "auth-otp",
+        "auth-totp",
+        "auth-webauthn",
+        "auth-remember-me",
+        "auth-password",
+        "auth-magic-link",
+        "auth-recovery-code"
+      ],
+      "finding": {
+        "package": "auth-otp",
+        "classification": "concurrent request availability / lock lifecycle",
+        "baseline_sha": "bbe3830440abe301763850fc7d270810820b5edb",
+        "description": "Successful verification deleted the subject/purpose mutex row after a competing issue/verify had completed its no-op INSERT, making the next lock UPDATE affect zero rows and throw.",
+        "fix": "Keep the mutex row and reset failures/window_started_at via UPDATE.",
+        "native_concurrency_tested": false,
+        "evidence_boundary": "Deterministic public Cycle driver logger schedules a second valid public verify between the first operation no-op INSERT and lock UPDATE, using SQLite to verify resulting state. PostgreSQL Read Committed schedule is supported by primary docs/source; native contention is not certified.",
+        "storage_impact": "One non-secret budget/mutex row persists per issued subject/purpose even after successful proof. Existing cleanup only prunes challenge history. Locks still release at transaction commit; counters reset on success; existing BIGINT lock_version schemas suffice.",
+        "primary_sources": [
+          "https://www.postgresql.org/docs/17/transaction-iso.html",
+          "https://doxygen.postgresql.org/nodeModifyTable_8c_source.html"
+        ]
+      },
+      "changed_files": [
+        "src/DatabaseOtpChallengeStore.php",
+        "tests/BudgetLockRetentionTest.php"
+      ],
+      "validation": {
+        "red": {
+          "tests": 3,
+          "assertions": 8,
+          "errors": 2,
+          "exit": 2,
+          "log": "otp-budget-red.log",
+          "control": "Sequential valid proof resets aggregate failures; passes before fix."
+        },
+        "green": {
+          "tests": 3,
+          "assertions": 16,
+          "exit": 0,
+          "log": "otp-budget-green.log"
+        },
+        "php85_package": {
+          "tests": 52,
+          "assertions": 386,
+          "exit": 0,
+          "log": "otp-suite-php85.log"
+        },
+        "php84_package": {
+          "tests": 52,
+          "assertions": 386,
+          "exit": 0,
+          "log": "otp-suite-php84.log"
+        },
+        "phpstan_src_max": {
+          "exit": 0,
+          "log": "otp-phpstan.log"
+        },
+        "diff_check": {
+          "exit": 0
+        }
+      },
+      "other_scope": "No additional confirmed defect from targeted stale-credential, subject/browser-binding, compensation and request-state review. RememberMe stale AuthSession candidate rejected because AuthenticationMiddleware removes prior concrete state; WebAuthn zero-counter updates intentionally allow distinct ceremonies and deletion remains CAS-protected.",
+      "hashes": {
+        "src/DatabaseOtpChallengeStore.php": "cc052599225b6c8d89ada047872e33f7cd75fcce0b54c4a3607fff138b9db453",
+        "tests/BudgetLockRetentionTest.php": "a5322495fa09495c642132901a36f0cc58704726ff80801cf945fd362ab5e7c9"
+      }
+    },
+    "public_signatures_or_schema_changed": false,
+    "release_targets_unchanged": true,
+    "native_concurrency_tested": false,
+    "evidence_boundary": "Controlled public Cycle driver boundaries and SQLite verify expiry/rollback/state outcomes. PostgreSQL Read Committed semantics support the OTP schedule; no native independent-connection concurrency certification is claimed.",
+    "false_positive_filters": [
+      "Do not invalidate a timely rotation solely because acknowledgement of COMMIT occurs after the original deadline.",
+      "A stale snapshot can conservatively reject rotation when activity changes concurrently. FOR UPDATE changes locking semantics and is not required for this expiry correction.",
+      "AuthenticationMiddleware removes the prior concrete authentication-state type before replacement; a fabricated stale attribute outside that pipeline does not prove a RememberMe defect.",
+      "Distinct single-use WebAuthn ceremonies with zero sign counters do not themselves require a global revision rejection.",
+      "Deferred credential delivery is not an atomic distributed transaction with subsequent revocation or arbitrary network I/O."
+    ],
+    "retained_validation": {
+      "session_http_mutation": "Prior 90.84% MSI retained, not rerun: Session HTTP source/tests and dependency versions are unchanged.",
+      "app_di_smoke": "Prior five App6/DI6 request-ownership scenarios retained, not rerun: App and DI adapter code is unchanged. Those scenarios do not exercise the two database-store methods changed in this pass."
+    },
+    "primary_sources": [
+      "https://www.postgresql.org/docs/current/transaction-iso.html",
+      "https://phpstan.org/writing-php-code/phpdocs-basics#impure-functions"
+    ]
   }
 }
