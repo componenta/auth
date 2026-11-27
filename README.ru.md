@@ -1,9 +1,9 @@
-# Componenta Auth 3
+# Componenta Auth 4
 
-Transport-neutral контракты и orchestration аутентификации для приложений
-Componenta на PHP 8.4+.
+Контракты и координация аутентификации для приложений Componenta на PHP 8.4+,
+не зависящие от протокола передачи данных.
 
-Auth 3 намеренно оставляет `componenta/auth` маленьким core. Конкретные
+Auth 4 намеренно оставляет `componenta/auth` маленьким core. Конкретные
 способы входа, HTTP, authentication sessions и persistence вынесены в отдельные
 пакеты.
 
@@ -58,7 +58,7 @@ return new AuthenticationResult(
 );
 ```
 
-Auth 3 не выводит assurance из роли пользователя или одного названия метода.
+Auth 4 не выводит assurance из роли пользователя или одного названия метода.
 
 Дополнительно result может содержать:
 
@@ -97,4 +97,6 @@ Browser login начинается с отдельной короткоживу�
 Pre-auth credential и request token потребляются один раз и никогда не
 превращаются в authenticated session.
 
-См. `MIGRATION-v3.md` для карты перехода с Auth 2.
+Переход с Auth 3 описан в [руководстве по миграции](MIGRATION-v4.md).
+Матрица зависимостей и выполненные проверки приведены в
+[аудите от 27 ноября 2026 года](docs/AUTH-DEPENDENCY-AUDIT-2026-11-27.md).

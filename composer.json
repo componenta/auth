@@ -20,7 +20,8 @@
         "branch-alias": {
             "dev-main": "2.1.x-dev",
             "dev-auth-3": "3.0.x-dev",
-            "dev-release/auth-dependency-baseline-2026-11-26": "4.0.x-dev"
+            "dev-release/auth-dependency-baseline-2026-11-26": "4.0.x-dev",
+            "dev-fix/auth-dependency-audit-2026-11-27": "4.0.x-dev"
         }
     },
     "config": {

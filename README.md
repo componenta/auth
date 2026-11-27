@@ -1,8 +1,8 @@
-# Componenta Auth 3
+# Componenta Auth 4
 
 Transport-neutral authentication contracts and orchestration for Componenta applications on PHP 8.4+.
 
-Auth 3 is intentionally a small core. Concrete login mechanisms, HTTP integration,
+Auth 4 is intentionally a small core. Concrete login mechanisms, HTTP integration,
 sessions and persistence live in separate packages.
 
 ## Core responsibilities
@@ -56,7 +56,7 @@ return new AuthenticationResult(
 );
 ```
 
-A successful result without `AuthenticationEvidence` is rejected. Auth 3 does
+A successful result without `AuthenticationEvidence` is rejected. Auth 4 does
 not silently assign an assurance level from a role or method name.
 
 The subject must represent either an identity or a denial. A subject implementing
@@ -149,4 +149,12 @@ installing the packages does not itself establish an ASVS or NIST assurance clai
 Applications still own authentication policy, factor combinations, recovery,
 timeouts, deployment, logging and authorization.
 
-See `MIGRATION-v3.md` for the Auth 2 -> Auth 3 package map.
+See [the Auth 4 migration guide](MIGRATION-v4.md) for the coordinated package
+versions and changes from Auth 3. The earlier Auth 2 -> Auth 3 package map remains
+in [MIGRATION-v3.md](MIGRATION-v3.md).
+
+## Dependency audit
+
+The [27 November 2026 audit](docs/AUTH-DEPENDENCY-AUDIT-2026-11-27.md) records
+the coordinated dependency versions, verified source revisions, regression
+fixes and test results for this release line.
