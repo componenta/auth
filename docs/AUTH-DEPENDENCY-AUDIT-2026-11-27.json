@@ -6,27 +6,27 @@
   "summary": {
     "php85": {
       "packages": 16,
-      "tests": 580,
-      "assertions": 2636,
+      "tests": 633,
+      "assertions": 2878,
       "errors": 0,
       "failures": 0,
       "skipped": 4,
-      "passed": 576
+      "passed": 629
     },
     "php84": {
       "packages": 14,
-      "tests": 556,
-      "assertions": 2589,
+      "tests": 609,
+      "assertions": 2831,
       "errors": 0,
       "failures": 0,
       "skipped": 4,
-      "passed": 552
+      "passed": 605
     }
   },
   "packages": [
     {
       "name": "auth",
-      "base_sha": "99616c0f47c65f618870d86f574695f983bfbeaa",
+      "base_sha": "bd740de4d766cd01fdac716be125d93369e3de88",
       "php85_exit": 0,
       "php85": {
         "tests": 67,
@@ -49,10 +49,7 @@
         "skip_reasons": []
       },
       "selected_ref": "release/auth-dependency-baseline-2026-11-26",
-      "verified_worktree_sha256": "236a4cb4b76e2bb3e4b632bb5999ee8cdd899148b0b3e67151349f82141f7ef6",
       "target_version": "4.0.0",
-      "source_tree_sha": "3026f229cf36c2c25f2022dd0a974530865d7339",
-      "test_tree_sha": "3cdbafca329c75b040421c082fe33c3db06d4a8d",
       "require": {
         "php": "^8.4",
         "componenta/clock": "^1.2.0",
@@ -60,11 +57,15 @@
         "psr/clock": "^1.0",
         "psr/log": "^3.0"
       },
-      "verified_source_commit": "99616c0f47c65f618870d86f574695f983bfbeaa"
+      "verified_source_commit": "bd740de4d766cd01fdac716be125d93369e3de88",
+      "source_tree_sha": "3026f229cf36c2c25f2022dd0a974530865d7339",
+      "test_tree_sha": "3cdbafca329c75b040421c082fe33c3db06d4a8d",
+      "verified_worktree_sha256": "236a4cb4b76e2bb3e4b632bb5999ee8cdd899148b0b3e67151349f82141f7ef6",
+      "verification": "full rerun after expiry recheck"
     },
     {
       "name": "auth-app",
-      "base_sha": "9337da3a9107e47bacd6903f557467a46dab5975",
+      "base_sha": "9b776f733734e637be78100471638211a81df64c",
       "php85_exit": 0,
       "php85": {
         "tests": 11,
@@ -78,10 +79,7 @@
       "composer_validate_exit": 0,
       "diff_check_exit": 0,
       "selected_ref": "feat/config4-compatibility-2026-11-26",
-      "verified_worktree_sha256": "e69794c1300f2a01775df5c414de2b51c2b477ad8a17ddebb39579d9dc670463",
       "target_version": "3.0.0",
-      "source_tree_sha": "39075571f85b7871258976c40a912f66c60d99cc",
-      "test_tree_sha": "e6d4988d61b539cfba0ec1b839557d1c7dfe2df7",
       "require": {
         "php": "^8.5.13",
         "componenta/auth": "^4.0.0",
@@ -90,11 +88,15 @@
         "componenta/identity": "^1.1.1",
         "psr/http-message": "^2.0"
       },
-      "verified_source_commit": "9b776f733734e637be78100471638211a81df64c"
+      "verified_source_commit": "9b776f733734e637be78100471638211a81df64c",
+      "source_tree_sha": "39075571f85b7871258976c40a912f66c60d99cc",
+      "test_tree_sha": "e6d4988d61b539cfba0ec1b839557d1c7dfe2df7",
+      "verified_worktree_sha256": "e69794c1300f2a01775df5c414de2b51c2b477ad8a17ddebb39579d9dc670463",
+      "verification": "full rerun after expiry recheck"
     },
     {
       "name": "auth-http",
-      "base_sha": "5a59cd79fffff85934c639fd88df02d4cd6f668f",
+      "base_sha": "a2bbbf099fe4ae07aacb499da9265f03115a14f6",
       "php85_exit": 0,
       "php85": {
         "tests": 56,
@@ -117,10 +119,7 @@
         "skip_reasons": []
       },
       "selected_ref": "release/auth-dependency-baseline-2026-11-26",
-      "verified_worktree_sha256": "821212529a9450ff1693ea98ba22f3b09fd1c01f6d6f60081ef6a97a9d468bfc",
       "target_version": "2.0.0",
-      "source_tree_sha": "4d1d436ad32549100d677a2faf30b2575f9b6159",
-      "test_tree_sha": "fa560047998267d1d2a2b8eaf2232a6a61a2c0c1",
       "require": {
         "php": "^8.4",
         "componenta/auth": "^4.0.0",
@@ -130,11 +129,15 @@
         "psr/http-server-handler": "^1.0",
         "psr/http-server-middleware": "^1.0"
       },
-      "verified_source_commit": "a2bbbf099fe4ae07aacb499da9265f03115a14f6"
+      "verified_source_commit": "a2bbbf099fe4ae07aacb499da9265f03115a14f6",
+      "source_tree_sha": "4d1d436ad32549100d677a2faf30b2575f9b6159",
+      "test_tree_sha": "fa560047998267d1d2a2b8eaf2232a6a61a2c0c1",
+      "verified_worktree_sha256": "821212529a9450ff1693ea98ba22f3b09fd1c01f6d6f60081ef6a97a9d468bfc",
+      "verification": "full rerun after expiry recheck"
     },
     {
       "name": "auth-jwt",
-      "base_sha": "f4fe7ca646c18183c23aef048e887fde701b75c5",
+      "base_sha": "28e9e1cb83bfdcd0ae3ab60c85b82731b1652325",
       "php85_exit": 0,
       "php85": {
         "tests": 34,
@@ -157,10 +160,7 @@
         "skip_reasons": []
       },
       "selected_ref": "release/auth-dependency-baseline-2026-11-26",
-      "verified_worktree_sha256": "8198faac7e23f24921316d2968abbdc7338f3270c4d04ff1d65281f5b403fd5b",
       "target_version": "2.0.0",
-      "source_tree_sha": "7140df34fb23fec713cf6404a60883945572ab35",
-      "test_tree_sha": "d00ca6668442c0211e51483a2877789507272920",
       "require": {
         "componenta/auth": "^4.0.0",
         "componenta/auth-http": "^2.0.0",
@@ -175,11 +175,15 @@
         "psr/http-message": "^2.0",
         "psr/http-server-handler": "^1.0"
       },
-      "verified_source_commit": "28e9e1cb83bfdcd0ae3ab60c85b82731b1652325"
+      "verified_source_commit": "28e9e1cb83bfdcd0ae3ab60c85b82731b1652325",
+      "source_tree_sha": "7140df34fb23fec713cf6404a60883945572ab35",
+      "test_tree_sha": "d00ca6668442c0211e51483a2877789507272920",
+      "verified_worktree_sha256": "8198faac7e23f24921316d2968abbdc7338f3270c4d04ff1d65281f5b403fd5b",
+      "verification": "full rerun after expiry recheck"
     },
     {
       "name": "auth-magic-link",
-      "base_sha": "c428dad53f59e3fa9b58f1e032920fa21008313a",
+      "base_sha": "a10110092d19d8c49c2011f1cdfdf9d3478c1e7e",
       "php85_exit": 0,
       "php85": {
         "tests": 15,
@@ -202,10 +206,7 @@
         "skip_reasons": []
       },
       "selected_ref": "release/auth-dependency-baseline-2026-11-26",
-      "verified_worktree_sha256": "50a44bcc0bc1f366d6eaa2e697b6a4ed7f66c5fc57c53359c1d6b9f885de4307",
       "target_version": "3.0.0",
-      "source_tree_sha": "23d9da210bfb359613c7e9d14072989eb04d0ff9",
-      "test_tree_sha": "2308307ab975330d3ea44b8ce3af3b7ea31ceb28",
       "require": {
         "php": "^8.4",
         "componenta/auth": "^4.0.0",
@@ -218,15 +219,19 @@
         "psr/http-message": "^2.0",
         "psr/http-server-handler": "^1.0"
       },
-      "verified_source_commit": "a10110092d19d8c49c2011f1cdfdf9d3478c1e7e"
+      "verified_source_commit": "a10110092d19d8c49c2011f1cdfdf9d3478c1e7e",
+      "source_tree_sha": "23d9da210bfb359613c7e9d14072989eb04d0ff9",
+      "test_tree_sha": "2308307ab975330d3ea44b8ce3af3b7ea31ceb28",
+      "verified_worktree_sha256": "50a44bcc0bc1f366d6eaa2e697b6a4ed7f66c5fc57c53359c1d6b9f885de4307",
+      "verification": "full rerun after expiry recheck"
     },
     {
       "name": "auth-otp",
-      "base_sha": "8c63e802c01e627c44b2f5cb86d60c85fdfec14a",
+      "base_sha": "ce458fcee84295093d94df04c89f42e9005b1331",
       "php85_exit": 0,
       "php85": {
-        "tests": 43,
-        "assertions": 346,
+        "tests": 49,
+        "assertions": 370,
         "errors": 0,
         "failures": 0,
         "skipped": 0,
@@ -237,18 +242,15 @@
       "diff_check_exit": 0,
       "php84_exit": 0,
       "php84": {
-        "tests": 43,
-        "assertions": 346,
+        "tests": 49,
+        "assertions": 370,
         "errors": 0,
         "failures": 0,
         "skipped": 0,
         "skip_reasons": []
       },
       "selected_ref": "release/auth-dependency-baseline-2026-11-26",
-      "verified_worktree_sha256": "52767642813584c03437ae5e4587a6c4156db88f76adbac13a34686c92b78d63",
       "target_version": "3.0.0",
-      "source_tree_sha": "27d582a6bcfc730150321f2e4953505ac31f08b6",
-      "test_tree_sha": "a16c5f9e1578b123d42d28fb1764da6813c41b1a",
       "require": {
         "php": "^8.4",
         "componenta/auth": "^4.0.0",
@@ -262,11 +264,15 @@
         "psr/http-message": "^2.0",
         "psr/http-server-handler": "^1.0"
       },
-      "verified_source_commit": "ce458fcee84295093d94df04c89f42e9005b1331"
+      "verified_source_commit": "bbe3830440abe301763850fc7d270810820b5edb",
+      "source_tree_sha": "094bde3e4ae2e42c5ea58a230078147187049064",
+      "test_tree_sha": "756fd1fe4ac7ed3846f4dbfa0f4eaad4c89c67fa",
+      "verified_worktree_sha256": "40bfe983501792bab9cec2eeda27174187b34e81ef1e3ee7f562b293a81e70d2",
+      "verification": "full rerun after expiry recheck"
     },
     {
       "name": "auth-password",
-      "base_sha": "3394314daa9a17d755df7494293d215c64edaf64",
+      "base_sha": "0e563af36db2ff2d683de547de6140cabe3b692c",
       "php85_exit": 0,
       "php85": {
         "tests": 19,
@@ -289,10 +295,7 @@
         "skip_reasons": []
       },
       "selected_ref": "release/auth-dependency-baseline-2026-11-26",
-      "verified_worktree_sha256": "9b9ad1fcd8f7db52e70939c4ce48a6e2cb120bf098b475a304bdc5509eb765a2",
       "target_version": "3.0.0",
-      "source_tree_sha": "9ade6e3ca0d30d24576f15534853b04b5b06f192",
-      "test_tree_sha": "120086177f78e48ef45f49ffe54ca7a065db3b3e",
       "require": {
         "php": "^8.4",
         "componenta/auth": "^4.0.0",
@@ -306,11 +309,15 @@
         "psr/http-message": "^2.0",
         "psr/http-server-handler": "^1.0"
       },
-      "verified_source_commit": "0e563af36db2ff2d683de547de6140cabe3b692c"
+      "verified_source_commit": "0e563af36db2ff2d683de547de6140cabe3b692c",
+      "source_tree_sha": "9ade6e3ca0d30d24576f15534853b04b5b06f192",
+      "test_tree_sha": "120086177f78e48ef45f49ffe54ca7a065db3b3e",
+      "verified_worktree_sha256": "9b9ad1fcd8f7db52e70939c4ce48a6e2cb120bf098b475a304bdc5509eb765a2",
+      "verification": "full rerun after expiry recheck"
     },
     {
       "name": "auth-recovery-code",
-      "base_sha": "3880d3326a1193d873a07eba1858263f40b567e1",
+      "base_sha": "3daf794d4f95acf55505983e514e22f83e5b4f7e",
       "php85_exit": 0,
       "php85": {
         "tests": 15,
@@ -333,10 +340,7 @@
         "skip_reasons": []
       },
       "selected_ref": "release/auth-dependency-baseline-2026-11-26",
-      "verified_worktree_sha256": "7a0aa36d8233f05e28abb1e317b45a835daca58c1502b14128b9c4b62496b6ac",
       "target_version": "3.0.0",
-      "source_tree_sha": "4f05c12b71817c0b5b82afd3e47f2ac766e744ce",
-      "test_tree_sha": "66b2316fbd9195878a3359581567f440e8ad7539",
       "require": {
         "php": "^8.4",
         "componenta/auth": "^4.0.0",
@@ -349,15 +353,19 @@
         "psr/http-message": "^2.0",
         "psr/http-server-handler": "^1.0"
       },
-      "verified_source_commit": "3daf794d4f95acf55505983e514e22f83e5b4f7e"
+      "verified_source_commit": "3daf794d4f95acf55505983e514e22f83e5b4f7e",
+      "source_tree_sha": "4f05c12b71817c0b5b82afd3e47f2ac766e744ce",
+      "test_tree_sha": "66b2316fbd9195878a3359581567f440e8ad7539",
+      "verified_worktree_sha256": "7a0aa36d8233f05e28abb1e317b45a835daca58c1502b14128b9c4b62496b6ac",
+      "verification": "full rerun after expiry recheck"
     },
     {
       "name": "auth-remember-me",
-      "base_sha": "468a920e60fe853d1109420a0fa641f04caa37d4",
+      "base_sha": "56247b9276bd974e7c6859ff90636f2557ee4e55",
       "php85_exit": 0,
       "php85": {
-        "tests": 29,
-        "assertions": 176,
+        "tests": 38,
+        "assertions": 223,
         "errors": 0,
         "failures": 0,
         "skipped": 0,
@@ -368,18 +376,15 @@
       "diff_check_exit": 0,
       "php84_exit": 0,
       "php84": {
-        "tests": 29,
-        "assertions": 176,
+        "tests": 38,
+        "assertions": 223,
         "errors": 0,
         "failures": 0,
         "skipped": 0,
         "skip_reasons": []
       },
       "selected_ref": "release/auth-dependency-baseline-2026-11-26",
-      "verified_worktree_sha256": "e6e1c10d7067f7410d9df8a5ca303e4e582ac6afda0bae6dd499133b6e0a90dc",
       "target_version": "3.0.0",
-      "source_tree_sha": "db0886e42589b0dd34a0b80d29e74f8c995c0891",
-      "test_tree_sha": "c3f721d2a545dcdab084d0011e4dfd00746cb55e",
       "require": {
         "php": "^8.4",
         "componenta/auth": "^4.0.0",
@@ -393,11 +398,15 @@
         "psr/http-server-handler": "^1.0",
         "psr/http-server-middleware": "^1.0"
       },
-      "verified_source_commit": "56247b9276bd974e7c6859ff90636f2557ee4e55"
+      "verified_source_commit": "31c3a2163719bf11057efc37c3881a77ada0752a",
+      "source_tree_sha": "da0e3e8d0c773f2999acc0552e4552c4540f38be",
+      "test_tree_sha": "977dc2a3473347dcd927333936cbdcd32ea44d8d",
+      "verified_worktree_sha256": "51853f61b3ca5d04d62c45e3075c6879a82cfec711702b8ec51921d5cee8e099",
+      "verification": "full rerun after expiry recheck"
     },
     {
       "name": "auth-session",
-      "base_sha": "16f8b54843e702d025646ca892ae6bff610c560c",
+      "base_sha": "c8b94cd9329ba63e75a00253cd111bc72f60c8a2",
       "php85_exit": 0,
       "php85": {
         "tests": 16,
@@ -420,20 +429,21 @@
         "skip_reasons": []
       },
       "selected_ref": "release/auth-dependency-baseline-2026-11-26",
-      "verified_worktree_sha256": "0143a50de1178343bed39d85735dbd5b93a575afa8b3fbb2c2ce7385ea85b085",
       "target_version": "2.0.0",
-      "source_tree_sha": "641c51206e22f37c3957cfe0e4a50a1119d77a97",
-      "test_tree_sha": "59a69cdb227e8723c84fdc66e4dcd6a590cf87d0",
       "require": {
         "php": "^8.4",
         "componenta/auth": "^4.0.0",
         "componenta/identity": "^1.1.1"
       },
-      "verified_source_commit": "c8b94cd9329ba63e75a00253cd111bc72f60c8a2"
+      "verified_source_commit": "c8b94cd9329ba63e75a00253cd111bc72f60c8a2",
+      "source_tree_sha": "641c51206e22f37c3957cfe0e4a50a1119d77a97",
+      "test_tree_sha": "59a69cdb227e8723c84fdc66e4dcd6a590cf87d0",
+      "verified_worktree_sha256": "0143a50de1178343bed39d85735dbd5b93a575afa8b3fbb2c2ce7385ea85b085",
+      "verification": "full rerun after expiry recheck"
     },
     {
       "name": "auth-session-app",
-      "base_sha": "dd449cec38e12ede5b7da6b3570b0bf919407dbf",
+      "base_sha": "d5235a8ba2c83e066601276c9956548c79e55946",
       "php85_exit": 0,
       "php85": {
         "tests": 13,
@@ -447,10 +457,7 @@
       "composer_validate_exit": 0,
       "diff_check_exit": 0,
       "selected_ref": "feat/config4-compatibility-2026-11-26",
-      "verified_worktree_sha256": "62bb9dacfe9c1f118a31abae6303bfc8993526a5a170b123badc488d132c7edc",
       "target_version": "2.0.0",
-      "source_tree_sha": "9363392c1a1ae3f8407657e1bade90cdedfad6b8",
-      "test_tree_sha": "5c5aa5d2aa9bb1a6dc1473327e13c69692e356c2",
       "require": {
         "php": "^8.5.13",
         "componenta/auth-session": "^2.0.0",
@@ -458,15 +465,19 @@
         "componenta/di": "^6.0.0",
         "psr/http-message": "^2.0"
       },
-      "verified_source_commit": "d5235a8ba2c83e066601276c9956548c79e55946"
+      "verified_source_commit": "d5235a8ba2c83e066601276c9956548c79e55946",
+      "source_tree_sha": "9363392c1a1ae3f8407657e1bade90cdedfad6b8",
+      "test_tree_sha": "5c5aa5d2aa9bb1a6dc1473327e13c69692e356c2",
+      "verified_worktree_sha256": "62bb9dacfe9c1f118a31abae6303bfc8993526a5a170b123badc488d132c7edc",
+      "verification": "full rerun after expiry recheck"
     },
     {
       "name": "auth-session-database",
-      "base_sha": "c09ae7d1c3f99f43c204ebf033b146b1a8a67843",
+      "base_sha": "194db5d7838b52e4dd1b84c0910c4ea17b25caa6",
       "php85_exit": 0,
       "php85": {
-        "tests": 46,
-        "assertions": 277,
+        "tests": 50,
+        "assertions": 288,
         "errors": 0,
         "failures": 0,
         "skipped": 4,
@@ -494,8 +505,8 @@
       "diff_check_exit": 0,
       "php84_exit": 0,
       "php84": {
-        "tests": 46,
-        "assertions": 277,
+        "tests": 50,
+        "assertions": 288,
         "errors": 0,
         "failures": 0,
         "skipped": 4,
@@ -519,10 +530,7 @@
         ]
       },
       "selected_ref": "release/auth-dependency-baseline-2026-11-26",
-      "verified_worktree_sha256": "1c1a88de17328b16b36f87a0495835a3727ee83b6de7d03a510040ab4341d677",
       "target_version": "2.0.0",
-      "source_tree_sha": "82e3922c5e0d596c0282966c627a46e8ada95ca2",
-      "test_tree_sha": "5096c723b506b286e267056a48a83ab900abe1dc",
       "require": {
         "php": "^8.4",
         "componenta/auth": "^4.0.0",
@@ -531,11 +539,15 @@
         "cycle/database": "^2.22",
         "psr/clock": "^1.0"
       },
-      "verified_source_commit": "194db5d7838b52e4dd1b84c0910c4ea17b25caa6"
+      "verified_source_commit": "b5967229f49a582e85e746eaf56eb491678e291e",
+      "source_tree_sha": "3d441e393e4fe277b7afc9ea54e6a631664647eb",
+      "test_tree_sha": "456f65c0383611953d24f47d2e4e2d86223507f6",
+      "verified_worktree_sha256": "43fe4f988b914301f0a96a92d686f302abe0d51cfd4d53087c6d89da612cefcb",
+      "verification": "full rerun after expiry recheck"
     },
     {
       "name": "auth-session-http",
-      "base_sha": "3f0966d6bb9cc65a0a89da62aa0b96a16e615676",
+      "base_sha": "f4ff2542928bd44ea39b7249d676cfc15abcfcd9",
       "php85_exit": 0,
       "php85": {
         "tests": 103,
@@ -558,10 +570,7 @@
         "skip_reasons": []
       },
       "selected_ref": "release/auth-dependency-baseline-2026-11-26",
-      "verified_worktree_sha256": "037be8c9228be5f9b0c73012c8c7259503c59d5dd971b3f1f293397edd1a8aeb",
       "target_version": "3.0.0",
-      "source_tree_sha": "13407456ba894539c6b2ee9472512cadd4e04ada",
-      "test_tree_sha": "a347248fefbbe47785b4882611593caadde557ab",
       "require": {
         "componenta/auth": "^4.0.0",
         "componenta/auth-http": "^2.0.0",
@@ -575,15 +584,19 @@
         "psr/http-server-handler": "^1.0",
         "psr/http-server-middleware": "^1.0"
       },
-      "verified_source_commit": "f4ff2542928bd44ea39b7249d676cfc15abcfcd9"
+      "verified_source_commit": "f4ff2542928bd44ea39b7249d676cfc15abcfcd9",
+      "source_tree_sha": "13407456ba894539c6b2ee9472512cadd4e04ada",
+      "test_tree_sha": "a347248fefbbe47785b4882611593caadde557ab",
+      "verified_worktree_sha256": "037be8c9228be5f9b0c73012c8c7259503c59d5dd971b3f1f293397edd1a8aeb",
+      "verification": "full rerun after expiry recheck"
     },
     {
       "name": "auth-token",
-      "base_sha": "3869916d41fb24f3a14c6e1468cb55d834d851fa",
+      "base_sha": "a6297467ed3abd5ebb01a94a86b7025fe65f84f2",
       "php85_exit": 0,
       "php85": {
-        "tests": 23,
-        "assertions": 91,
+        "tests": 26,
+        "assertions": 108,
         "errors": 0,
         "failures": 0,
         "skipped": 0,
@@ -594,33 +607,34 @@
       "diff_check_exit": 0,
       "php84_exit": 0,
       "php84": {
-        "tests": 23,
-        "assertions": 91,
+        "tests": 26,
+        "assertions": 108,
         "errors": 0,
         "failures": 0,
         "skipped": 0,
         "skip_reasons": []
       },
       "selected_ref": "release/auth-dependency-baseline-2026-11-26",
-      "verified_worktree_sha256": "3891b7a001979aabe5146b0bd60a24de89e83797a1c0ec97eae0e2c7a634f01c",
       "target_version": "1.0.1",
-      "source_tree_sha": "bbd999b25d64c96305c95cef92bbccf4979ded5f",
-      "test_tree_sha": "fce3e248b6bb0c03939359d3a60062ff9ba66e45",
       "require": {
         "php": "^8.4",
         "componenta/identity": "^1.1.1",
         "cycle/database": "^2.22",
         "psr/clock": "^1.0"
       },
-      "verified_source_commit": "a6297467ed3abd5ebb01a94a86b7025fe65f84f2"
+      "verified_source_commit": "58f0ba09cc96aeeeffc481ed501864f60e302fe0",
+      "source_tree_sha": "9a4ab216656090ab64faa74c0d1984948e991eb6",
+      "test_tree_sha": "3351a462d4c0d6d546f9d7f5789c8c5e689d423c",
+      "verified_worktree_sha256": "ff1e54ba88aff9503fa2dc6a5391d1b88a558e0844595af256ee72b38df9523b",
+      "verification": "full rerun after expiry recheck"
     },
     {
       "name": "auth-totp",
-      "base_sha": "eb2cce835932ba4d1c2de79e21f9d6cc690352c2",
+      "base_sha": "c91f96c5bf46bbf10c1c97c493f82db78b12bbb1",
       "php85_exit": 0,
       "php85": {
-        "tests": 32,
-        "assertions": 90,
+        "tests": 60,
+        "assertions": 221,
         "errors": 0,
         "failures": 0,
         "skipped": 0,
@@ -631,18 +645,15 @@
       "diff_check_exit": 0,
       "php84_exit": 0,
       "php84": {
-        "tests": 32,
-        "assertions": 90,
+        "tests": 60,
+        "assertions": 221,
         "errors": 0,
         "failures": 0,
         "skipped": 0,
         "skip_reasons": []
       },
       "selected_ref": "fix/auth-audit-2026-11-25",
-      "verified_worktree_sha256": "e34aeb865181db64ae88aaaf7479b2c5281b53a0699c260a8cbf8805b467945d",
       "target_version": "3.0.0",
-      "source_tree_sha": "0b171e978866f4e370e1a42e791b2a8de38449b6",
-      "test_tree_sha": "2c7bcc0d381be686c191a1d0f7be7b63a330ff82",
       "require": {
         "php": "^8.4",
         "ext-sodium": "*",
@@ -657,15 +668,19 @@
         "psr/http-server-handler": "^1.0",
         "spomky-labs/otphp": "^11.5"
       },
-      "verified_source_commit": "c91f96c5bf46bbf10c1c97c493f82db78b12bbb1"
+      "verified_source_commit": "ea174a3bcb2b705e6e1065918d7f8826d80eb72b",
+      "source_tree_sha": "236dd1912dd32a49b14553bbdebcfcf04220a2b7",
+      "test_tree_sha": "bd5f54cc63a315563971ca92eca4095ce3151064",
+      "verified_worktree_sha256": "245bedf23db0b8259e42d11cbdd0f2fdf8a28a3c1be5eb12ebd4cac95cc6088a",
+      "verification": "full rerun after expiry recheck"
     },
     {
       "name": "auth-webauthn",
-      "base_sha": "457c3683defb12e7154b99930a9483660292eb97",
+      "base_sha": "09c7683eb023b68a49a0676f11c73dde1fdbfc23",
       "php85_exit": 0,
       "php85": {
-        "tests": 58,
-        "assertions": 406,
+        "tests": 61,
+        "assertions": 418,
         "errors": 0,
         "failures": 0,
         "skipped": 0,
@@ -676,18 +691,15 @@
       "diff_check_exit": 0,
       "php84_exit": 0,
       "php84": {
-        "tests": 58,
-        "assertions": 406,
+        "tests": 61,
+        "assertions": 418,
         "errors": 0,
         "failures": 0,
         "skipped": 0,
         "skip_reasons": []
       },
       "selected_ref": "fix/auth-audit-2026-11-25",
-      "verified_worktree_sha256": "4cfaddb05eaac78baf82b8a09ed9d8effb3340a7918eafecf77db1018fac3a39",
       "target_version": "3.0.0",
-      "source_tree_sha": "1df55bde6c31cd41d55e9d10c36049395350833d",
-      "test_tree_sha": "26b4ea2ae1757a5efafb0f703c6ab73a73216506",
       "require": {
         "php": "^8.4",
         "ext-json": "*",
@@ -705,7 +717,11 @@
         "symfony/serializer": "^7.0|^8.0",
         "web-auth/webauthn-lib": "^5.3"
       },
-      "verified_source_commit": "09c7683eb023b68a49a0676f11c73dde1fdbfc23"
+      "verified_source_commit": "82b5ec40f402518894c00941bcdabc03958010b8",
+      "source_tree_sha": "c74ef135e056687ecbab6f2fa6caad54a1117dd6",
+      "test_tree_sha": "68b05c7da3b2343978a5bb059620a9d83d81cd98",
+      "verified_worktree_sha256": "94ba2e3b12ad927ea87a15c0640734fbe2e7b6a81240127045314a84db7e6d49",
+      "verification": "full rerun after expiry recheck"
     }
   ],
   "dependencies": [
@@ -1114,14 +1130,414 @@
     }
   },
   "framework_integration_conflict": {
-    "package": "componenta/app",
-    "ref": "refactor/app-runtime-contracts",
-    "commit": "d1b6af3ac4e61822cd65e4b1ebe01fc9005b53bc",
+    "package": "componenta/skeleton",
+    "ref": "refactor/unified-application-build-2026-11-27",
+    "commit": "1d5789bb8f90e48f9f989a89cbbc9716e07c12eb",
+    "preset": "Full/Auth",
+    "source_path": "installer/Installer.php",
     "requires": {
-      "componenta/config": "^3.0.0",
-      "componenta/di": "^5.0.3",
-      "componenta/reflection": "^2.0.1"
+      "componenta/auth": "^2.1.0"
+    },
+    "reason": "Optional installer preset still selects the old monolithic Auth 2 generation.",
+    "previous_app_dependency_conflict_resolved": true
+  },
+  "source_commit_note": "verified_source_commit identifies the tested production/test trees and Composer manifest. For auth, source remains unchanged and the report is published by a later documentation-only commit. Test results were recorded before committing these identical worktrees; verified_worktree_sha256 ties evidence to their final contents.",
+  "recheck": {
+    "checked_at": "2026-11-27T15:52:40.626242+02:00",
+    "timezone": "Europe/Kaliningrad",
+    "before_heads": {
+      "auth": "bd740de4d766cd01fdac716be125d93369e3de88",
+      "auth-app": "9b776f733734e637be78100471638211a81df64c",
+      "auth-http": "a2bbbf099fe4ae07aacb499da9265f03115a14f6",
+      "auth-jwt": "28e9e1cb83bfdcd0ae3ab60c85b82731b1652325",
+      "auth-magic-link": "a10110092d19d8c49c2011f1cdfdf9d3478c1e7e",
+      "auth-otp": "ce458fcee84295093d94df04c89f42e9005b1331",
+      "auth-password": "0e563af36db2ff2d683de547de6140cabe3b692c",
+      "auth-recovery-code": "3daf794d4f95acf55505983e514e22f83e5b4f7e",
+      "auth-remember-me": "56247b9276bd974e7c6859ff90636f2557ee4e55",
+      "auth-session": "c8b94cd9329ba63e75a00253cd111bc72f60c8a2",
+      "auth-session-app": "d5235a8ba2c83e066601276c9956548c79e55946",
+      "auth-session-database": "194db5d7838b52e4dd1b84c0910c4ea17b25caa6",
+      "auth-session-http": "f4ff2542928bd44ea39b7249d676cfc15abcfcd9",
+      "auth-token": "a6297467ed3abd5ebb01a94a86b7025fe65f84f2",
+      "auth-totp": "c91f96c5bf46bbf10c1c97c493f82db78b12bbb1",
+      "auth-webauthn": "09c7683eb023b68a49a0676f11c73dde1fdbfc23"
+    },
+    "selected_dependency_heads_unchanged": true,
+    "third_party_latest_unchanged": {
+      "cycle/database": true,
+      "lcobucci/jwt": true,
+      "spomky-labs/otphp": true,
+      "symfony/serializer": true,
+      "web-auth/webauthn-lib": true,
+      "nyholm/psr7": true,
+      "psr/http-factory": true,
+      "psr/http-message": true,
+      "psr/clock": true,
+      "psr/log": true,
+      "pestphp/pest": true,
+      "phpunit/phpunit": true,
+      "phpstan/phpstan": true
+    },
+    "upstream_unreleased_aliases": {
+      "di": {
+        "dev-main": "6.0.x-dev",
+        "dev-fix/callback-dependency-baseline-2026-11-26": "6.0.x-dev"
+      },
+      "identity": {
+        "dev-fix/callback-dependency-baseline-2026-11-26": "1.1.x-dev"
+      },
+      "password": {},
+      "http-csrf-middleware": {}
+    },
+    "release_targets_unchanged": true,
+    "new_regression_cases": 53,
+    "red_failures_on_original_source": 36,
+    "fixes": [
+      {
+        "package": "auth-token",
+        "operations": [
+          "find"
+        ],
+        "regression_tests": 3,
+        "red_failures": 2,
+        "test_file": "tests/LookupExpiryTest.php",
+        "result": "Recheck expiry after the writer SELECT; no token mutation or extra SQL.",
+        "commit": "58f0ba09cc96aeeeffc481ed501864f60e302fe0"
+      },
+      {
+        "package": "auth-session-database",
+        "operations": [
+          "touch"
+        ],
+        "regression_tests": 4,
+        "red_failures": 3,
+        "test_file": "tests/ActivityExpiryTest.php",
+        "result": "Rollback a renewal delayed beyond the observed idle/absolute expiry; preserve the caller transaction with a savepoint.",
+        "commit": "b5967229f49a582e85e746eaf56eb491678e291e"
+      },
+      {
+        "package": "auth-otp",
+        "operations": [
+          "verify"
+        ],
+        "regression_tests": 6,
+        "red_failures": 4,
+        "test_file": "tests/VerificationExpiryTest.php",
+        "result": "Reject proofs expiring during UPDATE/COMMIT; the completed claim remains consumed.",
+        "commit": "bbe3830440abe301763850fc7d270810820b5edb"
+      },
+      {
+        "package": "auth-remember-me",
+        "operations": [
+          "rotate",
+          "bindRotation",
+          "idempotent bind retry"
+        ],
+        "regression_tests": 9,
+        "red_failures": 6,
+        "test_file": "tests/RotationExpiryTest.php",
+        "result": "Recheck original grant expiry after the write or retry read; rotation never extends that expiry.",
+        "commit": "31c3a2163719bf11057efc37c3881a77ada0752a"
+      },
+      {
+        "package": "auth-totp",
+        "operations": [
+          "confirmEnrollment",
+          "verify"
+        ],
+        "regression_tests": 28,
+        "red_failures": 19,
+        "test_file": "tests/OperationExpiryTest.php",
+        "result": "Rollback activation beyond pending TTL or code window; preserve prior active factor and outer transaction. Recheck verification window after COMMIT and retain claimed step.",
+        "commit": "ea174a3bcb2b705e6e1065918d7f8826d80eb72b"
+      },
+      {
+        "package": "auth-webauthn",
+        "operations": [
+          "consumeCeremony"
+        ],
+        "regression_tests": 3,
+        "red_failures": 2,
+        "test_file": "tests/CeremonyExpiryTest.php",
+        "result": "Read deadline from writer and reject expiry after atomic claim; adds one writer SELECT.",
+        "commit": "82b5ec40f402518894c00941bcdabc03958010b8"
+      }
+    ],
+    "import_dependency_scan": {
+      "imports_examined": 716,
+      "undeclared_direct_class_imports": [],
+      "note": "Class owners resolved by actual PSR-4 source files, including overlapping PSR HTTP namespaces; lead filter, not standalone behavioral proof."
+    },
+    "independent_probes": {
+      "session_touch": {
+        "passed": [
+          "valid UPDATE before original expiry survives delayed COMMIT acknowledgment",
+          "clock exception propagates and rolls back renewal",
+          "clock exception rolls back own savepoint; caller work survives"
+        ],
+        "count": 3
+      },
+      "totp": {
+        "results": [
+          {
+            "probe": "activation_before_expiry_commit_after_expiry",
+            "passed": true
+          },
+          {
+            "probe": "activation_clock_failure",
+            "passed": true
+          },
+          {
+            "probe": "nested_activation_clock_failure",
+            "passed": true
+          },
+          {
+            "probe": "verification_post_commit_clock_failure",
+            "passed": true
+          }
+        ],
+        "passed": 4
+      },
+      "methods_clock_failures": {
+        "passed": 3,
+        "operations": [
+          "OTP post-COMMIT",
+          "Remember Me post-UPDATE",
+          "WebAuthn post-UPDATE"
+        ]
+      }
+    },
+    "mutation_note": "Session HTTP source, tests and dependency versions are unchanged; the prior 90.84% gate result is retained, not claimed as a new mutation run.",
+    "new_api_or_schema_changes": false,
+    "false_positive_filters": [
+      "Shared Psr\\Http\\Message namespace is split between http-message and http-factory; real classes correctly declared.",
+      "Namespace declarations are not imported classes.",
+      "Absent upstream aliases in Password/CSRF do not imply wrong release SemVer; branch testing needs explicit root aliases or projected path versions.",
+      "Dev PHPUnit13/Pest5 migration remains outside production dependency upgrade scope and is disclosed.",
+      "A renewal or activation accepted before its original deadline is not undone solely because COMMIT acknowledgment is late.",
+      "Caller-supplied timestamps in the synchronous JWT store API are an explicit contract, not an implicit live-clock guarantee."
+    ],
+    "latest_upstream_refresh": {
+      "at": "2026-11-27T13:51:47.991873+00:00",
+      "previous_app_sha": "cfe006ddd73ff4dd1187155c4b4e70affdf49207",
+      "app_sha": "f7cbfacf8e3f6759cdcbc971d753d1a9f13add0c",
+      "previous_skeleton_sha": "17e50b0992f99df51d4073d6acfa6a7f2468c4b5",
+      "skeleton_sha": "1d5789bb8f90e48f9f989a89cbbc9716e07c12eb",
+      "app_delta": "BuildContext cannot be cloned/serialized; BuildStore manifest format v2 with _manifest.php; Composer constraints and Auth-facing composition APIs unchanged.",
+      "skeleton_delta": "Entry-point error handling and integration process isolation; composer.json, Installer.php, preset-compatibility docs unchanged.",
+      "constraints_changed": false,
+      "full_auth_preset_still_requires": "componenta/auth ^2.1.0",
+      "smoke_passed": 5,
+      "app_src_composer_files_verified_against_installed": 52,
+      "all_package_versions_unchanged": true
     }
   },
-  "source_commit_note": "For auth, the source commit identifies the unchanged src/tests trees; the documentation commit is separate. verified_worktree_sha256 also covers the reviewed Composer manifest."
+  "app_integration": {
+    "source": {
+      "ref": "refactor/unified-application-build-2026-11-27",
+      "sha": "f7cbfacf8e3f6759cdcbc971d753d1a9f13add0c",
+      "version": "6.0.0",
+      "constraints": {
+        "php": "^8.5.13",
+        "componenta/class-finder": "^2.2.0",
+        "componenta/config": "^4.0.0",
+        "componenta/di": "^6.0.0",
+        "componenta/path-resolver": "^1.0",
+        "componenta/reflection": "^3.0.0",
+        "componenta/scope": "^1.0",
+        "componenta/tokenizer": "^1.0",
+        "componenta/var-export": "^2.0",
+        "psr/container": "^2.0"
+      }
+    },
+    "skeleton": {
+      "ref": "refactor/unified-application-build-2026-11-27",
+      "sha": "1d5789bb8f90e48f9f989a89cbbc9716e07c12eb",
+      "version": "6.0.0",
+      "constraints": {
+        "componenta/app": "^6.0.0",
+        "componenta/app-console": "^6.0.0",
+        "componenta/app-http": "^4.0.0",
+        "componenta/composer-plugin": "^2.0.0",
+        "componenta/config": "^4.0.0",
+        "componenta/di": "^6.0.0",
+        "componenta/error-handler-app": "^2.0.0",
+        "componenta/http": "^1.0",
+        "componenta/http-body-parsing-middleware": "^1.2.0",
+        "componenta/http-psr": "^1.2.0",
+        "componenta/http-psr-nyholm": "^1.2.0",
+        "componenta/interceptor": "^4.0.0",
+        "componenta/path-resolver": "^1.0",
+        "componenta/router": "^4.0.0",
+        "componenta/router-app": "^6.0.0",
+        "componenta/templater-app": "^1.3.0",
+        "componenta/validation": "^3.2.0",
+        "componenta/validation-app": "^4.0.0",
+        "ext-ctype": "*",
+        "ext-json": "*",
+        "ext-mbstring": "*",
+        "php": "^8.5.13",
+        "psr/container": "^2.0",
+        "symfony/console": "^7.4 || ^8.0"
+      },
+      "remaining_full_auth_preset_requirement": {
+        "componenta/auth": "^2.1.0"
+      },
+      "installer_source_line": 166
+    },
+    "proof": {
+      "root_requires": {
+        "componenta/auth": "4.0.0",
+        "componenta/auth-app": "3.0.0",
+        "componenta/auth-http": "2.0.0",
+        "componenta/auth-jwt": "2.0.0",
+        "componenta/auth-magic-link": "3.0.0",
+        "componenta/auth-otp": "3.0.0",
+        "componenta/auth-password": "3.0.0",
+        "componenta/auth-recovery-code": "3.0.0",
+        "componenta/auth-remember-me": "3.0.0",
+        "componenta/auth-session": "2.0.0",
+        "componenta/auth-session-app": "2.0.0",
+        "componenta/auth-session-database": "2.0.0",
+        "componenta/auth-session-http": "3.0.0",
+        "componenta/auth-token": "1.0.1",
+        "componenta/auth-totp": "3.0.0",
+        "componenta/auth-webauthn": "3.0.0",
+        "componenta/app": "6.0.0",
+        "php": "^8.5.13"
+      },
+      "root_dev_requires": {
+        "nyholm/psr7": "^1.8"
+      },
+      "runtime_package_count": 82,
+      "dev_package_count": 1,
+      "solver_exit": 0,
+      "install_exit": 0,
+      "platform_exit": 0,
+      "smoke_exit": 0,
+      "smoke": {
+        "app_source": "f7cbfacf8e3f6759cdcbc971d753d1a9f13add0c",
+        "php": "8.5.13",
+        "passed": [
+          "authenticated request",
+          "anonymous request after authentication",
+          "different authenticated request on same container",
+          "malformed attribute rejected: Componenta\\Identity\\IdentityInterface",
+          "malformed attribute rejected: Componenta\\Auth\\Session\\AuthSession"
+        ],
+        "count": 5
+      },
+      "packages": {
+        "brick/math": "1.0.0",
+        "componenta/app": "6.0.0",
+        "componenta/arrayable": "1.0.0",
+        "componenta/auth": "4.0.0",
+        "componenta/auth-app": "3.0.0",
+        "componenta/auth-http": "2.0.0",
+        "componenta/auth-jwt": "2.0.0",
+        "componenta/auth-magic-link": "3.0.0",
+        "componenta/auth-otp": "3.0.0",
+        "componenta/auth-password": "3.0.0",
+        "componenta/auth-recovery-code": "3.0.0",
+        "componenta/auth-remember-me": "3.0.0",
+        "componenta/auth-session": "2.0.0",
+        "componenta/auth-session-app": "2.0.0",
+        "componenta/auth-session-database": "2.0.0",
+        "componenta/auth-session-http": "3.0.0",
+        "componenta/auth-token": "1.0.1",
+        "componenta/auth-totp": "3.0.0",
+        "componenta/auth-webauthn": "3.0.0",
+        "componenta/caster": "1.0.0",
+        "componenta/class-finder": "v2.2.0",
+        "componenta/clock": "1.2.0",
+        "componenta/config": "4.0.0",
+        "componenta/di": "6.0.0",
+        "componenta/filter": "v2.1.0",
+        "componenta/http-csrf-middleware": "4.0.0",
+        "componenta/identity": "1.1.1",
+        "componenta/iterator": "v1.1.2",
+        "componenta/mimetype-detector": "2.0.0",
+        "componenta/password": "2.0.0",
+        "componenta/path-resolver": "v1.0.0",
+        "componenta/reflection": "3.0.0",
+        "componenta/scope": "v1.0.0",
+        "componenta/tokenizer": "v1.0.1",
+        "componenta/validation": "3.2.0",
+        "componenta/var-export": "v2.0.0",
+        "cycle/database": "2.24.0",
+        "doctrine/deprecations": "1.2.0",
+        "giggsey/libphonenumber-for-php": "9.0.44",
+        "giggsey/locale": "2.10.0",
+        "lcobucci/jwt": "5.7.0",
+        "nikic/php-parser": "v5.9.0",
+        "paragonie/constant_time_encoding": "v3.1.5",
+        "phpdocumentor/reflection-common": "2.2.1",
+        "phpdocumentor/reflection-docblock": "6.0.3",
+        "phpdocumentor/type-resolver": "2.1.0",
+        "phpstan/phpdoc-parser": "2.4.2",
+        "psr/clock": "1.0.0",
+        "psr/container": "2.0.2",
+        "psr/event-dispatcher": "1.0.0",
+        "psr/http-factory": "1.1.0",
+        "psr/http-message": "2.0",
+        "psr/http-server-handler": "1.0.2",
+        "psr/http-server-middleware": "1.0.2",
+        "psr/log": "3.0.2",
+        "spiral/core": "3.18.3",
+        "spiral/hmvc": "3.18.3",
+        "spiral/interceptors": "3.18.3",
+        "spiral/pagination": "3.18.3",
+        "spiral/security": "3.18.3",
+        "spomky-labs/cbor-php": "3.4.2",
+        "spomky-labs/otphp": "11.5.1",
+        "spomky-labs/pki-framework": "1.6.3",
+        "symfony/clock": "v8.1.9",
+        "symfony/deprecation-contracts": "v3.8.1",
+        "symfony/finder": "v8.1.12",
+        "symfony/polyfill-ctype": "v1.37.0",
+        "symfony/polyfill-intl-grapheme": "v1.43.3",
+        "symfony/polyfill-intl-normalizer": "v1.43.0",
+        "symfony/polyfill-mbstring": "v1.43.3",
+        "symfony/polyfill-php81": "v1.38.1",
+        "symfony/polyfill-php83": "v1.43.0",
+        "symfony/polyfill-uuid": "v1.43.0",
+        "symfony/property-access": "v8.1.12",
+        "symfony/property-info": "v8.1.12",
+        "symfony/serializer": "v8.1.12",
+        "symfony/string": "v8.1.12",
+        "symfony/type-info": "v8.1.12",
+        "symfony/uid": "v8.1.9",
+        "web-auth/cose-lib": "4.8.2",
+        "web-auth/webauthn-lib": "5.3.17",
+        "webmozart/assert": "2.5.1",
+        "nyholm/psr7": "1.8.3"
+      },
+      "no_ignored_constraints_or_platform": true,
+      "no_replace": true,
+      "limitations": [
+        "Projected versions are not published releases.",
+        "App bootstrap and Auth DI adapter request ownership smoke only; not full application runtime or generated Full preset migration."
+      ],
+      "tested_auth_heads": {
+        "auth-totp": "ea174a3bcb2b705e6e1065918d7f8826d80eb72b",
+        "auth-session-database": "b5967229f49a582e85e746eaf56eb491678e291e",
+        "auth": "bd740de4d766cd01fdac716be125d93369e3de88",
+        "auth-webauthn": "82b5ec40f402518894c00941bcdabc03958010b8",
+        "auth-token": "58f0ba09cc96aeeeffc481ed501864f60e302fe0",
+        "auth-jwt": "28e9e1cb83bfdcd0ae3ab60c85b82731b1652325",
+        "auth-http": "a2bbbf099fe4ae07aacb499da9265f03115a14f6",
+        "auth-recovery-code": "3daf794d4f95acf55505983e514e22f83e5b4f7e",
+        "auth-password": "0e563af36db2ff2d683de547de6140cabe3b692c",
+        "auth-session-http": "f4ff2542928bd44ea39b7249d676cfc15abcfcd9",
+        "auth-magic-link": "a10110092d19d8c49c2011f1cdfdf9d3478c1e7e",
+        "auth-session": "c8b94cd9329ba63e75a00253cd111bc72f60c8a2",
+        "auth-session-app": "d5235a8ba2c83e066601276c9956548c79e55946",
+        "auth-app": "9b776f733734e637be78100471638211a81df64c",
+        "auth-remember-me": "31c3a2163719bf11057efc37c3881a77ada0752a",
+        "auth-otp": "bbe3830440abe301763850fc7d270810820b5edb"
+      },
+      "app_verified_installed_source_files": 52
+    }
+  }
 }
